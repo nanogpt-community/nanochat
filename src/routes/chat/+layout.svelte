@@ -558,7 +558,7 @@
 				bind:this={textareaWrapper}
 			>
 				<div class="mb-2 text-center text-[10px] text-muted-foreground/60">
-					Make sure you agree to our <a href="/terms" class="underline hover:text-foreground">Terms</a> and our <a href="/privacy" class="underline hover:text-foreground">Privacy Policy</a>
+					Powered by <a href="https://nano-gpt.com" class="underline hover:text-foreground">Nano-GPT</a>
 				</div>
 				<div
 					class="bg-secondary/40 rounded-2xl p-2.5 backdrop-blur-xl border border-border shadow-2xl"
