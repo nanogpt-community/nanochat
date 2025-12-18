@@ -13,6 +13,8 @@
 - Yarn -> Bun
 - Openrouter -> NanoGPT
 - Theme more closely resembles T3 Chat
+- Nano-GPT Web Search
+- Nano-GPT Web Scraping when you enter a URL (adds to context)
 
 ## ✨ About
 
