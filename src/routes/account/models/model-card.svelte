@@ -2,13 +2,13 @@
 	import type { Provider } from '$lib/types';
 	import * as Card from '$lib/components/ui/card';
 	import { Switch } from '$lib/components/ui/switch';
-	import { useConvexClient } from 'convex-svelte';
-	import { api } from '$lib/backend/convex/_generated/api';
+	import { mutate } from '$lib/client/mutation.svelte';
+	import { api } from '$lib/cache/cached-query.svelte';
 	import { session } from '$lib/state/session.svelte.js';
 	import { ResultAsync } from 'neverthrow';
 	import { getFirstSentence } from '$lib/utils/strings';
 	import { supportsImages, supportsReasoning } from '$lib/utils/model-capabilities';
-	import type { OpenRouterModel } from '$lib/backend/models/open-router';
+	import type { NanoGPTModel } from '$lib/backend/models/nano-gpt';
 	import Tooltip from '$lib/components/ui/tooltip.svelte';
 	import EyeIcon from '~icons/lucide/eye';
 	import BrainIcon from '~icons/lucide/brain';
@@ -23,13 +23,11 @@
 		enabled?: boolean;
 		disabled?: boolean;
 	} & {
-		provider: typeof Provider.OpenRouter;
-		model: OpenRouterModel;
+		provider: typeof Provider.NanoGPT;
+		model: NanoGPTModel;
 	};
 
 	let { provider, model, enabled = false, disabled = false }: Props = $props();
-
-	const client = useConvexClient();
 
 	const [shortDescription, fullDescription] = $derived(getFirstSentence(model.description));
 
@@ -40,11 +38,13 @@
 		if (!session.current?.user.id) return;
 
 		const res = await ResultAsync.fromPromise(
-			client.mutation(api.user_enabled_models.set, {
+			mutate(api.user_enabled_models.set.url, {
+				action: 'set',
 				provider,
-				model_id: model.id,
+				modelId: model.id,
 				enabled: v,
-				session_token: session.current?.session.token,
+			}, {
+				invalidatePatterns: [api.user_enabled_models.get_enabled.url, api.user_enabled_models.is_enabled.url]
 			}),
 			(e) => e
 		);
@@ -78,21 +78,9 @@
 	</Card.Header>
 	<Card.Content>
 		<div class="flex place-items-center gap-1">
-			{#if model && provider === 'openrouter' && supportsImages(model)}
-				<Tooltip>
-					{#snippet trigger(tooltip)}
-						<div
-							{...tooltip.trigger}
-							class="rounded-md border-violet-500 bg-violet-500/50 p-1 text-violet-400"
-						>
-							<EyeIcon class="size-3" />
-						</div>
-					{/snippet}
-					Supports image analysis
-				</Tooltip>
-			{/if}
 
-			{#if model && provider === 'openrouter' && supportsReasoning(model)}
+
+			{#if model && provider === 'nanogpt' && supportsReasoning(model)}
 				<Tooltip>
 					{#snippet trigger(tooltip)}
 						<div

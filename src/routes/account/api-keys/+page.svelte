@@ -5,12 +5,12 @@
 	const allProviders = Object.values(Provider);
 
 	const providersMeta: Record<Provider, ProviderMeta> = {
-		[Provider.OpenRouter]: {
-			title: 'OpenRouter',
-			link: 'https://openrouter.ai/settings/keys',
-			description: 'API Key for OpenRouter.',
-			models: ['a shit ton'],
-			placeholder: 'sk-or-...',
+		[Provider.NanoGPT]: {
+			title: 'NanoGPT',
+			link: 'https://nano-gpt.com',
+			description: 'API Key for NanoGPT.',
+			models: ['many'],
+			placeholder: '...',
 		},
 		[Provider.HuggingFace]: {
 			title: 'HuggingFace',
@@ -43,7 +43,7 @@
 </script>
 
 <svelte:head>
-	<title>API Keys | thom.chat</title>
+	<title>API Keys | not t3.chat</title>
 </svelte:head>
 
 <div>
@@ -56,8 +56,8 @@
 
 <div class="mt-8 flex flex-col gap-4">
 	{#each allProviders as provider (provider)}
-		<!-- only do OpenRouter for now -->
-		{#if provider === Provider.OpenRouter}
+		<!-- only do NanoGPT for now -->
+		{#if provider === Provider.NanoGPT}
 			{@const meta = providersMeta[provider]}
 			<ProviderCard {provider} {meta} />
 		{/if}

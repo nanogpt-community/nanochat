@@ -1,16 +1,14 @@
-import { api } from '$lib/backend/convex/_generated/api';
-import type { Id } from '$lib/backend/convex/_generated/dataModel';
 import { error, json, type RequestHandler } from '@sveltejs/kit';
-import { ConvexHttpClient } from 'convex/browser';
 import { ResultAsync } from 'neverthrow';
 import { z } from 'zod/v4';
 import { getSessionCookie } from 'better-auth/cookies';
-import { PUBLIC_CONVEX_URL } from '$env/static/public';
+import { db } from '$lib/db';
+import { conversations } from '$lib/db/schema';
+import { eq, and } from 'drizzle-orm';
+import { auth } from '$lib/auth';
 
 // Import the global cache from generate-message
 import { generationAbortControllers } from '../generate-message/cache.js';
-
-const client = new ConvexHttpClient(PUBLIC_CONVEX_URL);
 
 const reqBodySchema = z.object({
 	conversation_id: z.string(),
@@ -44,23 +42,21 @@ export const POST: RequestHandler = async ({ request }) => {
 	}
 	const args = parsed.data;
 
-	const cookie = getSessionCookie(request.headers);
-	const sessionToken = cookie?.split('.')[0] ?? null;
-
-	if (!sessionToken || sessionToken !== args.session_token) {
+	// Get session from auth
+	const session = await auth.api.getSession({ headers: request.headers });
+	if (!session?.user?.id) {
 		return error(401, 'Unauthorized');
 	}
 
 	// Verify the user owns this conversation
-	const conversationResult = await ResultAsync.fromPromise(
-		client.query(api.conversations.getById, {
-			conversation_id: args.conversation_id as Id<'conversations'>,
-			session_token: sessionToken,
-		}),
-		(e) => `Failed to get conversation: ${e}`
-	);
+	const conversation = await db.query.conversations.findFirst({
+		where: and(
+			eq(conversations.id, args.conversation_id),
+			eq(conversations.userId, session.user.id)
+		),
+	});
 
-	if (conversationResult.isErr()) {
+	if (!conversation) {
 		return error(403, 'Conversation not found or unauthorized');
 	}
 
@@ -74,14 +70,9 @@ export const POST: RequestHandler = async ({ request }) => {
 		cancelled = true;
 
 		// Update conversation generating status to false
-		await ResultAsync.fromPromise(
-			client.mutation(api.conversations.updateGenerating, {
-				conversation_id: args.conversation_id as Id<'conversations'>,
-				generating: false,
-				session_token: sessionToken,
-			}),
-			(e) => `Failed to update generating status: ${e}`
-		);
+		await db.update(conversations)
+			.set({ generating: false })
+			.where(eq(conversations.id, args.conversation_id));
 	}
 
 	return response({ ok: true, cancelled });

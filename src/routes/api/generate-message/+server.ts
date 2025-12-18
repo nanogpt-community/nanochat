@@ -1,11 +1,20 @@
-import { PUBLIC_CONVEX_URL } from '$env/static/public';
-import { OPENROUTER_FREE_KEY } from '$env/static/private';
-import { api } from '$lib/backend/convex/_generated/api';
-import type { Doc, Id } from '$lib/backend/convex/_generated/dataModel';
+
+import type { Doc } from '$lib/db/types';
+import { db, generateId } from '$lib/db';
+import {
+	userEnabledModels,
+	userKeys,
+	userRules,
+	userSettings,
+	conversations,
+	messages,
+	storage,
+} from '$lib/db/schema';
+import { readFileSync } from 'fs';
+import { eq, and, asc, sql } from 'drizzle-orm';
+import { auth } from '$lib/auth';
 import { Provider, type Annotation } from '$lib/types';
 import { error, json, type RequestHandler } from '@sveltejs/kit';
-import { getSessionCookie } from 'better-auth/cookies';
-import { ConvexHttpClient } from 'convex/browser';
 import { err, ok, Result, ResultAsync } from 'neverthrow';
 import OpenAI from 'openai';
 import { z } from 'zod/v4';
@@ -13,6 +22,7 @@ import { generationAbortControllers } from './cache.js';
 import { md } from '$lib/utils/markdown-it.js';
 import * as array from '$lib/utils/array';
 import { parseMessageForRules } from '$lib/utils/rules.js';
+import { performNanoGPTWebSearch } from '$lib/backend/web-search';
 
 // Set to true to enable debug logging
 const ENABLE_LOGGING = true;
@@ -64,59 +74,58 @@ function log(message: string, startTime: number): void {
 	console.log(`[GenerateMessage] ${message} (${elapsed}ms)`);
 }
 
-const client = new ConvexHttpClient(PUBLIC_CONVEX_URL);
+// Helper to get user ID from session token
+async function getUserIdFromSession(
+	sessionToken: string
+): Promise<Result<string, string>> {
+	try {
+		// Query the session table to get user ID
+		const session = await db.query.session.findFirst({
+			where: (sessions, { eq }) => eq(sessions.token, sessionToken),
+		});
+		if (!session) {
+			return err('Session not found');
+		}
+		return ok(session.userId);
+	} catch (e) {
+		return err(`Failed to get user from session: ${e}`);
+	}
+}
 
 async function generateConversationTitle({
 	conversationId,
-	sessionToken,
+	userId,
 	startTime,
-	keyResultPromise,
+	apiKey,
 	userMessage,
 }: {
 	conversationId: string;
-	sessionToken: string;
+	userId: string;
 	startTime: number;
-	keyResultPromise: ResultAsync<string | null, string>;
+	apiKey: string;
 	userMessage: string;
 }) {
 	log('Starting conversation title generation', startTime);
 
-	const keyResult = await keyResultPromise;
-
-	if (keyResult.isErr()) {
-		log(`Title generation: API key error: ${keyResult.error}`, startTime);
-		return;
-	}
-
-	const userKey = keyResult.value;
-	const actualKey = userKey || OPENROUTER_FREE_KEY;
-
-	log(`Title generation: Using ${userKey ? 'user' : 'free tier'} API key`, startTime);
-
 	// Only generate title if conversation currently has default title
-	const conversationResult = await ResultAsync.fromPromise(
-		client.query(api.conversations.get, {
-			session_token: sessionToken,
-		}),
-		(e) => `Failed to get conversations: ${e}`
-	);
-
-	if (conversationResult.isErr()) {
-		log(`Title generation: Failed to get conversation: ${conversationResult.error}`, startTime);
-		return;
-	}
-
-	const conversations = conversationResult.value;
-	const conversation = conversations.find((c) => c._id === conversationId);
+	const conversation = await db.query.conversations.findFirst({
+		where: and(eq(conversations.id, conversationId), eq(conversations.userId, userId)),
+	});
 
 	if (!conversation) {
-		log('Title generation: Conversation not found or already has custom title', startTime);
+		log('Title generation: Conversation not found', startTime);
+		return;
+	}
+
+	// If title is already customized (not "New Chat"), skip
+	if (conversation.title !== 'New Chat') {
+		log('Title generation: Conversation already has custom title', startTime);
 		return;
 	}
 
 	const openai = new OpenAI({
-		baseURL: 'https://openrouter.ai/api/v1',
-		apiKey: actualKey,
+		baseURL: 'https://nano-gpt.com/api/v1',
+		apiKey,
 	});
 
 	// Create a prompt for title generation using only the first user message
@@ -133,7 +142,7 @@ If its a simple hi, just name it "Greeting" or something like that.
 
 	const titleResult = await ResultAsync.fromPromise(
 		openai.chat.completions.create({
-			model: 'mistralai/ministral-8b',
+			model: 'zai-org/GLM-4.5-Air',
 			messages: [{ role: 'user', content: titlePrompt }],
 			max_tokens: 20,
 			temperature: 0.5,
@@ -158,41 +167,32 @@ If its a simple hi, just name it "Greeting" or something like that.
 	const generatedTitle = rawTitle.replace(/^["']|["']$/g, '');
 
 	// Update the conversation title
-	const updateResult = await ResultAsync.fromPromise(
-		client.mutation(api.conversations.updateTitle, {
-			conversation_id: conversationId as Id<'conversations'>,
-			title: generatedTitle,
-			session_token: sessionToken,
-		}),
-		(e) => `Failed to update conversation title: ${e}`
-	);
-
-	if (updateResult.isErr()) {
-		log(`Title generation: Failed to update title: ${updateResult.error}`, startTime);
-		return;
-	}
+	await db
+		.update(conversations)
+		.set({ title: generatedTitle, updatedAt: new Date() })
+		.where(eq(conversations.id, conversationId));
 
 	log(`Title generation: Successfully updated title to "${generatedTitle}"`, startTime);
 }
 
 async function generateAIResponse({
 	conversationId,
-	sessionToken,
+	userId,
 	startTime,
-	modelResultPromise,
-	keyResultPromise,
-	rulesResultPromise,
-	userSettingsPromise,
+	model,
+	apiKey,
+	rules,
+	userSettingsData,
 	abortSignal,
 	reasoningEffort,
 }: {
 	conversationId: string;
-	sessionToken: string;
+	userId: string;
 	startTime: number;
-	keyResultPromise: ResultAsync<string | null, string>;
-	modelResultPromise: ResultAsync<Doc<'user_enabled_models'> | null, string>;
-	rulesResultPromise: ResultAsync<Doc<'user_rules'>[], string>;
-	userSettingsPromise: ResultAsync<Doc<'user_settings'> | null, string>;
+	apiKey: string;
+	model: Doc<'user_enabled_models'>;
+	rules: Doc<'user_rules'>[];
+	userSettingsData: Doc<'user_settings'> | null;
 	abortSignal?: AbortSignal;
 	reasoningEffort?: 'low' | 'medium' | 'high';
 }) {
@@ -203,202 +203,67 @@ async function generateAIResponse({
 		return;
 	}
 
-	const [modelResult, keyResult, messagesQueryResult, rulesResult, userSettingsResult] =
-		await Promise.all([
-			modelResultPromise,
-			keyResultPromise,
-			ResultAsync.fromPromise(
-				client.query(api.messages.getAllFromConversation, {
-					conversation_id: conversationId as Id<'conversations'>,
-					session_token: sessionToken,
-				}),
-				(e) => `Failed to get messages: ${e}`
-			),
-			rulesResultPromise,
-			userSettingsPromise,
-		]);
+	// Get all messages for this conversation
+	const conversationMessages = await db.query.messages.findMany({
+		where: eq(messages.conversationId, conversationId),
+		orderBy: [asc(messages.createdAt)],
+	});
 
-	if (modelResult.isErr()) {
-		handleGenerationError({
-			error: modelResult.error,
-			conversationId,
-			messageId: undefined,
-			sessionToken,
-			startTime,
-		});
-		return;
-	}
-
-	const model = modelResult.value;
-	if (!model) {
-		handleGenerationError({
-			error: 'Model not found or not enabled',
-			conversationId,
-			messageId: undefined,
-			sessionToken,
-			startTime,
-		});
-		return;
-	}
-
-	log('Background: Model found and enabled', startTime);
-
-	if (messagesQueryResult.isErr()) {
-		handleGenerationError({
-			error: `messages query failed: ${messagesQueryResult.error}`,
-			conversationId,
-			messageId: undefined,
-			sessionToken,
-			startTime,
-		});
-		return;
-	}
-
-	const messages = messagesQueryResult.value;
-	log(`Background: Retrieved ${messages.length} messages from conversation`, startTime);
+	log(`Background: Retrieved ${conversationMessages.length} messages from conversation`, startTime);
 
 	// Check if web search is enabled for the last user message
-	const lastUserMessage = messages.filter((m) => m.role === 'user').pop();
-	const webSearchEnabled = lastUserMessage?.web_search_enabled ?? false;
+	const lastUserMessage = conversationMessages.filter((m) => m.role === 'user').pop();
+	const webSearchEnabled = lastUserMessage?.webSearchEnabled ?? false;
 
-	const modelId = webSearchEnabled ? `${model.model_id}:online` : model.model_id;
+	const modelId = model.modelId;
+
+	// Perform web search if enabled
+	let searchContext: string | null = null;
+	if (webSearchEnabled && lastUserMessage) {
+		log('Background: Performing web search', startTime);
+		try {
+			searchContext = await performNanoGPTWebSearch(lastUserMessage.content, apiKey);
+			log('Background: Web search completed', startTime);
+		} catch (e) {
+			log(`Background: Web search failed: ${e}`, startTime);
+		}
+	}
 
 	// Create assistant message
-	const messageCreationResult = await ResultAsync.fromPromise(
-		client.mutation(api.messages.create, {
-			conversation_id: conversationId,
-			model_id: model.model_id,
-			provider: Provider.OpenRouter,
-			content: '',
-			role: 'assistant',
-			session_token: sessionToken,
-			web_search_enabled: webSearchEnabled,
-		}),
-		(e) => `Failed to create assistant message: ${e}`
-	);
+	const assistantMessageId = generateId();
+	const now = new Date();
 
-	if (messageCreationResult.isErr()) {
-		handleGenerationError({
-			error: `assistant message creation failed: ${messageCreationResult.error}`,
-			conversationId,
-			messageId: undefined,
-			sessionToken,
-			startTime,
-		});
-		return;
-	}
+	await db.insert(messages).values({
+		id: assistantMessageId,
+		conversationId,
+		modelId: model.modelId,
+		provider: Provider.NanoGPT,
+		content: '',
+		role: 'assistant',
+		webSearchEnabled,
+		createdAt: now,
+	});
 
-	const mid = messageCreationResult.value;
 	log('Background: Assistant message created', startTime);
 
-	if (keyResult.isErr()) {
-		handleGenerationError({
-			error: `API key query failed: ${keyResult.error}`,
-			conversationId,
-			messageId: mid,
-			sessionToken,
-			startTime,
-		});
-		return;
-	}
-
-	if (userSettingsResult.isErr()) {
-		handleGenerationError({
-			error: `User settings query failed: ${userSettingsResult.error}`,
-			conversationId,
-			messageId: mid,
-			sessionToken,
-			startTime,
-		});
-		return;
-	}
-
-	const userKey = keyResult.value;
-	const userSettings = userSettingsResult.value;
-	let actualKey: string;
-
-	if (userKey) {
-		// User has their own API key
-		actualKey = userKey;
-		log('Background: Using user API key', startTime);
-	} else {
-		// User doesn't have API key, check if using a free model
-		const isFreeModel = model.model_id.endsWith(':free');
-
-		if (!isFreeModel) {
-			// For non-free models, check the 10 message limit
-			const freeMessagesUsed = userSettings?.free_messages_used || 0;
-
-			if (freeMessagesUsed >= 10) {
-				handleGenerationError({
-					error:
-						'Free message limit reached (10/10). Please add your own OpenRouter API key to continue chatting, or use a free model ending in ":free".',
-					conversationId,
-					messageId: mid,
-					sessionToken,
-					startTime,
-				});
-				return;
-			}
-
-			// Increment free message count before generating (only for non-free models)
-			const incrementResult = await ResultAsync.fromPromise(
-				client.mutation(api.user_settings.incrementFreeMessageCount, {
-					session_token: sessionToken,
-				}),
-				(e) => `Failed to increment free message count: ${e}`
-			);
-
-			if (incrementResult.isErr()) {
-				handleGenerationError({
-					error: `Failed to track free message usage: ${incrementResult.error}`,
-					conversationId,
-					messageId: mid,
-					sessionToken,
-					startTime,
-				});
-				return;
-			}
-
-			log(`Background: Using free tier (${freeMessagesUsed + 1}/10 messages)`, startTime);
-		} else {
-			log(`Background: Using free model (${model.model_id}) - no message count`, startTime);
-		}
-
-		// Use environment OpenRouter key
-		actualKey = OPENROUTER_FREE_KEY;
-	}
-
-	if (rulesResult.isErr()) {
-		handleGenerationError({
-			error: `rules query failed: ${rulesResult.error}`,
-			conversationId,
-			messageId: mid,
-			sessionToken,
-			startTime,
-		});
-		return;
-	}
-
-	const userMessage = messages[messages.length - 1];
+	const userMessage = conversationMessages[conversationMessages.length - 1];
 
 	if (!userMessage) {
-		handleGenerationError({
+		await handleGenerationError({
 			error: 'No user message found',
 			conversationId,
-			messageId: mid,
-			sessionToken,
+			messageId: assistantMessageId,
 			startTime,
 		});
 		return;
 	}
 
-	let attachedRules = rulesResult.value.filter((r) => r.attach === 'always');
+	let attachedRules = rules.filter((r) => r.attach === 'always');
 
-	for (const message of messages) {
+	for (const message of conversationMessages) {
 		const parsedRules = parseMessageForRules(
 			message.content,
-			rulesResult.value.filter((r) => r.attach === 'manual')
+			rules.filter((r) => r.attach === 'manual')
 		);
 
 		attachedRules.push(...parsedRules);
@@ -406,56 +271,109 @@ async function generateAIResponse({
 
 	// remove duplicates
 	attachedRules = array.fromMap(
-		array.toMap(attachedRules, (r) => [r._id, r]),
+		array.toMap(attachedRules, (r) => [r.id, r]),
 		(_k, v) => v
 	);
 
 	log(`Background: ${attachedRules.length} rules attached`, startTime);
 
 	const openai = new OpenAI({
-		baseURL: 'https://openrouter.ai/api/v1',
-		apiKey: actualKey,
+		baseURL: 'https://nano-gpt.com/api/v1',
+		apiKey,
 	});
 
-	const formattedMessages = messages.map((m) => {
-		if (m.images && m.images.length > 0 && m.role === 'user') {
+	const formattedMessages = await Promise.all(
+		conversationMessages.map(async (m) => {
+			const messageImages = m.images as Array<{
+				url: string;
+				storage_id: string;
+				fileName?: string;
+			}> | null;
+			if (messageImages && messageImages.length > 0 && m.role === 'user') {
+				const processedImages = await Promise.all(
+					messageImages.map(async (img) => {
+						// If it's already a data URL or http url, return as is (though http might fail if localhost)
+						if (img.url.startsWith('data:') || img.url.startsWith('http')) {
+							return {
+								type: 'image_url' as const,
+								image_url: { url: img.url },
+							};
+						}
+
+						// Look up storage record
+						const storageRecord = await db.query.storage.findFirst({
+							where: eq(storage.id, img.storage_id),
+						});
+
+						if (!storageRecord) {
+							console.warn(`Storage record not found for id: ${img.storage_id}`);
+							return {
+								type: 'image_url' as const,
+								image_url: { url: img.url }, // Fallback to original URL
+							};
+						}
+
+						try {
+							const fileBuffer = readFileSync(storageRecord.path);
+							const base64 = fileBuffer.toString('base64');
+							const dataUrl = `data:${storageRecord.mimeType};base64,${base64}`;
+
+							return {
+								type: 'image_url' as const,
+								image_url: { url: dataUrl },
+							};
+						} catch (e) {
+							console.error(`Failed to read file for image ${img.storage_id}:`, e);
+							return {
+								type: 'image_url' as const,
+								image_url: { url: img.url }, // Fallback
+							};
+						}
+					})
+				);
+
+				return {
+					role: 'user' as const,
+					content: [{ type: 'text' as const, text: m.content }, ...processedImages],
+				};
+			}
 			return {
-				role: 'user' as const,
-				content: [
-					{ type: 'text' as const, text: m.content },
-					...m.images.map((img) => ({
-						type: 'image_url' as const,
-						image_url: { url: img.url },
-					})),
-				],
+				role: m.role as 'user' | 'assistant' | 'system',
+				content: m.content,
 			};
-		}
-		return {
-			role: m.role as 'user' | 'assistant' | 'system',
-			content: m.content,
-		};
-	});
+		})
+	);
 
-	// Only include system message if there are rules to follow
-	const messagesToSend =
-		attachedRules.length > 0
-			? [
-					...formattedMessages,
-					{
-						role: 'system' as const,
-						content: `The user has mentioned one or more rules to follow with the @<rule_name> syntax. Please follow these rules as they apply.
+	// Construct system message content
+	let systemContent = '';
+
+	if (searchContext) {
+		systemContent += `${searchContext}\n\nInstructions: Use the above search results to answer the user's query. Cite your sources where possible. If the results are not relevant, you can ignore them.\n\n`;
+	}
+
+	if (attachedRules.length > 0) {
+		systemContent += `The user has mentioned one or more rules to follow with the @<rule_name> syntax. Please follow these rules as they apply.
 Rules to follow:
-${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`,
-					},
-				]
+${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
+	}
+
+	// Only include system message if there is content
+	const messagesToSend =
+		systemContent.length > 0
+			? [
+				...formattedMessages,
+				{
+					role: 'system' as const,
+					content: systemContent,
+				},
+			]
 			: formattedMessages;
 
 	if (abortSignal?.aborted) {
-		handleGenerationError({
+		await handleGenerationError({
 			error: 'Cancelled by user',
 			conversationId,
-			messageId: mid,
-			sessionToken,
+			messageId: assistantMessageId,
 			startTime,
 		});
 		return;
@@ -478,11 +396,10 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`,
 	);
 
 	if (streamResult.isErr()) {
-		handleGenerationError({
+		await handleGenerationError({
 			error: `Failed to create stream: ${streamResult.error}`,
 			conversationId,
-			messageId: mid,
-			sessionToken,
+			messageId: assistantMessageId,
 			startTime,
 		});
 		return;
@@ -516,25 +433,17 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`,
 
 			generationId = chunk.id;
 
-			const updateResult = await ResultAsync.fromPromise(
-				client.mutation(api.messages.updateContent, {
-					message_id: mid,
+			// Update message content in database
+			await db
+				.update(messages)
+				.set({
 					content,
-					reasoning: reasoning.length > 0 ? reasoning : undefined,
-					session_token: sessionToken,
-					generation_id: generationId,
-					annotations,
-					reasoning_effort: reasoningEffort,
-				}),
-				(e) => `Failed to update message content: ${e}`
-			);
-
-			if (updateResult.isErr()) {
-				log(
-					`Background message update failed on chunk ${chunkCount}: ${updateResult.error}`,
-					startTime
-				);
-			}
+					reasoning: reasoning.length > 0 ? reasoning : null,
+					generationId,
+					annotations: annotations.length > 0 ? annotations : null,
+					reasoningEffort,
+				})
+				.where(eq(messages.id, assistantMessageId));
 		}
 
 		log(
@@ -553,7 +462,7 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`,
 		);
 
 		const generationStatsResult = await retryResult(
-			() => getGenerationStats(generationId!, actualKey),
+			() => getGenerationStats(generationId!, apiKey),
 			{
 				delay: 500,
 				retries: 2,
@@ -580,62 +489,33 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`,
 			log(`Background: Failed to render HTML: ${contentHtmlResult.error}`, startTime);
 		}
 
-		const [updateMessageResult, updateGeneratingResult, updateCostUsdResult] = await Promise.all([
-			ResultAsync.fromPromise(
-				client.mutation(api.messages.updateMessage, {
-					message_id: mid,
-					token_count: generationStats.tokens_completion,
-					cost_usd: generationStats.total_cost,
-					generation_id: generationId,
-					session_token: sessionToken,
-					content_html: contentHtmlResult.unwrapOr(undefined),
-				}),
-				(e) => `Failed to update message: ${e}`
-			),
-			ResultAsync.fromPromise(
-				client.mutation(api.conversations.updateGenerating, {
-					conversation_id: conversationId as Id<'conversations'>,
-					generating: false,
-					session_token: sessionToken,
-				}),
-				(e) => `Failed to update generating status: ${e}`
-			),
-			ResultAsync.fromPromise(
-				client.mutation(api.conversations.updateCostUsd, {
-					conversation_id: conversationId as Id<'conversations'>,
-					cost_usd: generationStats.total_cost ?? 0,
-					session_token: sessionToken,
-				}),
-				(e) => `Failed to update cost usd: ${e}`
-			),
-		]);
+		// Update message with final data
+		await db
+			.update(messages)
+			.set({
+				tokenCount: generationStats.tokens_completion,
+				costUsd: generationStats.total_cost,
+				generationId,
+				contentHtml: contentHtmlResult.unwrapOr(null),
+			})
+			.where(eq(messages.id, assistantMessageId));
 
-		if (updateGeneratingResult.isErr()) {
-			log(`Background generating status update failed: ${updateGeneratingResult.error}`, startTime);
-			return;
-		}
+		// Update conversation generating status and cost
+		await db
+			.update(conversations)
+			.set({
+				generating: false,
+				updatedAt: new Date(),
+				costUsd: sql`${conversations.costUsd} + ${generationStats.total_cost ?? 0}`,
+			})
+			.where(eq(conversations.id, conversationId));
 
-		log('Background: Generating status updated to false', startTime);
-
-		if (updateMessageResult.isErr()) {
-			log(`Background message update failed: ${updateMessageResult.error}`, startTime);
-			return;
-		}
-
-		log('Background: Message updated', startTime);
-
-		if (updateCostUsdResult.isErr()) {
-			log(`Background cost usd update failed: ${updateCostUsdResult.error}`, startTime);
-			return;
-		}
-
-		log('Background: Cost usd updated', startTime);
+		log('Background: Message and conversation updated', startTime);
 	} catch (error) {
-		handleGenerationError({
+		await handleGenerationError({
 			error: `Stream processing error: ${error}`,
 			conversationId,
-			messageId: mid,
-			sessionToken,
+			messageId: assistantMessageId,
 			startTime,
 		});
 	} finally {
@@ -670,47 +550,57 @@ export const POST: RequestHandler = async ({ request }) => {
 
 	log('Schema validation passed', startTime);
 
-	const cookie = getSessionCookie(request.headers);
-
-	const sessionToken = cookie?.split('.')[0] ?? null;
-
-	if (!sessionToken) {
-		log(`No session token found`, startTime);
+	// Get user from session
+	const session = await auth.api.getSession({ headers: request.headers });
+	if (!session?.user?.id) {
+		log('No session found', startTime);
 		return error(401, 'Unauthorized');
 	}
 
-	const modelResultPromise = ResultAsync.fromPromise(
-		client.query(api.user_enabled_models.get, {
-			provider: Provider.OpenRouter,
-			model_id: args.model_id,
-			session_token: sessionToken,
-		}),
-		(e) => `Failed to get model: ${e}`
-	);
-
-	const keyResultPromise = ResultAsync.fromPromise(
-		client.query(api.user_keys.get, {
-			provider: Provider.OpenRouter,
-			session_token: sessionToken,
-		}),
-		(e) => `Failed to get API key: ${e}`
-	);
-
-	const userSettingsPromise = ResultAsync.fromPromise(
-		client.query(api.user_settings.get, {
-			session_token: sessionToken,
-		}),
-		(e) => `Failed to get user settings: ${e}`
-	);
-
-	const rulesResultPromise = ResultAsync.fromPromise(
-		client.query(api.user_rules.all, {
-			session_token: sessionToken,
-		}),
-		(e) => `Failed to get rules: ${e}`
-	);
-
+	const userId = session.user.id;
 	log('Session authenticated successfully', startTime);
+
+	// Fetch model, API key, rules, and user settings in parallel
+	const [modelRecord, keyRecord, rulesRecords, userSettingsRecord] = await Promise.all([
+		db.query.userEnabledModels.findFirst({
+			where: and(
+				eq(userEnabledModels.userId, userId),
+				eq(userEnabledModels.provider, Provider.NanoGPT),
+				eq(userEnabledModels.modelId, args.model_id)
+			),
+		}),
+		db.query.userKeys.findFirst({
+			where: and(eq(userKeys.userId, userId), eq(userKeys.provider, Provider.NanoGPT)),
+		}),
+		db.query.userRules.findMany({
+			where: eq(userRules.userId, userId),
+		}),
+		db.query.userSettings.findFirst({
+			where: eq(userSettings.userId, userId),
+		}),
+	]);
+
+	if (!modelRecord) {
+		log('Model not found or not enabled', startTime);
+		return error(400, 'Model not found or not enabled');
+	}
+
+	// Determine API key
+	let actualKey: string;
+	if (keyRecord?.key) {
+		actualKey = keyRecord.key;
+		log('Using user API key', startTime);
+	} else if (process.env.NANOGPT_API_KEY) {
+		actualKey = process.env.NANOGPT_API_KEY;
+		log('Using global API key', startTime);
+	} else {
+		// NanoGPT requires an API key
+		log('No NanoGPT API key found', startTime);
+		return error(
+			403,
+			'No API key found. Please add your NanoGPT API key in Settings > Models to continue chatting.'
+		);
+	}
 
 	let conversationId = args.conversation_id;
 	if (!conversationId) {
@@ -719,32 +609,42 @@ export const POST: RequestHandler = async ({ request }) => {
 			return error(400, 'You must provide a message when creating a new conversation');
 		}
 
-		const convMessageResult = await ResultAsync.fromPromise(
-			client.mutation(api.conversations.createAndAddMessage, {
-				content: args.message,
-				content_html: '',
-				role: 'user',
-				images: args.images,
-				web_search_enabled: args.web_search_enabled,
-				session_token: sessionToken,
-			}),
-			(e) => `Failed to create conversation: ${e}`
-		);
+		// Create new conversation
+		conversationId = generateId();
+		const now = new Date();
 
-		if (convMessageResult.isErr()) {
-			log(`Conversation creation failed: ${convMessageResult.error}`, startTime);
-			return error(500, 'Failed to create conversation');
-		}
+		await db.insert(conversations).values({
+			id: conversationId,
+			userId,
+			title: 'New Chat',
+			generating: true,
+			public: false,
+			pinned: false,
+			costUsd: 0,
+			createdAt: now,
+			updatedAt: now,
+		});
 
-		conversationId = convMessageResult.value.conversationId;
+		// Create user message
+		const userMessageId = generateId();
+		await db.insert(messages).values({
+			id: userMessageId,
+			conversationId,
+			content: args.message,
+			role: 'user',
+			images: args.images ?? null,
+			webSearchEnabled: args.web_search_enabled ?? false,
+			createdAt: now,
+		});
+
 		log('New conversation and message created', startTime);
 
 		// Generate title for new conversation in background
 		generateConversationTitle({
 			conversationId,
-			sessionToken,
+			userId,
 			startTime,
-			keyResultPromise,
+			apiKey: actualKey,
 			userMessage: args.message,
 		}).catch((error) => {
 			log(`Background title generation error: ${error}`, startTime);
@@ -752,43 +652,34 @@ export const POST: RequestHandler = async ({ request }) => {
 	} else {
 		log('Using existing conversation', startTime);
 
-		if (args.message) {
-			const userMessageResult = await ResultAsync.fromPromise(
-				client.mutation(api.messages.create, {
-					conversation_id: conversationId as Id<'conversations'>,
-					content: args.message,
-					session_token: args.session_token,
-					model_id: args.model_id,
-					reasoning_effort: args.reasoning_effort,
-					role: 'user',
-					images: args.images,
-					web_search_enabled: args.web_search_enabled,
-				}),
-				(e) => `Failed to create user message: ${e}`
-			);
+		// Verify user owns conversation
+		const existingConversation = await db.query.conversations.findFirst({
+			where: and(eq(conversations.id, conversationId), eq(conversations.userId, userId)),
+		});
 
-			if (userMessageResult.isErr()) {
-				log(`User message creation failed: ${userMessageResult.error}`, startTime);
-				return error(500, 'Failed to create user message');
-			}
+		if (!existingConversation) {
+			return error(403, 'Conversation not found or unauthorized');
+		}
+
+		if (args.message) {
+			const userMessageId = generateId();
+			await db.insert(messages).values({
+				id: userMessageId,
+				conversationId,
+				content: args.message,
+				role: 'user',
+				modelId: args.model_id,
+				reasoningEffort: args.reasoning_effort,
+				images: args.images ?? null,
+				webSearchEnabled: args.web_search_enabled ?? false,
+				createdAt: new Date(),
+			});
 
 			log('User message created', startTime);
 		}
-	}
 
-	// Set generating status to true before starting background generation
-	const setGeneratingResult = await ResultAsync.fromPromise(
-		client.mutation(api.conversations.updateGenerating, {
-			conversation_id: conversationId as Id<'conversations'>,
-			generating: true,
-			session_token: sessionToken,
-		}),
-		(e) => `Failed to set generating status: ${e}`
-	);
-
-	if (setGeneratingResult.isErr()) {
-		log(`Failed to set generating status: ${setGeneratingResult.error}`, startTime);
-		return error(500, 'Failed to set generating status');
+		// Set generating status to true
+		await db.update(conversations).set({ generating: true }).where(eq(conversations.id, conversationId));
 	}
 
 	// Create and cache AbortController for this generation
@@ -798,12 +689,12 @@ export const POST: RequestHandler = async ({ request }) => {
 	// Start AI response generation in background - don't await
 	generateAIResponse({
 		conversationId,
-		sessionToken,
+		userId,
 		startTime,
-		modelResultPromise,
-		keyResultPromise,
-		rulesResultPromise,
-		userSettingsPromise,
+		model: modelRecord,
+		apiKey: actualKey,
+		rules: rulesRecords,
+		userSettingsData: userSettingsRecord ?? null,
 		abortSignal: abortController.signal,
 		reasoningEffort: args.reasoning_effort,
 	})
@@ -811,11 +702,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			log(`Background AI response generation error: ${error}`, startTime);
 			// Reset generating status on error
 			try {
-				await client.mutation(api.conversations.updateGenerating, {
-					conversation_id: conversationId as Id<'conversations'>,
-					generating: false,
-					session_token: sessionToken,
-				});
+				await db.update(conversations).set({ generating: false }).where(eq(conversations.id, conversationId));
 			} catch (e) {
 				log(`Failed to reset generating status after error: ${e}`, startTime);
 			}
@@ -834,7 +721,7 @@ async function getGenerationStats(
 	token: string
 ): Promise<Result<Data, string>> {
 	try {
-		const generation = await fetch(`https://openrouter.ai/api/v1/generation?id=${generationId}`, {
+		const generation = await fetch(`https://nano-gpt.com/api/v1/generation?id=${generationId}`, {
 			headers: {
 				Authorization: `Bearer ${token}`,
 			},
@@ -843,7 +730,7 @@ async function getGenerationStats(
 		const { data } = await generation.json();
 
 		if (!data) {
-			return err('No data returned from OpenRouter');
+			return err('No data returned from NanoGPT');
 		}
 
 		return ok(data);
@@ -884,31 +771,25 @@ async function handleGenerationError({
 	error,
 	conversationId,
 	messageId,
-	sessionToken,
 	startTime,
 }: {
 	error: string;
 	conversationId: string;
 	messageId: string | undefined;
-	sessionToken: string;
 	startTime: number;
 }) {
 	log(`Background: ${error}`, startTime);
 
-	const updateErrorResult = await ResultAsync.fromPromise(
-		client.mutation(api.messages.updateError, {
-			conversation_id: conversationId as Id<'conversations'>,
-			message_id: messageId,
-			error,
-			session_token: sessionToken,
-		}),
-		(e) => `Error updating error: ${e}`
-	);
-
-	if (updateErrorResult.isErr()) {
-		log(`Error updating error: ${updateErrorResult.error}`, startTime);
-		return;
+	// Update message with error if we have a message ID
+	if (messageId) {
+		await db
+			.update(messages)
+			.set({ error })
+			.where(eq(messages.id, messageId));
 	}
+
+	// Update conversation generating status
+	await db.update(conversations).set({ generating: false }).where(eq(conversations.id, conversationId));
 
 	log('Error updated', startTime);
 }

@@ -6,15 +6,12 @@
 	import { Textarea } from '$lib/components/ui/textarea';
 	import { Label } from '$lib/components/ui/label';
 	import XIcon from '~icons/lucide/x';
-	import { useConvexClient } from 'convex-svelte';
+	import { mutate } from '$lib/client/mutation.svelte';
 	import { session } from '$lib/state/session.svelte';
-	import { useCachedQuery, type QueryResult } from '$lib/cache/cached-query.svelte';
-	import type { Doc } from '$lib/backend/convex/_generated/dataModel';
+	import { useCachedQuery, api, type QueryResult } from '$lib/cache/cached-query.svelte';
+	import type { Doc } from '$lib/db/types';
 	import { Input } from '$lib/components/ui/input';
-	import { api } from '$lib/backend/convex/_generated/api';
 	import Rule from './rule.svelte';
-
-	const client = useConvexClient();
 
 	const newRuleCollapsible = new Collapsible({
 		open: false,
@@ -22,9 +19,7 @@
 
 	let creatingRule = $state(false);
 
-	const userRulesQuery: QueryResult<Doc<'user_rules'>[]> = useCachedQuery(api.user_rules.all, {
-		session_token: session.current?.session.token ?? '',
-	});
+	const userRulesQuery: QueryResult<Doc<'user_rules'>[]> = useCachedQuery(api.user_rules.all, {});
 
 	async function submitNewRule(e: SubmitEvent) {
 		e.preventDefault();
@@ -36,11 +31,11 @@
 
 		creatingRule = true;
 
-		await client.mutation(api.user_rules.create, {
+		await mutate(api.user_rules.create.url, {
+			action: 'create',
 			name,
 			attach,
 			rule,
-			session_token: session.current?.session.token ?? '',
 		});
 
 		newRuleCollapsible.open = false;
@@ -55,11 +50,11 @@
 </script>
 
 <svelte:head>
-	<title>Customization | thom.chat</title>
+	<title>Customization | not t3.chat</title>
 </svelte:head>
 
 <h1 class="text-2xl font-bold">Customization</h1>
-<h2 class="text-muted-foreground mt-2 text-sm">Customize your experience with thom.chat.</h2>
+<h2 class="text-muted-foreground mt-2 text-sm">Customize your experience with not t3.chat.</h2>
 
 <div class="mt-8 flex flex-col gap-4">
 	<div class="flex place-items-center justify-between">
@@ -123,7 +118,7 @@
 			</form>
 		</div>
 	{/if}
-	{#each userRulesQuery.data ?? [] as rule (rule._id)}
+	{#each userRulesQuery.data ?? [] as rule (rule.id)}
 		<Rule {rule} allRules={userRulesQuery.data ?? []} />
 	{/each}
 </div>

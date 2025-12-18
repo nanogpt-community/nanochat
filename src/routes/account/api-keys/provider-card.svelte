@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { api } from '$lib/backend/convex/_generated/api';
+	import { useCachedQuery, api } from '$lib/cache/cached-query.svelte';
 	import { LocalToasts } from '$lib/builders/local-toasts.svelte';
-	import { useCachedQuery } from '$lib/cache/cached-query.svelte';
+	import { mutate } from '$lib/client/mutation.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import * as Card from '$lib/components/ui/card';
 	import { Input } from '$lib/components/ui/input';
@@ -9,7 +9,6 @@
 	import { session } from '$lib/state/session.svelte.js';
 	import { Provider, type ProviderMeta } from '$lib/types';
 	import KeyIcon from '~icons/lucide/key';
-	import { useConvexClient } from 'convex-svelte';
 	import { ResultAsync } from 'neverthrow';
 	import { resource } from 'runed';
 	import * as providers from '$lib/utils/providers';
@@ -22,12 +21,9 @@
 	let { provider, meta }: Props = $props();
 	const id = $props.id();
 
-	const keyQuery = useCachedQuery(api.user_keys.get, {
+	const keyQuery = useCachedQuery(api.user_keys.get, () => ({
 		provider,
-		session_token: session.current?.session.token ?? '',
-	});
-
-	const client = useConvexClient();
+	}));
 
 	let loading = $state(false);
 	const toasts = new LocalToasts({ id });
@@ -42,10 +38,11 @@
 		if (key === null || !session.current?.user.id) return;
 
 		const res = await ResultAsync.fromPromise(
-			client.mutation(api.user_keys.set, {
+			mutate(api.user_keys.set.url, {
 				provider,
 				key: `${key}`,
-				session_token: session.current?.session.token,
+			}, {
+				invalidatePatterns: [api.user_keys.get.url, api.user_enabled_models.get_enabled.url]
 			}),
 			(e) => e
 		);
@@ -65,8 +62,8 @@
 		async (key) => {
 			if (!key) return null;
 
-			if (provider === Provider.OpenRouter) {
-				return (await providers.OpenRouter.getApiKey(key)).unwrapOr(null);
+			if (provider === Provider.NanoGPT) {
+				return (await providers.NanoGPT.getApiKey(key)).unwrapOr(null);
 			}
 
 			return null;
@@ -100,7 +97,7 @@
 					<div class="bg-input h-6 w-[200px] animate-pulse rounded-md"></div>
 				{:else if apiKeyInfoResource.current}
 					<span class="text-muted-foreground flex h-6 place-items-center text-xs">
-						${apiKeyInfoResource.current?.usage.toFixed(3)} used ・ ${apiKeyInfoResource.current?.limit_remaining.toFixed(
+						${(apiKeyInfoResource.current?.usage ?? 0).toFixed(3)} used ・ ${(apiKeyInfoResource.current?.limit_remaining ?? 0).toFixed(
 							3
 						)} remaining
 					</span>

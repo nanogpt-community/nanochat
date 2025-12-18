@@ -8,9 +8,8 @@
 	import { Avatar } from 'melt/components';
 	import { Kbd } from '$lib/components/ui/kbd/index.js';
 	import { cmdOrCtrl } from '$lib/hooks/is-mac.svelte.js';
-	import { useCachedQuery } from '$lib/cache/cached-query.svelte.js';
+	import { useCachedQuery, api } from '$lib/cache/cached-query.svelte.js';
 	import { session } from '$lib/state/session.svelte.js';
-	import { api } from '$lib/backend/convex/_generated/api.js';
 	import { cn } from '$lib/utils/utils.js';
 	import { useLastChat } from '$lib/state/last-chat.svelte.js';
 

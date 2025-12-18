@@ -1,0 +1,13 @@
+services:
+  app:
+    build: .
+    ports:
+      - "3432:3000"
+    volumes:
+      - ./data:/app/data
+    env_file:
+      - .env
+    environment:
+      - ORIGIN=http://100.125.232.16:3432
+      - BETTER_AUTH_URL=http://100.125.232.16:3432
+    restart: unless-stopped

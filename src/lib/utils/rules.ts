@@ -1,4 +1,4 @@
-import type { Doc } from '$lib/backend/convex/_generated/dataModel';
+import type { Doc } from '$lib/db/types';
 
 export function parseMessageForRules(
 	message: string,

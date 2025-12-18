@@ -1,16 +1,15 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import { api } from '$lib/backend/convex/_generated/api';
-	import type { Doc, Id } from '$lib/backend/convex/_generated/dataModel';
-	import { useCachedQuery } from '$lib/cache/cached-query.svelte';
+	import { useCachedQuery, api, invalidateQueryPattern } from '$lib/cache/cached-query.svelte';
+	import type { Doc, Id } from '$lib/db/types';
 	import * as Sidebar from '$lib/components/ui/sidebar';
 	import { useSidebarControls } from '$lib/components/ui/sidebar';
 	import Tooltip from '$lib/components/ui/tooltip.svelte';
 	import { cmdOrCtrl } from '$lib/hooks/is-mac.svelte';
 	import { session } from '$lib/state/session.svelte';
 	import { cn } from '$lib/utils/utils.js';
-	import { useConvexClient } from 'convex-svelte';
+	import { mutate } from '$lib/client/mutation.svelte';
 	import { Avatar } from 'melt/components';
 	import LoaderCircleIcon from '~icons/lucide/loader-circle';
 	import PanelLeftIcon from '~icons/lucide/panel-left';
@@ -20,19 +19,19 @@
 	import { Button } from './ui/button';
 	import { callModal } from './ui/modal/global-modal.svelte';
 	import SplitIcon from '~icons/lucide/split';
+	import SearchIcon from '~icons/lucide/search';
+	import LogInIcon from '~icons/lucide/log-in';
 
 	let { searchModalOpen = $bindable(false) }: { searchModalOpen: boolean } = $props();
-
-	const client = useConvexClient();
 
 	const controls = useSidebarControls();
 
 	async function togglePin(conversationId: string) {
 		if (!session.current?.session.token) return;
 
-		await client.mutation(api.conversations.togglePin, {
-			conversation_id: conversationId as Id<'conversations'>,
-			session_token: session.current.session.token,
+		await mutate(api.conversations.togglePin.url, {
+			action: 'togglePin',
+			conversationId,
 		});
 	}
 
@@ -47,10 +46,14 @@
 
 		if (!session.current?.session.token) return;
 
-		await client.mutation(api.conversations.remove, {
-			conversation_id: conversationId as Id<'conversations'>,
-			session_token: session.current.session.token,
+		await fetch(`/api/db/conversations?id=${conversationId}`, {
+			method: 'DELETE',
+			credentials: 'include',
 		});
+
+		// Invalidate the conversations cache so the sidebar updates immediately
+		invalidateQueryPattern(api.conversations.get.url);
+
 		await goto(`/chat`);
 	}
 
@@ -78,13 +81,14 @@
 		};
 
 		conversations.forEach((conversation) => {
+			if (!conversation) return;
 			// Pinned conversations go to pinned group regardless of time
 			if (conversation.pinned) {
 				groups.pinned.push(conversation);
 				return;
 			}
 
-			const updatedAt = conversation.updated_at ?? 0;
+			const updatedAt = conversation.updatedAt ? new Date(conversation.updatedAt).getTime() : 0;
 			const timeDiff = now - updatedAt;
 
 			if (timeDiff < oneDay) {
@@ -100,10 +104,10 @@
 			}
 		});
 
-		// Sort pinned conversations by updated_at (most recent first)
+		// Sort pinned conversations by updatedAt (most recent first)
 		groups.pinned.sort((a, b) => {
-			const aTime = a.updated_at ?? 0;
-			const bTime = b.updated_at ?? 0;
+			const aTime = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+			const bTime = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
 			return bTime - aTime;
 		});
 
@@ -134,40 +138,33 @@
 				Toggle Sidebar ({cmdOrCtrl} + B)
 			</Tooltip>
 		</div>
-		<span class="text-center font-serif text-xl font-semibold">thom.chat</span>
+		<span class="text-center font-sans text-xl font-bold tracking-tight">T3.chat</span>
 		<div class="size-9"></div>
 	</div>
-	<div class="mt-1 flex w-full flex-col gap-2 px-2">
+	<div class="mt-2 flex w-full flex-col gap-2 px-2">
 		<Tooltip>
 			{#snippet trigger(tooltip)}
 				<a
 					href="/chat"
-					class="border-reflect button-reflect bg-primary/20 hover:bg-primary/50 font-fake-proxima w-full rounded-lg px-4 py-2 text-center text-sm tracking-[-0.005em] duration-200"
+					class="bg-primary hover:opacity-90 text-primary-foreground font-fake-proxima w-full rounded-lg px-4 py-2 text-center text-sm font-semibold tracking-[-0.01em] transition-all duration-200"
 					{...tooltip.trigger}
 					onclick={controls.closeMobile}
-					style="font-variation-settings: 'wght' 750"
 				>
 					New Chat
 				</a>
 			{/snippet}
 			New Chat ({cmdOrCtrl} + Shift + O)
 		</Tooltip>
-		<!--
-		<Tooltip>
-			{#snippet trigger(tooltip)}
-				<button
-					{...tooltip.trigger}
-					type="button"
-					class="text-muted-foreground font-fake-proxima border-border flex place-items-center gap-2 border-b py-2 md:text-sm"
-					onclick={openSearchModal}
-				>
-					<SearchIcon class="size-4" />
-					<span class="text-muted-foreground/50">Search conversations...</span>
-				</button>
-			{/snippet}
-			Search ({cmdOrCtrl} + K)
-		</Tooltip>
-		-->
+	</div>
+	<div class="mt-2 flex w-full flex-col gap-2 px-2">
+		<button
+			type="button"
+			class="text-muted-foreground/70 hover:text-foreground flex items-center gap-2 px-3 py-2 text-sm transition-all bg-secondary/20 rounded-lg border border-transparent hover:border-border"
+			onclick={() => (searchModalOpen = true)}
+		>
+			<SearchIcon class="size-4" />
+			<span>Search threads...</span>
+		</button>
 	</div>
 	<div class="relative flex min-h-0 flex-1 shrink-0 flex-col overflow-clip">
 		<div
@@ -178,47 +175,47 @@
 				{@const IconComponent = group.icon}
 				{#if group.conversations.length > 0}
 					<div class="px-2 py-1" class:mt-2={index > 0}>
-						<h3 class="text-heading text-xs font-medium">
+						<h3 class="text-muted-foreground text-[11px] font-bold uppercase tracking-wider">
 							{#if IconComponent}
-								<IconComponent class="inline size-3" />
+								<IconComponent class="inline size-3 mr-1" />
 							{/if}
 							{group.label}
 						</h3>
 					</div>
-					{#each group.conversations as conversation (conversation._id)}
-						{@const isActive = page.params.id === conversation._id}
+					{#each group.conversations as conversation (conversation.id)}
+						{@const isActive = page.params.id === conversation.id}
 						<a
-							href={`/chat/${conversation._id}`}
+							href={`/chat/${conversation.id}`}
 							onclick={controls.closeMobile}
 							class="group w-full py-0.5 pr-2.5 text-left text-sm"
 						>
 							<div
 								class={cn(
-									'relative flex w-full items-center justify-between overflow-clip rounded-lg',
-									{ 'bg-sidebar-accent': isActive, 'group-hover:bg-sidebar-accent': !isActive }
+									'relative flex w-full items-center justify-between overflow-clip rounded-lg transition-colors',
+									{ 'bg-sidebar-accent text-sidebar-accent-foreground': isActive, 'hover:bg-sidebar-accent/50': !isActive }
 								)}
 							>
 								<p class="truncate rounded-lg py-2 pr-4 pl-3 whitespace-nowrap">
-									{#if conversation.branched_from}
-										<Tooltip>
-											{#snippet trigger(tooltip)}
-												<button
-													type="button"
-													class="hover:text-foreground text-muted-foreground/50 cursor-pointer transition-all"
-													onclick={(e) => {
-														e.preventDefault();
-														e.stopPropagation();
-														goto(`/chat/${conversation.branched_from}`);
-													}}
-													{...tooltip.trigger}
-												>
-													<SplitIcon class="mr-1 inline size-4" />
-												</button>
-											{/snippet}
-											Go to original conversation
-										</Tooltip>
-									{/if}
-									<span>{conversation.title}</span>
+								{#if conversation.branchedFrom}
+									<Tooltip>
+										{#snippet trigger(tooltip)}
+											<button
+												type="button"
+												class="hover:text-foreground text-muted-foreground/50 cursor-pointer transition-all"
+												onclick={(e) => {
+													e.preventDefault();
+													e.stopPropagation();
+													goto(`/chat/${conversation.branchedFrom}`);
+												}}
+												{...tooltip.trigger}
+											>
+												<SplitIcon class="mr-1 inline size-4" />
+											</button>
+										{/snippet}
+										Go to original conversation
+									</Tooltip>
+								{/if}
+									<span class="font-medium">{conversation?.title ?? 'Untitled'}</span>
 								</p>
 								<div class="pr-2">
 									{#if conversation.generating}
@@ -243,7 +240,7 @@
 												onclick={(e) => {
 													e.preventDefault();
 													e.stopPropagation();
-													togglePin(conversation._id);
+													togglePin(conversation.id);
 												}}
 											>
 												{#if conversation.pinned}
@@ -263,7 +260,7 @@
 												onclick={(e) => {
 													e.preventDefault();
 													e.stopPropagation();
-													deleteConversation(conversation._id);
+													deleteConversation(conversation.id);
 												}}
 											>
 												<XIcon class="size-4" />
@@ -282,19 +279,19 @@
 			class="from-sidebar pointer-events-none absolute right-0 bottom-0 left-0 z-10 h-4 bg-gradient-to-t to-transparent"
 		></div>
 	</div>
-	<div class="py-2">
+	<div class="py-2 px-2">
 		{#if page.data.session !== null}
-			<Button href="/account" variant="ghost" class="h-auto w-full justify-start">
+			<Button href="/account" variant="ghost" class="h-auto w-full justify-start gap-3 px-3 py-2">
 				<Avatar src={page.data.session?.user.image ?? undefined}>
 					{#snippet children(avatar)}
 						<img
 							{...avatar.image}
 							alt="Your avatar"
-							class={cn('size-10 rounded-full', {
-								'blur-[6px]': settings.data?.privacy_mode,
+							class={cn('size-8 rounded-full', {
+								'blur-[6px]': settings.data?.privacyMode,
 							})}
 						/>
-						<span {...avatar.fallback} class="size-10 rounded-full">
+						<span {...avatar.fallback} class="size-8 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold">
 							{page.data.session?.user.name
 								.split(' ')
 								.map((name: string) => name[0]?.toUpperCase())
@@ -302,21 +299,17 @@
 						</span>
 					{/snippet}
 				</Avatar>
-				<div class="flex flex-col">
-					<span class={cn('text-sm', { 'blur-[6px]': settings.data?.privacy_mode })}>
+				<div class="flex flex-col min-w-0">
+					<span class={cn('text-sm font-medium truncate', { 'blur-[6px]': settings.data?.privacyMode })}>
 						{page.data.session?.user.name}
-					</span>
-					<span
-						class={cn('text-muted-foreground text-xs', {
-							'blur-[6px]': settings.data?.privacy_mode,
-						})}
-					>
-						{page.data.session?.user.email}
 					</span>
 				</div>
 			</Button>
 		{:else}
-			<Button href="/login" class="w-full">Login</Button>
+			<Button href="/login" variant="ghost" class="w-full justify-start gap-2 px-3">
+				<LogInIcon class="size-4" />
+				Login
+			</Button>
 		{/if}
 	</div>
 </Sidebar.Sidebar>

@@ -133,4 +133,8 @@ export class LRUCache<K = string, V = unknown> {
 	has(key: K): boolean {
 		return this.cache.has(key);
 	}
+
+	keys(): IterableIterator<K> {
+		return this.cache.keys();
+	}
 }

@@ -1,27 +1,28 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { api } from '$lib/backend/convex/_generated/api.js';
-	import { type Id } from '$lib/backend/convex/_generated/dataModel.js';
-	import { useCachedQuery } from '$lib/cache/cached-query.svelte.js';
-	import * as Icons from '$lib/components/icons';
+	import { useCachedQuery, api } from '$lib/cache/cached-query.svelte.js';
+	import type { Id } from '$lib/db/types';
+	import { GitHub, Svelte } from '$lib/components/icons';
 	import { Button } from '$lib/components/ui/button';
 	import { LightSwitch } from '$lib/components/ui/light-switch/index.js';
 	import Tooltip from '$lib/components/ui/tooltip.svelte';
 	import Message from '../../chat/[id]/message.svelte';
 
-	const conversationId = page.params.id as Id<'conversations'>;
+	const conversationId = page.params.id;
 
 	const conversationQuery = useCachedQuery(api.conversations.getPublicById, {
-		conversation_id: conversationId,
+		id: conversationId,
 	});
 
 	const messagesQuery = useCachedQuery(api.messages.getByConversationPublic, {
-		conversation_id: conversationId,
+		conversationId: conversationId,
+		public: 'true',
 	});
 
-	const formatDate = (timestamp: number | undefined) => {
+	const formatDate = (timestamp: number | Date | undefined) => {
 		if (!timestamp) return '';
-		return new Date(timestamp).toLocaleDateString('en-US', {
+		const date = timestamp instanceof Date ? timestamp : new Date(timestamp);
+		return date.toLocaleDateString('en-US', {
 			year: 'numeric',
 			month: 'long',
 			day: 'numeric',
@@ -31,7 +32,7 @@
 
 <svelte:head>
 	<title>{conversationQuery.data?.title || 'Shared Chat'} | Shared Chat</title>
-	<meta name="description" content="A shared conversation from thom.chat" />
+	<meta name="description" content="A shared conversation from not t3.chat" />
 </svelte:head>
 
 <div class="fill-device-height">
@@ -45,7 +46,7 @@
 					href="/"
 					class="text-foreground hover:text-foreground/80 flex items-center gap-2 transition-colors"
 				>
-					<span class="font-serif font-semibold">thom.chat</span>
+					<span class="font-serif font-semibold">not t3.chat</span>
 				</a>
 				<div class="text-muted-foreground text-sm">Shared conversation</div>
 			</div>
@@ -82,8 +83,8 @@
 				<div class="border-border rounded-lg border p-6">
 					<h1 class="text-foreground mb-2 text-2xl font-bold">{conversationQuery.data.title}</h1>
 					<div class="text-muted-foreground flex items-center gap-4 text-sm">
-						{#if conversationQuery.data.updated_at}
-							<span>Updated {formatDate(conversationQuery.data.updated_at)}</span>
+						{#if conversationQuery.data.updatedAt}
+							<span>Updated {formatDate(conversationQuery.data.updatedAt)}</span>
 						{/if}
 						<span>Public conversation</span>
 					</div>
@@ -92,7 +93,7 @@
 				<!-- Messages -->
 				<div class="flex flex-col space-y-0">
 					{#if messagesQuery.data && messagesQuery.data.length > 0}
-						{#each messagesQuery.data as message (message._id)}
+						{#each messagesQuery.data as message (message.id)}
 							<Message {message} />
 						{/each}
 					{:else}
@@ -116,13 +117,13 @@
 			>
 				<div class="flex items-center gap-4">
 					<a
-						href="https://github.com/TGlide/thom-chat"
+						href="https://github.com/0xgingi/thom-chat"
 						class="hover:text-foreground flex items-center gap-1 transition-colors"
 					>
-						Source on <Icons.GitHub class="inline size-3" />
+						Source on <GitHub class="inline size-3" />
 					</a>
 					<span class="flex items-center gap-1">
-						Crafted by <Icons.Svelte class="inline size-3" /> wizards.
+						Crafted by <Svelte class="inline size-3" /> wizards.
 					</span>
 				</div>
 				<div>

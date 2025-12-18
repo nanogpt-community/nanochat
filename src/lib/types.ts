@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export const Provider = {
-	OpenRouter: 'openrouter',
+	NanoGPT: 'nanogpt',
 	HuggingFace: 'huggingface',
 	OpenAI: 'openai',
 	Anthropic: 'anthropic',

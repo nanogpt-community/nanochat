@@ -1,9 +1,8 @@
 <script lang="ts">
-	import { api } from '$lib/backend/convex/_generated/api';
+	import { useCachedQuery, api } from '$lib/cache/cached-query.svelte';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import Modal from '$lib/components/ui/modal/modal.svelte';
 	import { session } from '$lib/state/session.svelte';
-	import { useQuery } from 'convex-svelte';
 	import { Debounced } from 'runed';
 	import { tick } from 'svelte';
 	import { goto } from '$app/navigation';
@@ -17,10 +16,9 @@
 
 	const debouncedInput = new Debounced(() => input, 500);
 
-	const search = useQuery(api.conversations.search, () => ({
-		search_term: debouncedInput.current,
-		search_mode: searchMode,
-		session_token: session.current?.session.token ?? '',
+	const search = useCachedQuery(api.conversations.search, () => ({
+		search: debouncedInput.current,
+		mode: searchMode,
 	}));
 
 	// Reset selected index when search results change
@@ -56,7 +54,7 @@
 				if (selectedIndex >= 0 && selectedIndex < search.data.length) {
 					const result = search.data[selectedIndex];
 					if (result) {
-						goto(`/chat/${result.conversation._id}`);
+						goto(`/chat/${result.conversation.id}`);
 						open = false;
 					}
 				}
@@ -131,13 +129,13 @@
 						role="button"
 						tabindex="0"
 						onclick={() => {
-							goto(`/chat/${conversation._id}`);
+							goto(`/chat/${conversation.id}`);
 							open = false;
 						}}
 						onkeydown={(e) => {
 							if (e.key === 'Enter' || e.key === ' ') {
 								e.preventDefault();
-								goto(`/chat/${conversation._id}`);
+								goto(`/chat/${conversation.id}`);
 								open = false;
 							}
 						}}
@@ -146,11 +144,11 @@
 						<div class="min-w-0 flex-1">
 							<div class="mb-1 flex items-center gap-2">
 								<div class={['truncate font-medium', titleMatch && 'text-heading']}>
-									{conversation.title}
+									{conversation?.title ?? 'Untitled'}
 								</div>
 							</div>
 							<div class="text-muted-foreground text-xs">
-								{messages.length} matching message{messages.length !== 1 ? 's' : ''}
+								{messages?.length ?? 0} matching message{(messages?.length ?? 0) !== 1 ? 's' : ''}
 								{#if titleMatch}
 									<span class="text-heading">• Title match</span>
 								{/if}
@@ -162,7 +160,7 @@
 							class="shrink-0 text-xs"
 							onclick={(e: MouseEvent) => {
 								e.stopPropagation();
-								goto(`/chat/${conversation._id}`);
+								goto(`/chat/${conversation.id}`);
 								open = false;
 							}}
 						>

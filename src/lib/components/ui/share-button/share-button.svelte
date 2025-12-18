@@ -1,13 +1,12 @@
 <script lang="ts">
-	import { api } from '$lib/backend/convex/_generated/api.js';
-	import { type Id } from '$lib/backend/convex/_generated/dataModel.js';
-	import { useCachedQuery } from '$lib/cache/cached-query.svelte';
+	import { useCachedQuery, api } from '$lib/cache/cached-query.svelte';
+	import type { Id } from '$lib/db/types';
 	import { Button } from '$lib/components/ui/button';
 	import { Switch } from '$lib/components/ui/switch';
 	import Tooltip from '$lib/components/ui/tooltip.svelte';
 	import { UseClipboard } from '$lib/hooks/use-clipboard.svelte.js';
 	import { session } from '$lib/state/session.svelte.js';
-	import { useConvexClient } from 'convex-svelte';
+	import { mutate } from '$lib/client/mutation.svelte';
 	import { Popover } from 'melt/builders';
 	import { ResultAsync } from 'neverthrow';
 	import { scale } from 'svelte/transition';
@@ -17,16 +16,14 @@
 	import ShareIcon from '~icons/lucide/share';
 	import XIcon from '~icons/lucide/x';
 
-	const client = useConvexClient();
 	const clipboard = new UseClipboard();
 
 	let { conversationId } = $props<{
-		conversationId: Id<'conversations'>;
+		conversationId: string;
 	}>();
 
 	const conversationQuery = useCachedQuery(api.conversations.getById, () => ({
-		conversation_id: conversationId as Id<'conversations'>,
-		session_token: session.current?.session.token ?? '',
+		id: conversationId,
 	}));
 
 	let isPublic = $derived(Boolean(conversationQuery.data?.public));
@@ -58,10 +55,10 @@
 
 		isToggling = true;
 		const result = await ResultAsync.fromPromise(
-			client.mutation(api.conversations.setPublic, {
-				conversation_id: conversationId,
+			mutate(api.conversations.setPublic.url, {
+				action: 'setPublic',
+				conversationId,
 				public: newValue,
-				session_token: session.current.session.token,
 			}),
 			(e) => e
 		);

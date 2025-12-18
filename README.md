@@ -2,23 +2,17 @@
   <img src="static/favicon.png" alt="thom.chat" width="180" height="180">
   <h1>thom.chat</h1>
   <p><em>Open-source self-hostable T3 Chat.</em></p>
-
-  <p>
-    <img src="https://img.shields.io/badge/SvelteKit-FF3E00?style=for-the-badge&logo=svelte&logoColor=white" alt="SvelteKit">
-    <img src="https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript">
-    <img src="https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" alt="Tailwind">
-    <img src="https://img.shields.io/badge/Convex-FF6B6B?style=for-the-badge&logo=convex&logoColor=white" alt="Convex">
-  </p>
-
-  <p>
-    <img src="https://img.shields.io/github/license/tglide/thom-chat?style=flat-square" alt="License">
-    <img src="https://img.shields.io/github/stars/tglide/thom-chat?style=flat-square" alt="Stars">
-    <img src="https://img.shields.io/github/forks/tglide/thom-chat?style=flat-square" alt="Forks">
-    <img src="https://img.shields.io/github/issues/tglide/thom-chat?style=flat-square" alt="Issues">
-  </p>
 </div>
 
 ---
+
+## Changes with this fork
+
+- Removed Convex -> Using SQLite instead
+- Added Dockerfile/Docker Compose
+- Yarn -> Bun
+- Openrouter -> NanoGPT
+- Theme more closely resembles T3 Chat
 
 ## ✨ About
 

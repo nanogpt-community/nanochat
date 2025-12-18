@@ -1,11 +1,9 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import { api } from '$lib/backend/convex/_generated/api.js';
-	import { type Doc, type Id } from '$lib/backend/convex/_generated/dataModel.js';
-	import { useCachedQuery } from '$lib/cache/cached-query.svelte.js';
+	import { useCachedQuery, api, invalidateQueryPattern } from '$lib/cache/cached-query.svelte.js';
+	import type { Doc, Id } from '$lib/db/types';
 	import AppSidebar from '$lib/components/app-sidebar.svelte';
-	import * as Icons from '$lib/components/icons';
 	import { Button } from '$lib/components/ui/button';
 	import { ImageModal } from '$lib/components/ui/image-modal';
 	import { LightSwitch } from '$lib/components/ui/light-switch/index.js';
@@ -23,7 +21,7 @@
 	import { supportsImages, supportsReasoning } from '$lib/utils/model-capabilities';
 	import { omit, pick } from '$lib/utils/object.js';
 	import { cn } from '$lib/utils/utils.js';
-	import { useConvexClient } from 'convex-svelte';
+	import { mutate } from '$lib/client/mutation.svelte';
 	import { FileUpload, Popover } from 'melt/builders';
 	import { Debounced, ElementSize, IsMounted, PersistedState, ScrollState } from 'runed';
 	import { fade, scale } from 'svelte/transition';
@@ -49,26 +47,27 @@
 	import BrainIcon from '~icons/lucide/brain';
 	import * as casing from '$lib/utils/casing.js';
 
-	const client = useConvexClient();
-
 	let { children } = $props();
 
 	let textarea = $state<HTMLTextAreaElement>();
 	let abortController = $state<AbortController | null>(null);
 
 	$effect(() => {
-		client.mutation(api.user_enabled_models.enable_initial, {
-			session_token: session.current?.session.token ?? '',
+		// Enable initial models for new users
+		mutate(api.user_enabled_models.enable_initial.url, {
+			action: 'enableInitial',
+		}, {
+			invalidatePatterns: [api.user_enabled_models.get_enabled.url]
 		});
 	});
 
 	const currentConversationQuery = useCachedQuery(api.conversations.getById, () => ({
-		conversation_id: page.params.id as Id<'conversations'>,
-		session_token: session.current?.session.token ?? '',
+		id: page.params.id,
 	}));
 
 	const isGenerating = $derived(
-		Boolean(currentConversationQuery.data?.generating) || currentConversationQuery.isLoading
+		Boolean(currentConversationQuery.data?.generating) || 
+		(page.params.id ? currentConversationQuery.isLoading : false)
 	);
 
 	async function stopGeneration() {
@@ -102,8 +101,9 @@
 	const textareaDisabled = $derived(
 		isGenerating ||
 			loading ||
-			(currentConversationQuery.data &&
-				currentConversationQuery.data.user_id !== session.current?.user.id) ||
+			(page.params.id &&
+				currentConversationQuery.data &&
+				currentConversationQuery.data.userId !== session.current?.user.id) ||
 			enhancingPrompt
 	);
 
@@ -140,6 +140,12 @@
 
 			const cid = res.value.conversation_id;
 
+			// Invalidate relevant queries to trigger updates
+			invalidateQueryPattern(api.conversations.getById.url);
+			invalidateQueryPattern(api.messages.getAllFromConversation.url);
+			// Always invalidate sidebar to update timestamps and pick up new chats
+			invalidateQueryPattern(api.conversations.get.url);
+
 			if (page.params.id !== cid) {
 				goto(`/chat/${cid}`);
 			}
@@ -150,6 +156,7 @@
 			message.current = '';
 		}
 	}
+
 
 	let abortEnhance: AbortController | null = $state(null);
 
@@ -194,7 +201,22 @@
 
 	const autosize = new TextareaAutosize();
 
-	const message = new PersistedState('prompt', '');
+	const message = new PersistedState('prompt', '', {
+		serializer: {
+			serialize: (value: string) => JSON.stringify(value),
+			deserialize: (value: string) => {
+				try {
+					return JSON.parse(value) as string;
+				} catch {
+					// If parsing fails, clear the corrupted value and return default
+					if (typeof window !== 'undefined') {
+						localStorage.removeItem('prompt');
+					}
+					return '';
+				}
+			},
+		},
+	});
 	let selectedImages = $state<{ url: string; storage_id: string; fileName?: string }[]>([]);
 	let isUploading = $state(false);
 	let fileInput = $state<HTMLInputElement>();
@@ -212,16 +234,13 @@
 	models.init();
 
 	const currentModelSupportsImages = $derived.by(() => {
-		if (!settings.modelId) return false;
-		const openRouterModels = models.from(Provider.OpenRouter);
-		const currentModel = openRouterModels.find((m) => m.id === settings.modelId);
-		return currentModel ? supportsImages(currentModel) : false;
+		return true;
 	});
 
 	const currentModelSupportsReasoning = $derived.by(() => {
 		if (!settings.modelId) return false;
-		const openRouterModels = models.from(Provider.OpenRouter);
-		const currentModel = openRouterModels.find((m) => m.id === settings.modelId);
+		const nanoGPTModels = models.from(Provider.NanoGPT);
+		const currentModel = nanoGPTModels.find((m) => m.id === settings.modelId);
 		if (!currentModel) return false;
 		return supportsReasoning(currentModel);
 	});
@@ -249,28 +268,21 @@
 				// Compress image to max 1MB
 				const compressedFile = await compressImage(file, 1024 * 1024);
 
-				// Generate upload URL
-				const uploadUrl = await client.mutation(api.storage.generateUploadUrl, {
-					session_token: session.current.session.token,
-				});
-
-				// Upload compressed file
-				const result = await fetch(uploadUrl, {
+				// Upload file to local storage API
+				const uploadResult = await fetch('/api/storage', {
 					method: 'POST',
+					headers: {
+						'Content-Type': file.type,
+					},
+					credentials: 'include',
 					body: compressedFile,
 				});
 
-				if (!result.ok) {
-					throw new Error(`Upload failed: ${result.statusText}`);
+				if (!uploadResult.ok) {
+					throw new Error(`Upload failed: ${uploadResult.statusText}`);
 				}
 
-				const { storageId } = await result.json();
-
-				// Get the URL for the uploaded file
-				const url = await client.query(api.storage.getUrl, {
-					storage_id: storageId,
-					session_token: session.current.session.token,
-				});
+				const { storageId, url } = await uploadResult.json();
 
 				if (url) {
 					uploadedFiles.push({ url, storage_id: storageId, fileName: file.name });
@@ -432,10 +444,10 @@
 </script>
 
 <svelte:head>
-	<title>Chat | thom.chat</title>
+	<title>Chat | not t3.chat</title>
 	<meta
 		name="viewport"
-		content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content"
+		content="width=device-width, initial-scale=1, viewport-fit=cover"
 	/>
 </svelte:head>
 
@@ -445,12 +457,14 @@
 
 <Sidebar.Root
 	bind:open={sidebarOpen}
-	class="fill-device-height overflow-clip"
+	class="bg-sidebar fill-device-height overflow-clip"
 	{...currentModelSupportsImages ? omit(fileUpload.dropzone, ['onclick']) : {}}
 >
 	<AppSidebar bind:searchModalOpen />
 
-	<Sidebar.Inset class="w-full min-w-0 overflow-clip px-2">
+	<Sidebar.Inset
+		class="bg-background relative flex min-h-svh flex-1 flex-col overflow-clip md:m-2 md:rounded-2xl md:border md:border-border"
+	>
 		{#if !sidebarOpen}
 			<!-- header - top left -->
 			<div
@@ -540,23 +554,17 @@
 			</div>
 
 			<div
-				class="abs-x-center group absolute -bottom-px left-1/2 mt-auto flex w-full max-w-3xl flex-col gap-1"
+				class="group absolute bottom-4 left-0 right-0 mx-auto mt-auto flex w-full max-w-3xl flex-col gap-1 px-4"
 				bind:this={textareaWrapper}
 			>
+				<div class="mb-2 text-center text-[10px] text-muted-foreground/60">
+					Make sure you agree to our <a href="/terms" class="underline hover:text-foreground">Terms</a> and our <a href="/privacy" class="underline hover:text-foreground">Privacy Policy</a>
+				</div>
 				<div
-					class={[
-						'border-reflect bg-background/80 rounded-t-[20px] p-2 pb-0 backdrop-blur-lg',
-						'[--opacity:50%] group-focus-within:[--opacity:100%]',
-					]}
+					class="bg-secondary/40 rounded-2xl p-2.5 backdrop-blur-xl border border-border shadow-2xl"
 				>
 					<form
-						class={[
-							'bg-background/50 text-foreground dark:bg-secondary/20 relative flex w-full flex-col items-stretch gap-2 rounded-t-xl border border-b-0 border-white/70 pt-3 pb-3 outline-8 dark:border-white/10',
-							'transition duration-200',
-							'outline-primary/10 group-focus-within:outline-primary/20',
-							'dark:outline-primary/1 dark:group-focus-within:outline-primary/10',
-						]}
-						style="box-shadow: rgba(0, 0, 0, 0.1) 0px 80px 50px 0px, rgba(0, 0, 0, 0.07) 0px 50px 30px 0px, rgba(0, 0, 0, 0.06) 0px 30px 15px 0px, rgba(0, 0, 0, 0.04) 0px 15px 8px, rgba(0, 0, 0, 0.04) 0px 6px 4px, rgba(0, 0, 0, 0.02) 0px 2px 2px;"
+						class="relative flex w-full flex-col items-stretch gap-2 transition duration-200"
 						onsubmit={(e) => {
 							e.preventDefault();
 							handleSubmit();
@@ -565,9 +573,9 @@
 						{#if error}
 							<div
 								in:fade={{ duration: 150 }}
-								class="bg-background absolute top-0 left-0 -translate-y-10 rounded-lg"
+								class="bg-background absolute top-0 left-0 -translate-y-12 rounded-lg"
 							>
-								<div class="rounded-lg bg-red-500/50 px-2 py-0.5 text-sm text-red-400">
+								<div class="rounded-lg bg-red-500/50 px-3 py-1 text-sm text-red-100">
 									{error}
 								</div>
 							</div>
@@ -575,11 +583,11 @@
 						{#if suggestedRules}
 							<div
 								{...popover.content}
-								class="bg-background border-border absolute rounded-lg border"
+								class="bg-popover text-popover-foreground border-border absolute bottom-full mb-2 rounded-lg border shadow-lg"
 								style="width: {textareaSize.width}px"
 							>
 								<div class="flex flex-col p-2" bind:this={ruleList}>
-									{#each suggestedRules as rule, i (rule._id)}
+									{#each suggestedRules as rule, i (rule.id)}
 										<button
 											type="button"
 											data-list-item
@@ -599,7 +607,7 @@
 												e.currentTarget.setAttribute('data-active', 'true');
 											}}
 											onclick={() => completeRule(rule)}
-											class="data-[active=true]:bg-accent rounded-md px-2 py-1 text-start"
+											class="data-[active=true]:bg-accent data-[active=true]:text-accent-foreground rounded-md px-2 py-1 text-start transition-colors"
 										>
 											{rule.name}
 										</button>
@@ -609,26 +617,26 @@
 						{/if}
 						<div class="flex flex-grow flex-col">
 							{#if selectedImages.length > 0}
-								<div class="mb-2 flex flex-wrap gap-2">
+								<div class="mb-2 flex flex-wrap gap-2 px-2 pt-2">
 									{#each selectedImages as image, index (image.storage_id)}
 										<div
-											class="group border-secondary-foreground/[0.08] bg-secondary-foreground/[0.02] hover:bg-secondary-foreground/10 relative flex h-12 w-12 max-w-full shrink-0 items-center justify-center gap-2 rounded-xl border border-solid p-0 transition-[width,height] duration-500"
+											class="group border-border bg-muted relative flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border p-1 transition-all"
 										>
 											<button
 												type="button"
 												onclick={() => openImageModal(image.url, image.fileName || 'image')}
-												class="rounded-lg"
+												class="block size-full overflow-hidden rounded-lg"
 											>
 												<img
 													src={image.url}
 													alt="Uploaded"
-													class="size-10 rounded-lg object-cover opacity-100 transition-opacity"
+													class="size-full object-cover transition-opacity hover:opacity-80"
 												/>
 											</button>
 											<button
 												type="button"
 												onclick={() => removeImage(index)}
-												class="bg-secondary hover:bg-muted absolute -top-1 -right-1 cursor-pointer rounded-full p-1 opacity-0 transition group-hover:opacity-100"
+												class="bg-destructive text-destructive-foreground absolute -top-1.5 -right-1.5 cursor-pointer rounded-full p-1 opacity-0 transition group-hover:opacity-100 shadow-sm"
 											>
 												<XIcon class="h-3 w-3" />
 											</button>
@@ -638,16 +646,14 @@
 							{/if}
 							<div class="relative flex flex-grow flex-row items-start">
 								<input {...fileUpload.input} bind:this={fileInput} />
-								<!-- TODO: Figure out better autofocus solution -->
-								<!-- svelte-ignore a11y_autofocus -->
 								<textarea
 									{...pick(popover.trigger, ['id', 'style', 'onfocusout', 'onfocus'])}
 									bind:this={textarea}
 									disabled={textareaDisabled}
-									class="text-foreground placeholder:text-muted-foreground/60 max-h-64 min-h-[60px] w-full resize-none !overflow-y-auto bg-transparent px-3 text-base leading-6 outline-none disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-[80px]"
+									class="text-foreground placeholder:text-muted-foreground/40 max-h-64 min-h-[40px] w-full resize-none !overflow-y-auto bg-transparent px-4 py-2 text-[15px] leading-relaxed outline-none disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-[50px]"
 									placeholder={isGenerating
 										? 'Generating response...'
-										: 'Type your message here, tag rules with @'}
+										: 'Type your message here...'}
 									name="message"
 									onkeydown={(e) => {
 										if (e.key === 'Enter' && !e.shiftKey && !popover.open) {
@@ -685,71 +691,27 @@
 									{@attach autosize.attachment}
 								></textarea>
 							</div>
-							<div class="mt-2 -mb-px flex w-full flex-row-reverse justify-between px-2">
-								<div class="-mt-0.5 -mr-0.5 flex items-center justify-center gap-2">
-									<Tooltip placement="top">
-										{#snippet trigger(tooltip)}
-											<button
-												type={isGenerating ? 'button' : 'submit'}
-												onclick={isGenerating ? stopGeneration : undefined}
-												disabled={isGenerating ? false : !message.current.trim()}
-												class="border-reflect button-reflect hover:bg-primary/90 active:bg-primary text-foreground dark:text-primary-foreground relative h-9 w-9 rounded-lg p-2 font-semibold shadow transition disabled:cursor-not-allowed disabled:opacity-50"
-												{...tooltip.trigger}
-											>
-												{#if isGenerating}
-													<StopIcon class="!size-5" />
-												{:else}
-													<SendIcon class="!size-5" />
-												{/if}
-											</button>
-										{/snippet}
-										{isGenerating ? 'Stop generation' : 'Send message'}
-									</Tooltip>
-								</div>
-								<div class="flex flex-wrap items-center gap-2 pr-2">
-									<ModelPicker onlyImageModels={selectedImages.length > 0} />
-									<div class="flex items-center gap-2">
-										{#if currentModelSupportsReasoning}
-											<DropdownMenu.Root>
-												<DropdownMenu.Trigger
-													class="border-border hover:bg-accent/20 flex items-center gap-1 rounded-full border px-1 py-1 text-xs transition-colors disabled:opacity-50 sm:px-2"
-												>
-													<BrainIcon class="!size-3" />
-													<span class="hidden whitespace-nowrap sm:inline">
-														{casing.camelToPascal(settings.reasoningEffort)}
-													</span>
-												</DropdownMenu.Trigger>
-												<DropdownMenu.Content align="start">
-													<DropdownMenu.Item onSelect={() => (settings.reasoningEffort = 'high')}>
-														<BrainIcon class="size-4" />
-														High
-													</DropdownMenu.Item>
-													<DropdownMenu.Item onSelect={() => (settings.reasoningEffort = 'medium')}>
-														<BrainIcon class="size-4" />
-														Medium
-													</DropdownMenu.Item>
-													<DropdownMenu.Item onSelect={() => (settings.reasoningEffort = 'low')}>
-														<BrainIcon class="size-4" />
-														Low
-													</DropdownMenu.Item>
-												</DropdownMenu.Content>
-											</DropdownMenu.Root>
-										{/if}
+							<div class="mt-1 flex w-full flex-row items-end justify-between px-2 pb-1">
+								<div class="flex flex-wrap items-center gap-1.5">
+									<ModelPicker
+										class="bg-secondary/50 hover:bg-secondary text-muted-foreground flex h-9 items-center justify-center rounded-lg px-2.5 transition-colors"
+										onlyImageModels={selectedImages.length > 0}
+									/>
+									<div class="flex items-center gap-1.5">
 										<button
 											type="button"
 											class={cn(
-												'border-border flex items-center gap-1 rounded-full border px-1 py-1 text-xs transition-colors sm:px-2',
-												settings.webSearchEnabled ? 'bg-accent/50' : 'hover:bg-accent/20'
+												'bg-secondary/50 hover:bg-secondary text-muted-foreground flex size-8 items-center justify-center rounded-lg transition-colors',
+												settings.webSearchEnabled && 'bg-primary/20 text-primary border-primary/50'
 											)}
 											onclick={() => (settings.webSearchEnabled = !settings.webSearchEnabled)}
 										>
-											<SearchIcon class="!size-3" />
-											<span class="hidden whitespace-nowrap sm:inline">Web search</span>
+											<SearchIcon class="size-4" />
 										</button>
 										{#if currentModelSupportsImages}
 											<button
 												type="button"
-												class="border-border hover:bg-accent/20 flex items-center gap-1 rounded-full border px-1 py-1 text-xs transition-colors disabled:opacity-50 sm:px-2"
+												class="bg-secondary/50 hover:bg-secondary text-muted-foreground flex size-8 items-center justify-center rounded-lg transition-colors disabled:opacity-50"
 												onclick={() => fileInput?.click()}
 												disabled={isUploading}
 											>
@@ -758,37 +720,43 @@
 														class="size-3 animate-spin rounded-full border-2 border-current border-t-transparent"
 													></div>
 												{:else}
-													<ImageIcon class="!size-3" />
+													<ImageIcon class="size-4" />
 												{/if}
-												<span class="hidden whitespace-nowrap sm:inline">Attach image</span>
 											</button>
 										{/if}
-										{#if session.current !== null && message.current.trim() !== ''}
+										{#if currentModelSupportsReasoning}
 											<button
 												type="button"
-												class="border-border hover:bg-accent/20 flex items-center gap-1 rounded-full border px-1 py-1 text-xs transition-colors disabled:opacity-50 sm:px-2"
-												onclick={() => {
-													if (enhancingPrompt) {
-														abortEnhance?.abort();
-													} else {
-														enhancePrompt();
-													}
-												}}
-												disabled={isGenerating}
-												in:scale={{ duration: 150, start: 0.95 }}
+												class={cn(
+													'bg-secondary/50 hover:bg-secondary text-muted-foreground flex size-8 items-center justify-center rounded-lg transition-colors',
+													settings.reasoningEffort !== 'low' && 'bg-primary/20 text-primary border-primary/50'
+												)}
+												onclick={() => (settings.reasoningEffort = settings.reasoningEffort === 'low' ? 'medium' : 'low')}
 											>
-												{#if enhancingPrompt}
-													<StopIcon class="!size-3" />
-													<ShinyText class="hidden whitespace-nowrap sm:inline">
-														Enhancing prompt...
-													</ShinyText>
-												{:else}
-													<SparkleIcon class="text-primary !size-3" />
-													<span class="hidden whitespace-nowrap sm:inline">Enhance prompt</span>
-												{/if}
+												<BrainIcon class="size-4" />
 											</button>
 										{/if}
 									</div>
+								</div>
+								<div class="mb-0.5">
+									<Tooltip placement="top">
+										{#snippet trigger(tooltip)}
+											<button
+												type={isGenerating ? 'button' : 'submit'}
+												onclick={isGenerating ? stopGeneration : undefined}
+												disabled={isGenerating ? false : !message.current.trim()}
+												class="bg-primary text-primary-foreground hover:opacity-90 active:scale-95 flex size-8 items-center justify-center rounded-lg shadow-lg transition-all disabled:cursor-not-allowed disabled:opacity-50 disabled:scale-100"
+												{...tooltip.trigger}
+											>
+												{#if isGenerating}
+													<StopIcon class="size-4" />
+												{:else}
+													<SendIcon class="size-4" />
+												{/if}
+											</button>
+										{/snippet}
+										{isGenerating ? 'Stop generation' : 'Send message'}
+									</Tooltip>
 								</div>
 							</div>
 						</div>
@@ -796,18 +764,7 @@
 				</div>
 			</div>
 
-			<!-- Credits in bottom-right, only on large screens -->
-			<div class="fixed right-4 bottom-4 hidden flex-col items-end gap-1 2xl:flex">
-				<a
-					href="https://github.com/TGlide/thom-chat"
-					class="text-muted-foreground flex place-items-center gap-1 text-xs"
-				>
-					Source on <Icons.GitHub class="inline size-3" />
-				</a>
-				<span class="text-muted-foreground flex place-items-center gap-1 text-xs">
-					Crafted by <Icons.Svelte class="inline size-3" /> wizards.
-				</span>
-			</div>
+
 		</div>
 	</Sidebar.Inset>
 

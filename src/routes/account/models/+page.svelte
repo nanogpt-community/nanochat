@@ -1,6 +1,5 @@
 <script lang="ts">
-	import { api } from '$lib/backend/convex/_generated/api';
-	import { useCachedQuery } from '$lib/cache/cached-query.svelte';
+	import { useCachedQuery, api } from '$lib/cache/cached-query.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Search } from '$lib/components/ui/search';
 	import { models } from '$lib/state/models.svelte';
@@ -14,18 +13,17 @@
 	import ModelCard from './model-card.svelte';
 	import { supportsImages, supportsReasoning } from '$lib/utils/model-capabilities';
 
-	const openRouterKeyQuery = useCachedQuery(api.user_keys.get, {
-		provider: Provider.OpenRouter,
-		session_token: session.current?.session.token ?? '',
+	const nanoGPTKeyQuery = useCachedQuery(api.user_keys.get, {
+		provider: Provider.NanoGPT,
 	});
 
-	const hasOpenRouterKey = $derived(
-		openRouterKeyQuery.data !== undefined && openRouterKeyQuery.data !== ''
+	const hasNanoGPTKey = $derived(
+		nanoGPTKeyQuery.data !== undefined && nanoGPTKeyQuery.data !== ''
 	);
 
 	let search = $state('');
 
-	const openRouterToggle = new Toggle({
+	const nanoGPTToggle = new Toggle({
 		value: true,
 		// TODO: enable this if and when when we use multiple providers
 		disabled: true,
@@ -39,34 +37,30 @@
 		value: false,
 	});
 
-	const imageModelsToggle = new Toggle({
-		value: false,
-	});
+
 
 	let initiallyEnabled = $state<string[]>([]);
 	$effect(() => {
 		if (Object.keys(models.enabled).length && initiallyEnabled.length === 0) {
 			initiallyEnabled = models
-				.from(Provider.OpenRouter)
+				.from(Provider.NanoGPT)
 				.filter((m) => m.enabled)
 				.map((m) => m.id);
 		}
 	});
 
-	const openRouterModels = $derived(
+	const nanoGPTModels = $derived(
 		fuzzysearch({
-			haystack: models.from(Provider.OpenRouter).filter((m) => {
+			haystack: models.from(Provider.NanoGPT).filter((m) => {
 				if (freeModelsToggle.value) {
-					if (m.pricing.prompt !== '0') return false;
+					if (m.pricing?.prompt !== '0') return false;
 				}
 
 				if (reasoningModelsToggle.value) {
 					if (!supportsReasoning(m)) return false;
 				}
 
-				if (imageModelsToggle.value) {
-					if (!supportsImages(m)) return false;
-				}
+
 
 				return true;
 			}),
@@ -83,7 +77,7 @@
 </script>
 
 <svelte:head>
-	<title>Models | thom.chat</title>
+	<title>Models | not t3.chat</title>
 </svelte:head>
 
 <h1 class="text-2xl font-bold">Available Models</h1>
@@ -95,11 +89,11 @@
 	<Search bind:value={search} placeholder="Search models" />
 	<div class="flex place-items-center gap-2">
 		<button
-			{...openRouterToggle.trigger}
-			aria-label="OpenRouter"
+			{...nanoGPTToggle.trigger}
+			aria-label="NanoGPT"
 			class="group text-primary-foreground bg-primary aria-[pressed=false]:border-border border-primary aria-[pressed=false]:bg-background flex place-items-center gap-1 rounded-full border px-2 py-1 text-xs transition-all disabled:cursor-not-allowed disabled:opacity-50"
 		>
-			OpenRouter
+			NanoGPT
 			<XIcon class="inline size-3 group-aria-[pressed=false]:hidden" />
 			<PlusIcon class="inline size-3 group-aria-[pressed=true]:hidden" />
 		</button>
@@ -121,46 +115,31 @@
 			<XIcon class="inline size-3 group-aria-[pressed=false]:hidden" />
 			<PlusIcon class="inline size-3 group-aria-[pressed=true]:hidden" />
 		</button>
-		<button
-			{...imageModelsToggle.trigger}
-			aria-label="Image Models"
-			class="group text-primary-foreground bg-primary aria-[pressed=false]:border-border border-primary aria-[pressed=false]:bg-background flex place-items-center gap-1 rounded-full border px-2 py-1 text-xs transition-all disabled:cursor-not-allowed disabled:opacity-50"
-		>
-			Images
-			<XIcon class="inline size-3 group-aria-[pressed=false]:hidden" />
-			<PlusIcon class="inline size-3 group-aria-[pressed=true]:hidden" />
-		</button>
+
 	</div>
 </div>
 
-{#if openRouterModels.length > 0}
+{#if nanoGPTModels.length > 0}
 	<div class="mt-4 flex flex-col gap-4">
 		<div>
-			<h3 class="text-lg font-bold">OpenRouter</h3>
-			<p class="text-muted-foreground text-sm">Easy access to over 400 models.</p>
+			<h3 class="text-lg font-bold">NanoGPT</h3>
+			<p class="text-muted-foreground text-sm">Access to premium models via NanoGPT.</p>
+			{#if !hasNanoGPTKey}
+				<p class="text-muted-foreground mt-1 text-xs">
+					<a href="/account/api-keys#nanogpt" class="text-primary underline">Add an API key</a> to get started.
+				</p>
+			{/if}
 		</div>
 		<div class="relative">
-			<div
-				class={cn('flex flex-col gap-4 overflow-hidden', {
-					'pointer-events-none max-h-96 mask-b-from-0% mask-b-to-80%': !hasOpenRouterKey,
-				})}
-			>
-				{#each openRouterModels as model (model.id)}
+			<div class="flex flex-col gap-4 overflow-hidden">
+				{#each nanoGPTModels as model (model.id)}
 					<ModelCard
-						provider={Provider.OpenRouter}
+						provider={Provider.NanoGPT}
 						{model}
 						enabled={model.enabled}
-						disabled={!hasOpenRouterKey}
 					/>
 				{/each}
 			</div>
-			{#if !hasOpenRouterKey}
-				<div
-					class="absolute bottom-10 left-0 z-10 flex w-full place-items-center justify-center gap-2"
-				>
-					<Button href="/account/api-keys#openrouter" class="w-fit">Add API Key</Button>
-				</div>
-			{/if}
 		</div>
 	</div>
 {/if}

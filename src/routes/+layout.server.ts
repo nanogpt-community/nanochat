@@ -1,14 +1,14 @@
-import { getOpenRouterModels, type OpenRouterModel } from '$lib/backend/models/open-router';
+import { getNanoGPTModels, type NanoGPTModel } from '$lib/backend/models/nano-gpt';
 import { Provider } from '$lib/types';
 import type { LayoutServerLoad } from './$types';
 
 export const load: LayoutServerLoad = async ({ locals }) => {
-	const [session, openRouterModels] = await Promise.all([locals.auth(), getOpenRouterModels()]);
+	const [session, nanoGPTModels] = await Promise.all([locals.auth(), getNanoGPTModels()]);
 
 	return {
 		session,
 		models: {
-			[Provider.OpenRouter]: openRouterModels.unwrapOr([] as OpenRouterModel[]),
+			[Provider.NanoGPT]: nanoGPTModels.unwrapOr([] as NanoGPTModel[]),
 		},
 	};
 };

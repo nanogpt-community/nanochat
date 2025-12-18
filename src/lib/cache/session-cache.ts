@@ -13,11 +13,16 @@ export class SessionStorageCache<T = unknown> {
 	private debounceMs: number;
 	private pendingWrites = new Set<string>();
 
+	private isBrowser: boolean;
+
 	constructor(storageKey = 'query-cache', maxSizeBytes = 1024 * 1024, debounceMs = 300) {
 		this.storageKey = storageKey;
 		this.debounceMs = debounceMs;
 		this.memoryCache = new LRUCache<string, CacheEntry<T>>(maxSizeBytes);
-		this.loadFromSessionStorage();
+		this.isBrowser = typeof window !== 'undefined' && typeof sessionStorage !== 'undefined';
+		if (this.isBrowser) {
+			this.loadFromSessionStorage();
+		}
 	}
 
 	private loadFromSessionStorage(): void {
@@ -51,6 +56,10 @@ export class SessionStorageCache<T = unknown> {
 	}
 
 	private writeToSessionStorage(): void {
+		if (!this.isBrowser) {
+			this.pendingWrites.clear();
+			return;
+		}
 		try {
 			const cacheData: Record<string, CacheEntry<T>> = {};
 			const now = Date.now();
@@ -114,10 +123,12 @@ export class SessionStorageCache<T = unknown> {
 
 	clear(): void {
 		this.memoryCache.clear();
-		try {
-			sessionStorage.removeItem(this.storageKey);
-		} catch (error) {
-			console.warn('Failed to clear sessionStorage:', error);
+		if (this.isBrowser) {
+			try {
+				sessionStorage.removeItem(this.storageKey);
+			} catch (error) {
+				console.warn('Failed to clear sessionStorage:', error);
+			}
 		}
 		if (this.writeTimeout) {
 			clearTimeout(this.writeTimeout);
@@ -152,5 +163,9 @@ export class SessionStorageCache<T = unknown> {
 			this.writeTimeout = null;
 		}
 		this.writeToSessionStorage();
+	}
+
+	keys(): IterableIterator<string> {
+		return this.memoryCache.keys();
 	}
 }

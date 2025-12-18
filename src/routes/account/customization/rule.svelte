@@ -3,9 +3,9 @@
 	import { Label } from '$lib/components/ui/label';
 	import { Textarea } from '$lib/components/ui/textarea';
 	import { Button } from '$lib/components/ui/button';
-	import type { Doc } from '$lib/backend/convex/_generated/dataModel';
-	import { useConvexClient } from 'convex-svelte';
-	import { api } from '$lib/backend/convex/_generated/api';
+	import type { Doc } from '$lib/db/types';
+	import { mutate } from '$lib/client/mutation.svelte';
+	import { api } from '$lib/cache/cached-query.svelte';
 	import { session } from '$lib/state/session.svelte';
 	import { LocalToasts } from '$lib/builders/local-toasts.svelte';
 	import { ResultAsync } from 'neverthrow';
@@ -21,8 +21,6 @@
 	const id = $props.id();
 
 	let { rule, allRules }: Props = $props();
-
-	const client = useConvexClient();
 
 	let updating = $state(false);
 	let deleting = $state(false);
@@ -40,11 +38,11 @@
 		updating = true;
 
 		const res = await ResultAsync.fromPromise(
-			client.mutation(api.user_rules.update, {
-				ruleId: rule._id,
+			mutate(api.user_rules.update.url, {
+				action: 'update',
+				ruleId: rule.id,
 				attach,
 				rule: ruleText,
-				session_token: session.current?.session.token ?? '',
 			}),
 			(e) => e
 		);
@@ -71,9 +69,9 @@
 
 		deleting = true;
 
-		await client.mutation(api.user_rules.remove, {
-			ruleId: rule._id,
-			session_token: session.current?.session.token ?? '',
+		await fetch(`/api/db/user-rules?id=${rule.id}`, {
+			method: 'DELETE',
+			credentials: 'include',
 		});
 
 		deleting = false;
@@ -83,10 +81,10 @@
 
 	async function renameRule() {
 		await ResultAsync.fromPromise(
-			client.mutation(api.user_rules.rename, {
-				ruleId: rule._id,
+			mutate(api.user_rules.rename.url, {
+				action: 'rename',
+				ruleId: rule.id,
 				name: ruleName,
-				session_token: session.current?.session.token ?? '',
 			}),
 			(e) => e
 		);
@@ -94,7 +92,7 @@
 
 	const ruleNameExists = $derived.by(() => {
 		for (const r of allRules) {
-			if (r._id === rule._id) continue;
+			if (r.id === rule.id) continue;
 			if (r.name === ruleName) return true;
 		}
 

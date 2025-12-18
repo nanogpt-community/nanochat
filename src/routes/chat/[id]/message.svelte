@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { cn } from '$lib/utils/utils';
 	import { tv } from 'tailwind-variants';
-	import type { Doc, Id } from '$lib/backend/convex/_generated/dataModel';
+	import type { Doc, Id } from '$lib/db/types';
 	import { CopyButton } from '$lib/components/ui/copy-button';
 	import '../../../markdown.css';
 	import MarkdownRenderer from './markdown-renderer.svelte';
@@ -11,13 +11,13 @@
 	import { isHtmlElement } from '$lib/utils/is';
 	import { Button } from '$lib/components/ui/button';
 	import Tooltip from '$lib/components/ui/tooltip.svelte';
-	import { useConvexClient } from 'convex-svelte';
-	import { api } from '$lib/backend/convex/_generated/api';
+	import { mutate } from '$lib/client/mutation.svelte';
+	import { api } from '$lib/cache/cached-query.svelte';
 	import { session } from '$lib/state/session.svelte';
 	import { ResultAsync } from 'neverthrow';
 	import { goto } from '$app/navigation';
 	import { callGenerateMessage } from '../../api/generate-message/call';
-	import * as Icons from '$lib/components/icons';
+	import { Branch, BranchAndRegen } from '$lib/components/icons';
 	import { settings } from '$lib/state/settings.svelte';
 	import ShinyText from '$lib/components/animations/shiny-text.svelte';
 	import ChevronRightIcon from '~icons/lucide/chevron-right';
@@ -42,8 +42,6 @@
 		message: Doc<'messages'>;
 	};
 
-	const client = useConvexClient();
-
 	let { message }: Props = $props();
 
 	let imageModal = $state<{ open: boolean; imageUrl: string; fileName: string }>({
@@ -62,10 +60,10 @@
 
 	async function createBranchedConversation() {
 		const res = await ResultAsync.fromPromise(
-			client.mutation(api.conversations.createBranched, {
-				conversation_id: message.conversation_id as Id<'conversations'>,
-				from_message_id: message._id,
-				session_token: session.current?.session.token ?? '',
+			mutate<{ conversationId: string }>(api.conversations.createBranched.url, {
+				action: 'branch',
+				conversationId: message.conversationId,
+				fromMessageId: message.id,
 			}),
 			(e) => e
 		);
@@ -75,7 +73,7 @@
 			return;
 		}
 
-		const cid = res.value;
+		const cid = res.value.conversationId;
 
 		if (message.role === 'user' && settings.modelId) {
 			const generateRes = await callGenerateMessage({
@@ -83,7 +81,7 @@
 				conversation_id: cid,
 				model_id: settings.modelId,
 				images: message.images,
-				web_search_enabled: message.web_search_enabled,
+				web_search_enabled: message.webSearchEnabled,
 			});
 
 			if (generateRes.isErr()) {
@@ -176,9 +174,9 @@
 				<div class="text-destructive">
 					<pre class="!bg-sidebar"><code>{message.error}</code></pre>
 				</div>
-			{:else if message.content_html}
+			{:else if message.contentHtml}
 				<!-- eslint-disable-next-line svelte/no-at-html-tags -->
-				{@html sanitizeHtml(message.content_html)}
+				{@html sanitizeHtml(message.contentHtml)}
 			{:else}
 				<svelte:boundary>
 					<MarkdownRenderer content={message.content} />
@@ -264,9 +262,9 @@
 						{...tooltip.trigger}
 					>
 						{#if message.role === 'user'}
-							<Icons.BranchAndRegen class="group-data-[loading=true]:opacity-0" />
+							<BranchAndRegen class="group-data-[loading=true]:opacity-0" />
 						{:else}
-							<Icons.Branch class="group-data-[loading=true]:opacity-0" />
+							<Branch class="group-data-[loading=true]:opacity-0" />
 						{/if}
 					</Button>
 				{/snippet}
@@ -285,24 +283,24 @@
 				</Tooltip>
 			{/if}
 			{#if message.role === 'assistant'}
-				{#if message.model_id !== undefined}
-					<span class="text-muted-foreground text-xs">{message.model_id}</span>
+				{#if message.modelId !== undefined}
+					<span class="text-muted-foreground text-xs">{message.modelId}</span>
 				{/if}
-				{#if message.reasoning_effort}
+				{#if message.reasoningEffort}
 					<span class="text-muted-foreground text-xs">
 						<BrainIcon class="inline-block size-4 shrink-0 text-green-500" />
-						{casing.camelToPascal(message.reasoning_effort)}
+						{casing.camelToPascal(message.reasoningEffort)}
 					</span>
 				{/if}
-				{#if message.web_search_enabled}
+				{#if message.webSearchEnabled}
 					<span class="text-muted-foreground text-xs">
 						<GlobeIcon class="text-primary inline-block size-4 shrink-0" />
 					</span>
 				{/if}
 
-				{#if message.cost_usd !== undefined}
+				{#if message.costUsd != null}
 					<span class="text-muted-foreground text-xs">
-						${message.cost_usd.toFixed(6)}
+						${message.costUsd.toFixed(6)}
 					</span>
 				{/if}
 			{/if}

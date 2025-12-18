@@ -1,8 +1,8 @@
 import { Provider } from '$lib/types';
-import { type OpenRouterModel } from './open-router';
+import { type NanoGPTModel } from './nano-gpt';
 
 export type ProviderModelMap = {
-	[Provider.OpenRouter]: OpenRouterModel;
+	[Provider.NanoGPT]: NanoGPTModel;
 	[Provider.HuggingFace]: never;
 	[Provider.OpenAI]: never;
 	[Provider.Anthropic]: never;

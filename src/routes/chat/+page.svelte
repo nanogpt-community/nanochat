@@ -7,15 +7,14 @@
 	import { Button } from '$lib/components/ui/button';
 	import { usePrompt } from '$lib/state/prompt.svelte';
 	import { scale } from 'svelte/transition';
-	import { useCachedQuery } from '$lib/cache/cached-query.svelte';
-	import { api } from '$lib/backend/convex/_generated/api';
+	import { useCachedQuery, api } from '$lib/cache/cached-query.svelte';
 	import { Provider } from '$lib/types';
 
 	const defaultSuggestions = [
-		'Give me bad medical advice, doctor.',
-		'Explain why Theo hates Svelte.',
-		'Write a song about losing money.',
-		'When are you going to take my job?',
+		'How does AI work?',
+		'Are black holes real?',
+		'How many Rs are in the word "strawberry"?',
+		'What is the meaning of life?',
 	];
 
 	const settings = useCachedQuery(api.user_settings.get, {
@@ -63,8 +62,8 @@
 
 	let selectedCategory = $state<string | null>(null);
 
-	const openRouterKeyQuery = useCachedQuery(api.user_keys.get, {
-		provider: Provider.OpenRouter,
+	const nanoGPTKeyQuery = useCachedQuery(api.user_keys.get, {
+		provider: Provider.NanoGPT,
 		session_token: session.current?.session.token ?? '',
 	});
 
@@ -72,22 +71,20 @@
 </script>
 
 <svelte:head>
-	<title>New Chat | thom.chat</title>
+	<title>T3.chat</title>
 </svelte:head>
 
-<div class="flex h-svh flex-col items-center justify-center">
-	{#if prompt.current.length === 0 && openRouterKeyQuery.data}
-		<div class="w-full p-2" in:scale={{ duration: 500, start: 0.9 }}>
-			<h2 class="text-left font-serif text-3xl font-semibold">
-				Hey there <span class={{ 'blur-sm': settings.data?.privacy_mode }}
-					>{session.current?.user.name ? ` ${session.current?.user.name}` : ''}</span
-				>!
-			</h2>
-			<div class="mt-4 flex flex-wrap items-center gap-1">
+<div class="flex h-svh flex-col items-center justify-center -translate-y-10">
+	{#if prompt.current.length === 0 && nanoGPTKeyQuery.data}
+		<div class="w-full max-w-2xl px-4 text-center" in:scale={{ duration: 500, start: 0.9 }}>
+			<h1 class="font-sans text-4xl font-bold tracking-tight mb-8">
+				How can I help you?
+			</h1>
+			<div class="mt-4 flex flex-wrap items-center justify-center gap-2">
 				{#each Object.entries(suggestionCategories) as [category, opts] (category)}
 					<button
 						type="button"
-						class="data-[active=true]:bg-primary focus-visible:border-ring focus-visible:ring-ring/50 bg-muted relative inline-flex h-9 shrink-0 items-center justify-center gap-2 overflow-hidden rounded-full px-4 py-2 text-sm font-medium whitespace-nowrap outline-hidden transition-all select-none hover:cursor-pointer focus-visible:ring-[3px] disabled:pointer-events-none disabled:opacity-50 has-[>svg]:px-3 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
+						class="data-[active=true]:bg-primary data-[active=true]:text-primary-foreground focus-visible:border-ring focus-visible:ring-ring/50 bg-secondary/50 border border-border relative inline-flex h-10 shrink-0 items-center justify-center gap-2 overflow-hidden rounded-full px-5 py-2 text-sm font-semibold whitespace-nowrap outline-hidden transition-all select-none hover:bg-secondary hover:cursor-pointer focus-visible:ring-[3px] disabled:pointer-events-none disabled:opacity-50"
 						data-active={selectedCategory === category}
 						onclick={() => {
 							if (selectedCategory === category) {
@@ -97,52 +94,49 @@
 							}
 						}}
 					>
-						<opts.icon />
+						<opts.icon class="size-4" />
 						{category}
 					</button>
 				{/each}
 			</div>
 
-			<div class="mt-2 flex flex-col gap-2 p-2">
+			<div class="mt-8 flex w-full flex-col items-center">
 				{#if selectedCategory && suggestionCategories[selectedCategory]}
-					{#each suggestionCategories[selectedCategory]?.suggestions ?? [] as suggestion (suggestion)}
-						<div class="border-border not-last:border-b not-last:pb-2">
-							<Button
+					<div class="flex w-full max-w-xl flex-col divide-y divide-border/50">
+						{#each suggestionCategories[selectedCategory]?.suggestions ?? [] as suggestion (suggestion)}
+							<button
 								onclick={() => (prompt.current = suggestion)}
-								variant="ghost"
-								class="w-full cursor-pointer justify-start px-2 py-2 text-start"
+								class="w-full cursor-pointer px-4 py-4 text-center text-base text-muted-foreground transition-all hover:bg-secondary/30 hover:text-foreground"
 							>
 								{suggestion}
-							</Button>
-						</div>
-					{/each}
+							</button>
+						{/each}
+					</div>
 				{:else}
-					{#each defaultSuggestions as suggestion}
-						<div class="border-border group not-last:border-b not-last:pb-2">
-							<Button
+					<div class="flex w-full max-w-xl flex-col divide-y divide-border/50">
+						{#each defaultSuggestions as suggestion}
+							<button
 								onclick={() => (prompt.current = suggestion)}
-								variant="ghost"
-								class="w-full cursor-pointer justify-start px-2 py-2 text-start"
+								class="w-full cursor-pointer px-4 py-4 text-center text-base text-muted-foreground transition-all hover:bg-secondary/30 hover:text-foreground"
 							>
 								{suggestion}
-							</Button>
-						</div>
-					{/each}
+							</button>
+						{/each}
+					</div>
 				{/if}
 			</div>
 		</div>
-	{:else if !openRouterKeyQuery.data && !openRouterKeyQuery.isLoading}
-		<div class="w-full p-2" in:scale={{ duration: 500, start: 0.9 }}>
-			<h2 class="text-left font-serif text-3xl font-semibold">
-				Hey there, <span class={{ 'blur-sm': settings.data?.privacy_mode }}
-					>{session.current?.user.name}</span
-				>!
-			</h2>
-			<p class="mt-2 text-left text-lg">
+	{:else if !nanoGPTKeyQuery.data && !nanoGPTKeyQuery.isLoading}
+		<div class="w-full max-w-2xl px-4 py-12 text-center" in:scale={{ duration: 500, start: 0.9 }}>
+			<h1 class="font-sans text-4xl font-bold tracking-tight mb-4">
+				How can I help you?
+			</h1>
+			<p class="text-muted-foreground mb-8 text-lg">
 				You can send some free messages, or provide a key for limitless access.
-				<br />
-				<a href="/account/api-keys" class="text-primary"> Go to settings </a>
 			</p>
+			<Button href="/account/api-keys" variant="default" size="lg" class="rounded-full px-8">
+				Go to settings
+			</Button>
 		</div>
 	{/if}
 </div>

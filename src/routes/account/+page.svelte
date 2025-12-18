@@ -1,27 +1,22 @@
 <script lang="ts">
-	import { api } from '$lib/backend/convex/_generated/api';
-	import { useCachedQuery } from '$lib/cache/cached-query.svelte';
+	import { useCachedQuery, api } from '$lib/cache/cached-query.svelte';
 	import { session } from '$lib/state/session.svelte';
 	import { ResultAsync } from 'neverthrow';
-	import { useConvexClient } from 'convex-svelte';
+	import { mutate } from '$lib/client/mutation.svelte';
 	import { Switch } from '$lib/components/ui/switch';
 
-	const client = useConvexClient();
+	const settings = useCachedQuery(api.user_settings.get, {});
 
-	const settings = useCachedQuery(api.user_settings.get, {
-		session_token: session.current?.session.token ?? '',
-	});
-
-	let privacyMode = $derived(settings.data?.privacy_mode ?? false);
+	let privacyMode = $derived(settings.data?.privacyMode ?? false);
 
 	async function toggleEnabled(v: boolean) {
 		privacyMode = v; // Optimistic!
 		if (!session.current?.user.id) return;
 
 		const res = await ResultAsync.fromPromise(
-			client.mutation(api.user_settings.set, {
-				privacy_mode: v,
-				session_token: session.current?.session.token,
+			mutate(api.user_settings.set.url, {
+				action: 'update',
+				privacyMode: v,
 			}),
 			(e) => e
 		);
@@ -31,7 +26,7 @@
 </script>
 
 <svelte:head>
-	<title>Account | thom.chat</title>
+	<title>Account | not t3.chat</title>
 </svelte:head>
 
 <h1 class="text-2xl font-bold">Account Settings</h1>
