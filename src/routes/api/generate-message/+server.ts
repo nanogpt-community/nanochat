@@ -24,6 +24,7 @@ import * as array from '$lib/utils/array';
 import { parseMessageForRules } from '$lib/utils/rules.js';
 import { performNanoGPTWebSearch } from '$lib/backend/web-search';
 import { scrapeUrlsFromMessage } from '$lib/backend/url-scraper';
+import { getUserMemory, upsertUserMemory } from '$lib/db/queries/user-memories';
 
 // Set to true to enable debug logging
 const ENABLE_LOGGING = true;
@@ -218,6 +219,21 @@ async function generateAIResponse({
 
 	const modelId = model.modelId;
 
+	// Fetch persistent memory if enabled
+	let storedMemory: string | null = null;
+	if (userSettingsData?.persistentMemoryEnabled) {
+		log('Background: Fetching persistent memory', startTime);
+		try {
+			const memory = await getUserMemory(userId);
+			if (memory?.content) {
+				storedMemory = memory.content;
+				log(`Background: Persistent memory loaded (${memory.content.length} chars)`, startTime);
+			}
+		} catch (e) {
+			log(`Background: Failed to fetch persistent memory: ${e}`, startTime);
+		}
+	}
+
 	// Perform web search if enabled
 	let searchContext: string | null = null;
 	if (webSearchEnabled && lastUserMessage) {
@@ -362,7 +378,12 @@ async function generateAIResponse({
 	// Construct system message content
 	let systemContent = '';
 
-	// Add scraped URL content first (if any)
+	// Add persistent memory context first (if available)
+	if (storedMemory) {
+		systemContent += `[MEMORY FROM PREVIOUS CONVERSATIONS]\n${storedMemory}\n\n[CURRENT CONVERSATION]\n`;
+	}
+
+	// Add scraped URL content (if any)
 	if (scrapedContent) {
 		systemContent += scrapedContent;
 	}
@@ -563,6 +584,47 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 				costUsd: sql`${conversations.costUsd} + ${generationStats.total_cost ?? 0}`,
 			})
 			.where(eq(conversations.id, conversationId));
+
+		// Update persistent memory if enabled
+		if (userSettingsData?.persistentMemoryEnabled) {
+			log('Background: Updating persistent memory', startTime);
+			try {
+				// Include the new messages in memory compression
+				const allMessages = [
+					...(storedMemory ? [{ role: 'system' as const, content: storedMemory }] : []),
+					...formattedMessages.map(m => ({
+						role: m.role as 'user' | 'assistant' | 'system',
+						content: typeof m.content === 'string' ? m.content : JSON.stringify(m.content),
+					})),
+					{ role: 'assistant' as const, content },
+				];
+
+				const memoryResponse = await fetch('https://nano-gpt.com/api/v1/memory', {
+					method: 'POST',
+					headers: {
+						'Authorization': `Bearer ${apiKey}`,
+						'Content-Type': 'application/json',
+					},
+					body: JSON.stringify({
+						messages: allMessages,
+						expiration_days: 30,
+					}),
+				});
+
+				if (memoryResponse.ok) {
+					const memoryData = await memoryResponse.json();
+					if (memoryData.messages?.[0]?.content) {
+						const compressedMemory = memoryData.messages[0].content;
+						await upsertUserMemory(userId, compressedMemory, memoryData.usage?.total_tokens);
+						log(`Background: Persistent memory updated (${compressedMemory.length} chars)`, startTime);
+					}
+				} else {
+					log(`Background: Memory API returned ${memoryResponse.status}`, startTime);
+				}
+			} catch (e) {
+				log(`Background: Failed to update persistent memory: ${e}`, startTime);
+			}
+		}
 
 		log('Background: Message and conversation updated', startTime);
 	} catch (error) {

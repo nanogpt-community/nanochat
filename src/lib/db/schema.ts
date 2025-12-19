@@ -83,6 +83,7 @@ export const userSettings = sqliteTable(
             .references(() => user.id, { onDelete: 'cascade' }),
         privacyMode: integer('privacy_mode', { mode: 'boolean' }).notNull().default(false),
         contextMemoryEnabled: integer('context_memory_enabled', { mode: 'boolean' }).notNull().default(false),
+        persistentMemoryEnabled: integer('persistent_memory_enabled', { mode: 'boolean' }).notNull().default(false),
         freeMessagesUsed: integer('free_messages_used').default(0),
         createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
         updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
@@ -213,6 +214,23 @@ export const storage = sqliteTable('storage', {
     createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
 });
 
+// User memories for cross-conversation persistent memory
+export const userMemories = sqliteTable(
+    'user_memories',
+    {
+        id: text('id').primaryKey(),
+        userId: text('user_id')
+            .notNull()
+            .references(() => user.id, { onDelete: 'cascade' }),
+        content: text('content').notNull(), // Compressed memory content from NanoGPT
+        tokenCount: integer('token_count'),
+        expiresAt: integer('expires_at', { mode: 'timestamp' }),
+        createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+        updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+    },
+    (table) => [index('user_memories_user_id_idx').on(table.userId)]
+);
+
 // ============================================================================
 // Relations
 // ============================================================================
@@ -226,6 +244,7 @@ export const userRelations = relations(user, ({ many, one }) => ({
     rules: many(userRules),
     conversations: many(conversations),
     storage: many(storage),
+    memories: one(userMemories),
 }));
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -296,6 +315,13 @@ export const storageRelations = relations(storage, ({ one }) => ({
     }),
 }));
 
+export const userMemoriesRelations = relations(userMemories, ({ one }) => ({
+    user: one(user, {
+        fields: [userMemories.userId],
+        references: [user.id],
+    }),
+}));
+
 // ============================================================================
 // Type Exports
 // ============================================================================
@@ -318,3 +344,5 @@ export type Message = typeof messages.$inferSelect;
 export type NewMessage = typeof messages.$inferInsert;
 export type Storage = typeof storage.$inferSelect;
 export type NewStorage = typeof storage.$inferInsert;
+export type UserMemory = typeof userMemories.$inferSelect;
+export type NewUserMemory = typeof userMemories.$inferInsert;

@@ -9,9 +9,10 @@
 
 	let privacyMode = $derived(settings.data?.privacyMode ?? false);
 	let contextMemoryEnabled = $derived(settings.data?.contextMemoryEnabled ?? false);
+	let persistentMemoryEnabled = $derived(settings.data?.persistentMemoryEnabled ?? false);
 
 	async function togglePrivacyMode(v: boolean) {
-		privacyMode = v; // Optimistic!
+		privacyMode = v;
 		if (!session.current?.user.id) return;
 
 		const res = await ResultAsync.fromPromise(
@@ -22,11 +23,11 @@
 			(e) => e
 		);
 
-		if (res.isErr()) privacyMode = !v; // Should have been a realist :(
+		if (res.isErr()) privacyMode = !v;
 	}
 
 	async function toggleContextMemory(v: boolean) {
-		contextMemoryEnabled = v; // Optimistic!
+		contextMemoryEnabled = v;
 		if (!session.current?.user.id) return;
 
 		const res = await ResultAsync.fromPromise(
@@ -38,6 +39,21 @@
 		);
 
 		if (res.isErr()) contextMemoryEnabled = !v;
+	}
+
+	async function togglePersistentMemory(v: boolean) {
+		persistentMemoryEnabled = v;
+		if (!session.current?.user.id) return;
+
+		const res = await ResultAsync.fromPromise(
+			mutate(api.user_settings.set.url, {
+				action: 'update',
+				persistentMemoryEnabled: v,
+			}),
+			(e) => e
+		);
+
+		if (res.isErr()) persistentMemoryEnabled = !v;
 	}
 </script>
 
@@ -63,5 +79,11 @@
 		</div>
 		<Switch bind:value={() => contextMemoryEnabled, toggleContextMemory} />
 	</div>
+	<div class="flex place-items-center justify-between">
+		<div class="flex flex-col gap-1">
+			<span>Persistent Memory</span>
+			<span class="text-muted-foreground text-sm">Remember facts about you across different conversations.</span>
+		</div>
+		<Switch bind:value={() => persistentMemoryEnabled, togglePersistentMemory} />
+	</div>
 </div>
-

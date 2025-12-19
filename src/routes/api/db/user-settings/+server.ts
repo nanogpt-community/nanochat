@@ -29,6 +29,7 @@ export const POST: RequestHandler = async ({ request }) => {
             const settings = await updateUserSettings(userId, {
                 privacyMode: body.privacyMode,
                 contextMemoryEnabled: body.contextMemoryEnabled,
+                persistentMemoryEnabled: body.persistentMemoryEnabled,
             });
             return json(settings);
         }
