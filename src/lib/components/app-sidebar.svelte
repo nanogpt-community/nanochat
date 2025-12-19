@@ -33,6 +33,8 @@
 			action: 'togglePin',
 			conversationId,
 		});
+
+		invalidateQueryPattern(api.conversations.get.url);
 	}
 
 	async function deleteConversation(conversationId: string) {

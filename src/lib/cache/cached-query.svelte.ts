@@ -98,6 +98,7 @@ export function useCachedQuery<TResult>(
 				method: queryConfig.method || 'GET',
 				headers: { 'Content-Type': 'application/json' },
 				credentials: 'include', // Include cookies for session
+				cache: 'no-store',
 				...(queryConfig.method === 'POST' ? { body: JSON.stringify(args) } : {}),
 			});
 
