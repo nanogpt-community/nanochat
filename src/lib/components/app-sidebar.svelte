@@ -293,7 +293,12 @@
 								'blur-[6px]': settings.data?.privacyMode,
 							})}
 						/>
-						<span {...avatar.fallback} class="size-8 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold">
+						<span
+							{...avatar.fallback}
+							class={cn('bg-primary/20 flex size-8 items-center justify-center rounded-full text-xs font-bold', {
+								'blur-[6px]': settings.data?.privacyMode,
+							})}
+						>
 							{page.data.session?.user.name
 								.split(' ')
 								.map((name: string) => name[0]?.toUpperCase())

@@ -97,10 +97,15 @@
 							{...avatar.image}
 							alt="Your avatar"
 							class={cn('size-40 rounded-full', {
-								'blur-[20px]': settings.data?.privacy_mode,
+								'blur-[20px]': settings.data?.privacyMode,
 							})}
 						/>
-						<span {...avatar.fallback}>
+						<span
+							{...avatar.fallback}
+							class={cn('flex size-40 items-center justify-center rounded-full bg-muted text-4xl font-semibold', {
+								'blur-[20px]': settings.data?.privacyMode,
+							})}
+						>
 							{data.session.user.name
 								.split(' ')
 								.map((i) => i[0]?.toUpperCase())
@@ -111,14 +116,14 @@
 				<div class="flex flex-col gap-1">
 					<p
 						class={cn('text-center text-2xl font-bold', {
-							'blur-[6px]': settings.data?.privacy_mode,
+							'blur-[6px]': settings.data?.privacyMode,
 						})}
 					>
 						{data.session.user.name}
 					</p>
 					<span
 						class={cn('text-muted-foreground text-center text-sm', {
-							'blur-[6px]': settings.data?.privacy_mode,
+							'blur-[6px]': settings.data?.privacyMode,
 						})}
 					>
 						{data.session.user.email}
