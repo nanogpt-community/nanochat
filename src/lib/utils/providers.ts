@@ -1,39 +1,75 @@
-import { Result, ResultAsync } from 'neverthrow';
 
-export type NanoGPTApiKeyData = {
-	label: string;
-	usage: number;
-	is_free_tier: boolean;
-	is_provisioning_key: boolean;
-	limit: number;
-	limit_remaining: number;
+import { Result, ResultAsync, ok, err } from 'neverthrow';
+
+export type NanoGPTConnectionData = {
+	balance: {
+		usd: string;
+		nano: string;
+		depositAddress?: string;
+	};
+	subscription: {
+		active: boolean;
+		daily: {
+			used: number;
+			remaining: number;
+			limit: number;
+			resetAt: number;
+		};
+		monthly: {
+			used: number;
+			remaining: number;
+			limit: number;
+			resetAt: number;
+		};
+	};
+	/* Legacy fields for compatibility if needed, though we'll update the UI */
+	usage?: number;
+	limit_remaining?: number;
 };
 
 export const NanoGPT = {
-	getApiKey: async (key: string): Promise<Result<NanoGPTApiKeyData, string>> => {
+	getApiKey: async (_key: string): Promise<Result<NanoGPTConnectionData, string>> => {
 		return await ResultAsync.fromPromise(
 			(async () => {
-				// Verify key by fetching models
-				const res = await fetch('https://nano-gpt.com/api/v1/models', {
-					headers: {
-						Authorization: `Bearer ${key}`,
-						'Content-Type': 'application/json',
-					},
-				});
+				const [balanceRes, usageRes] = await Promise.all([
+					fetch('/api/nano-gpt/balance', { method: 'POST' }),
+					fetch('/api/nano-gpt/subscription-usage', { method: 'GET' })
+				]);
 
-				if (!res.ok) throw new Error('Failed to verify API key');
+				if (!balanceRes.ok || !usageRes.ok) {
+					throw new Error('Failed to fetch NanoGPT account data');
+				}
 
-				// Start with dummy data since we don't have a dedicated key info endpoint yet
+				const balanceData = await balanceRes.json();
+				const usageData = await usageRes.json();
+
 				return {
-					label: 'NanoGPT Key',
-					usage: 0,
-					is_free_tier: false,
-					is_provisioning_key: false,
-					limit: 0,
-					limit_remaining: 0,
-				} as NanoGPTApiKeyData;
+					balance: {
+						usd: balanceData.usd_balance,
+						nano: balanceData.nano_balance,
+						depositAddress: balanceData.nanoDepositAddress
+					},
+					subscription: {
+						active: usageData.active,
+						daily: {
+							used: usageData.daily?.used ?? 0,
+							remaining: usageData.daily?.remaining ?? 0,
+							limit: usageData.limits?.daily ?? 0,
+							resetAt: usageData.daily?.resetAt
+						},
+						monthly: {
+							used: usageData.monthly?.used ?? 0,
+							remaining: usageData.monthly?.remaining ?? 0,
+							limit: usageData.limits?.monthly ?? 0,
+							resetAt: usageData.monthly?.resetAt
+						}
+					},
+					// Map to 'usage' roughly as currently used daily? Or maybe just ignore legacy fields
+					usage: usageData.daily?.used ?? 0,
+					limit_remaining: usageData.daily?.remaining ?? 0
+				} as NanoGPTConnectionData;
 			})(),
-			(e) => `Failed to get API key ${e}`
+			(e) => `Failed to get API key info: ${e}`
 		);
 	},
 };

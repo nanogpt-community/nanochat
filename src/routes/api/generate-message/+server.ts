@@ -241,11 +241,14 @@ async function generateAIResponse({
 
 	// Perform web search if enabled
 	let searchContext: string | null = null;
+	let webSearchCost = 0;
 	if (webSearchEnabled && lastUserMessage) {
 		log('Background: Performing web search', startTime);
 		try {
-			searchContext = await performNanoGPTWebSearch(lastUserMessage.content, apiKey, webSearchDepth ?? 'standard');
-			log('Background: Web search completed', startTime);
+			const depth = webSearchDepth ?? 'standard';
+			searchContext = await performNanoGPTWebSearch(lastUserMessage.content, apiKey, depth);
+			webSearchCost = depth === 'deep' ? 0.06 : 0.006;
+			log(`Background: Web search completed ($${webSearchCost})`, startTime);
 		} catch (e) {
 			log(`Background: Web search failed: ${e}`, startTime);
 		}
@@ -253,12 +256,17 @@ async function generateAIResponse({
 
 	// Scrape URLs from the user message if any are present
 	let scrapedContent: string = '';
+	let scrapeCost = 0;
+
 	if (lastUserMessage) {
 		log('Background: Checking for URLs to scrape', startTime);
 		try {
-			scrapedContent = await scrapeUrlsFromMessage(lastUserMessage.content, apiKey);
-			if (scrapedContent) {
-				log('Background: URL scraping completed', startTime);
+			const scrapeResult = await scrapeUrlsFromMessage(lastUserMessage.content, apiKey);
+			scrapedContent = scrapeResult.content;
+
+			if (scrapeResult.successCount > 0) {
+				scrapeCost = scrapeResult.successCount * 0.001;
+				log(`Background: URL scraping completed (${scrapeResult.successCount} URLs, $${scrapeCost})`, startTime);
 			}
 		} catch (e) {
 			log(`Background: URL scraping failed: ${e}`, startTime);
@@ -565,9 +573,11 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 					const promptTokens = usage.prompt_tokens ?? 0;
 					const completionTokens = usage.completion_tokens ?? 0;
 
-					// Calculate cost: (tokens / 1M) * price_per_million
-					costUsd = (promptTokens * promptPricePerMillion + completionTokens * completionPricePerMillion) / 1_000_000;
-					log(`Background: Calculated cost: $${costUsd.toFixed(6)} (prompt: ${promptTokens}, completion: ${completionTokens})`, startTime);
+					// Calculate cost: (tokens / 1M) * price_per_million + tool costs
+					const tokenCost = (promptTokens * promptPricePerMillion + completionTokens * completionPricePerMillion) / 1_000_000;
+					costUsd = tokenCost + webSearchCost + scrapeCost;
+
+					log(`Background: Calculated cost: $${costUsd.toFixed(6)} (prompt: ${promptTokens}, completion: ${completionTokens}, search: $${webSearchCost}, scrape: $${scrapeCost})`, startTime);
 				}
 			}
 		} else {

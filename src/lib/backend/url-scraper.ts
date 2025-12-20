@@ -144,11 +144,11 @@ Instructions: Use the above scraped page content to answer the user's query. Ref
 export async function scrapeUrlsFromMessage(
     messageContent: string,
     apiKey: string
-): Promise<string> {
+): Promise<{ content: string; successCount: number }> {
     const urls = extractUrls(messageContent);
 
     if (urls.length === 0) {
-        return '';
+        return { content: '', successCount: 0 };
     }
 
     console.log(`[URL Scraper] Found ${urls.length} URLs to scrape:`, urls);
@@ -156,10 +156,13 @@ export async function scrapeUrlsFromMessage(
     const response = await scrapeUrls(urls, apiKey);
 
     if (!response || !response.results) {
-        return '';
+        return { content: '', successCount: 0 };
     }
 
     console.log(`[URL Scraper] Scraped ${response.summary.successful}/${response.summary.requested} URLs successfully`);
 
-    return formatScrapedContent(response.results);
+    return {
+        content: formatScrapedContent(response.results),
+        successCount: response.summary.successful
+    };
 }

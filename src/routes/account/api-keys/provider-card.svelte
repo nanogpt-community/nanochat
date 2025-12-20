@@ -96,11 +96,45 @@
 				{#if apiKeyInfoResource.loading}
 					<div class="bg-input h-6 w-[200px] animate-pulse rounded-md"></div>
 				{:else if apiKeyInfoResource.current}
-					<span class="text-muted-foreground flex h-6 place-items-center text-xs">
-						${(apiKeyInfoResource.current?.usage ?? 0).toFixed(3)} used ・ ${(apiKeyInfoResource.current?.limit_remaining ?? 0).toFixed(
-							3
-						)} remaining
-					</span>
+					{#if provider === 'nanogpt'}
+						<div class="flex flex-col gap-2 mt-2 p-3 bg-muted/50 rounded-lg text-xs">
+							<div class="grid grid-cols-2 gap-x-4 gap-y-2">
+								<div class="flex flex-col">
+									<span class="text-muted-foreground">USD Balance</span>
+									<span class="font-mono">${apiKeyInfoResource.current.balance.usd}</span>
+								</div>
+								<div class="flex flex-col">
+									<span class="text-muted-foreground">Nano Balance</span>
+									<span class="font-mono">{apiKeyInfoResource.current.balance.nano} Ӿ</span>
+								</div>
+							</div>
+							
+							<div class="h-px bg-border my-1"></div>
+							
+							<div class="grid grid-cols-2 gap-x-4 gap-y-2">
+								<div class="flex flex-col">
+									<span class="text-muted-foreground">Daily Usage</span>
+									<div class="flex items-end gap-1">
+										<span class="font-medium">{apiKeyInfoResource.current.subscription.daily.used}</span>
+										<span class="text-muted-foreground mb-px">/ {apiKeyInfoResource.current.subscription.daily.limit}</span>
+									</div>
+								</div>
+								<div class="flex flex-col">
+									<span class="text-muted-foreground">Monthly Usage</span>
+									<div class="flex items-end gap-1">
+										<span class="font-medium">{apiKeyInfoResource.current.subscription.monthly.used}</span>
+										<span class="text-muted-foreground mb-px">/ {apiKeyInfoResource.current.subscription.monthly.limit}</span>
+									</div>
+								</div>
+							</div>
+						</div>
+					{:else}
+						<span class="text-muted-foreground flex h-6 place-items-center text-xs">
+							${(apiKeyInfoResource.current?.usage ?? 0).toFixed(3)} used ・ ${(apiKeyInfoResource.current?.limit_remaining ?? 0).toFixed(
+								3
+							)} remaining
+						</span>
+					{/if}
 				{:else}
 					<span
 						class="flex h-6 w-fit place-items-center rounded-lg bg-red-500/50 px-2 text-xs text-red-500"
