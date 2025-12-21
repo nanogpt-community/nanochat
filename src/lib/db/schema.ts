@@ -233,19 +233,23 @@ export const userMemories = sqliteTable(
     (table) => [index('user_memories_user_id_idx').on(table.userId)]
 );
 
-export const assistants = sqliteTable('assistants', {
-    id: text('id').primaryKey(),
-    userId: text('user_id')
-        .notNull()
-        .references(() => user.id, { onDelete: 'cascade' }),
-    name: text('name').notNull(),
-    description: text('description'),
-    modelId: text('model_id').notNull(),
-    provider: text('provider').notNull(),
-    systemPrompt: text('system_prompt').notNull(),
-    createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-    updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
-});
+export const assistants = sqliteTable(
+    'assistants',
+    {
+        id: text('id').primaryKey(),
+        userId: text('user_id')
+            .notNull()
+            .references(() => user.id, { onDelete: 'cascade' }),
+        name: text('name').notNull(),
+        description: text('description'),
+        modelId: text('model_id').notNull(),
+        provider: text('provider').notNull(),
+        systemPrompt: text('system_prompt').notNull(),
+        createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+        updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+    },
+    (table) => [index('assistants_user_id_idx').on(table.userId)]
+);
 
 // ============================================================================
 // Relations

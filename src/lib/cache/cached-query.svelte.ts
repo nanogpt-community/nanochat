@@ -66,18 +66,32 @@ export function useCachedQuery<TResult>(
 			return;
 		}
 
+		const args = getArgs();
+		
+		// Skip if session_token is required but empty/missing
+		if ('session_token' in args && !args.session_token) {
+			console.log('[useCachedQuery] Skipping query - no session token:', queryConfig.url);
+			isLoading = false;
+			data = undefined;
+			return;
+		}
+
 		const key = getCacheKey();
 
-		// Check cache first
+		// Check cache first - if we have cached data, show it immediately while revalidating
 		const cached = globalCache.get(key);
 		if (cached !== undefined) {
 			data = cached as TResult;
 			isStale = true;
-			isLoading = false;
+			// Don't set isLoading to false here - we're still fetching fresh data
+		} else {
+			// Only show loading if we don't have cached data
+			isLoading = true;
 		}
 
+		console.log('[useCachedQuery] Fetching:', queryConfig.url, 'with args:', args);
+
 		try {
-			const args = getArgs();
 			let url = queryConfig.url;
 
 			// Build URL with query params for GET requests, or use POST

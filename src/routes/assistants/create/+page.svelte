@@ -8,6 +8,8 @@
     import { settings } from '$lib/state/settings.svelte';
     import { Provider } from '$lib/types';
     import ArrowLeft from '~icons/lucide/arrow-left';
+    import { invalidateQueryPattern, queryCache } from '$lib/cache/cached-query.svelte';
+    import { session } from '$lib/state/session.svelte';
 
     let name = $state('');
     let description = $state('');
@@ -16,6 +18,13 @@
 
     async function handleSubmit(e: Event) {
         e.preventDefault();
+        
+        // Validate that a model is selected
+        if (!settings.modelId) {
+            alert('Please select a model before creating the assistant');
+            return;
+        }
+        
         loading = true;
 
         try {
@@ -25,20 +34,38 @@
                 body: JSON.stringify({
                     name,
                     description,
-                    modelId: settings.modelId, // Use the selected model from settings
+                    modelId: settings.modelId,
                     provider: Provider.NanoGPT,
                     systemPrompt,
                 }),
             });
 
             if (res.ok) {
-                goto('/assistants');
+                // Prefetch the assistants list to populate cache before navigation
+                try {
+                    const assistantsRes = await fetch('/api/db/assistants', {
+                        method: 'GET',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                    });
+                    if (assistantsRes.ok) {
+                        const assistants = await assistantsRes.json();
+                        // Populate cache with the correct key format
+                        const cacheKey = `/api/db/assistants:{"session_token":"${session.current?.session.token ?? ''}"}`;  
+                        queryCache.set(cacheKey, assistants, 7 * 24 * 60 * 60 * 1000);
+                    }
+                } catch (e) {
+                    console.error('Failed to prefetch assistants:', e);
+                }
+                await goto('/assistants');
             } else {
-                alert('Failed to create assistant');
+                const errorData = await res.json().catch(() => ({ message: 'Unknown error' }));
+                console.error('Failed to create assistant:', errorData);
+                alert(`Failed to create assistant: ${errorData.message || res.statusText}`);
             }
         } catch (error) {
-            console.error(error);
-            alert('Error creating assistant');
+            console.error('Error creating assistant:', error);
+            alert('Error creating assistant. Please try again.');
         } finally {
             loading = false;
         }
@@ -66,9 +93,13 @@
         </div>
 
         <div class="grid w-full gap-1.5">
-            <Label>Model</Label>
+            <Label>Model <span class="text-destructive">*</span></Label>
             <ModelPicker class="w-full justify-start" />
-            <p class="text-xs text-muted-foreground">The assistant will use the currently selected model: {settings.modelId}</p>
+            {#if settings.modelId}
+                <p class="text-xs text-muted-foreground">Selected model: {settings.modelId}</p>
+            {:else}
+                <p class="text-xs text-destructive">Please select a model</p>
+            {/if}
         </div>
 
         <div class="grid w-full gap-1.5">

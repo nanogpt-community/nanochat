@@ -8,9 +8,9 @@
     import ArrowLeft from '~icons/lucide/arrow-left';
     import * as Card from "$lib/components/ui/card";
 
-    const assistantsQuery = useCachedQuery(api.assistants.all, {
+    const assistantsQuery = useCachedQuery(api.assistants.all, () => ({
         session_token: session.current?.session.token ?? '',
-    });
+    }));
 
     async function deleteAssistant(id: string) {
         if (!confirm('Are you sure you want to delete this assistant?')) return;
@@ -43,7 +43,13 @@
         </Button>
     </div>
 
-    {#if assistantsQuery.isLoading}
+    {#if assistantsQuery.error}
+        <div class="flex flex-col items-center justify-center rounded-lg border border-dashed border-destructive/50 p-12 text-center">
+            <h3 class="text-lg font-semibold text-destructive">Error loading assistants</h3>
+            <p class="text-muted-foreground mt-2 mb-4">{assistantsQuery.error.message}</p>
+            <Button onclick={() => assistantsQuery.refetch?.()}>Retry</Button>
+        </div>
+    {:else if assistantsQuery.isLoading && !assistantsQuery.data}
         <p>Loading...</p>
     {:else if assistantsQuery.data?.length === 0}
         <div class="flex flex-col items-center justify-center rounded-lg border border-dashed p-12 text-center">

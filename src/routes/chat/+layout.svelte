@@ -53,16 +53,21 @@ let { children } = $props();
 let textarea = $state<HTMLTextAreaElement>();
 let abortController = $state<AbortController | null>(null);
 
-const assistantsQuery = useCachedQuery(api.assistants.all, {
+const assistantsQuery = useCachedQuery(api.assistants.all, () => ({
     session_token: session.current?.session.token ?? '',
-});
+}));
 
 let selectedAssistantId = $state<string | null>(null);
 const selectedAssistant = $derived(assistantsQuery.data?.find(a => a.id === selectedAssistantId));
 
+// Update model when assistant is selected (but avoid infinite loops)
+let lastAssistantModelId = $state<string | undefined>(undefined);
 $effect(() => {
-    if (selectedAssistant) {
+    if (selectedAssistant && selectedAssistant.modelId !== lastAssistantModelId) {
+        lastAssistantModelId = selectedAssistant.modelId;
         settings.modelId = selectedAssistant.modelId;
+    } else if (!selectedAssistant) {
+        lastAssistantModelId = undefined;
     }
 });
 
