@@ -4,6 +4,8 @@
 	import { Label } from '$lib/components/ui/label';
 	import { authClient } from '$lib/backend/auth/client.js';
 
+	let { data } = $props();
+
 	let username = $state('');
 	let password = $state('');
 	let isLoading = $state(false);
@@ -118,9 +120,11 @@
 			<Button onclick={handleSignIn} disabled={isLoading || !username || !password}>
 				{isLoading ? 'Loading...' : 'Sign In'}
 			</Button>
-			<Button variant="outline" onclick={handleSignUp} disabled={isLoading || !username || !password}>
-				Create Account
-			</Button>
+			{#if !data.signupsDisabled}
+				<Button variant="outline" onclick={handleSignUp} disabled={isLoading || !username || !password}>
+					Create Account
+				</Button>
+			{/if}
 		</div>
 
 		<div class="relative">

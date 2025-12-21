@@ -31,6 +31,7 @@ export const auth = betterAuth({
 	],
 	emailAndPassword: {
 		enabled: true,
+		disableSignUp: env.DISABLE_SIGNUPS === 'true',
 	},
 	databaseHooks: {
 		user: {
