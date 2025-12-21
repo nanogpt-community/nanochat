@@ -6,9 +6,10 @@ import {
 	userKeys,
 	userRules,
 	userSettings,
-	conversations,
-	messages,
-	storage,
+    conversations,
+    messages,
+    storage,
+    assistants,
 } from '$lib/db/schema';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { eq, and, asc, sql } from 'drizzle-orm';
@@ -35,9 +36,10 @@ const ENABLE_LOGGING = true;
 const reqBodySchema = z
 	.object({
 		message: z.string().optional(),
-		model_id: z.string(),
+        model_id: z.string(),
+        assistant_id: z.string().optional(),
 
-		session_token: z.string(),
+        session_token: z.string(),
 		conversation_id: z.string().optional(),
 		web_search_enabled: z.boolean().optional(),
 		web_search_mode: z.enum(['off', 'standard', 'deep']).optional(),
@@ -189,20 +191,22 @@ async function generateAIResponse({
 	apiKey,
 	rules,
 	userSettingsData,
-	abortSignal,
-	reasoningEffort,
-	webSearchDepth,
+    abortSignal,
+    reasoningEffort,
+    webSearchDepth,
+    assistant,
 }: {
-	conversationId: string;
-	userId: string;
-	startTime: number;
-	apiKey: string;
-	model: Doc<'user_enabled_models'>;
-	rules: Doc<'user_rules'>[];
-	userSettingsData: Doc<'user_settings'> | null;
-	abortSignal?: AbortSignal;
-	reasoningEffort?: 'low' | 'medium' | 'high';
-	webSearchDepth?: 'standard' | 'deep';
+    conversationId: string;
+    userId: string;
+    startTime: number;
+    apiKey: string;
+    model: Doc<'user_enabled_models'>;
+    rules: Doc<'user_rules'>[];
+    userSettingsData: Doc<'user_settings'> | null;
+    abortSignal?: AbortSignal;
+    reasoningEffort?: 'low' | 'medium' | 'high';
+    webSearchDepth?: 'standard' | 'deep';
+    assistant?: Doc<'assistants'>;
 }) {
 	log('Starting AI response generation in background', startTime);
 
@@ -389,10 +393,14 @@ async function generateAIResponse({
 		})
 	);
 
-	// Construct system message content
-	let systemContent = '';
+    // Construct system message content
+    let systemContent = '';
 
-	// Add persistent memory context first (if available)
+    if (assistant) {
+        systemContent += `${assistant.systemPrompt}\n\n`;
+    }
+
+    // Add persistent memory context first (if available)
 	if (storedMemory) {
 		systemContent += `[MEMORY FROM PREVIOUS CONVERSATIONS]\n${storedMemory}\n\n[CURRENT CONVERSATION]\n`;
 	}
@@ -895,27 +903,34 @@ export const POST: RequestHandler = async ({ request }) => {
 	const userId = session.user.id;
 	log('Session authenticated successfully', startTime);
 
-	// Fetch model, API key, rules, and user settings in parallel
-	const [modelRecord, keyRecord, rulesRecords, userSettingsRecord] = await Promise.all([
-		db.query.userEnabledModels.findFirst({
-			where: and(
-				eq(userEnabledModels.userId, userId),
-				eq(userEnabledModels.provider, Provider.NanoGPT),
-				eq(userEnabledModels.modelId, args.model_id)
-			),
-		}),
-		db.query.userKeys.findFirst({
-			where: and(eq(userKeys.userId, userId), eq(userKeys.provider, Provider.NanoGPT)),
-		}),
-		db.query.userRules.findMany({
-			where: eq(userRules.userId, userId),
-		}),
-		db.query.userSettings.findFirst({
-			where: eq(userSettings.userId, userId),
-		}),
-	]);
+    // Fetch model, API key, rules, and user settings in parallel
+    const [modelRecord, keyRecord, rulesRecords, userSettingsRecord] = await Promise.all([
+        db.query.userEnabledModels.findFirst({
+            where: and(
+                eq(userEnabledModels.userId, userId),
+                eq(userEnabledModels.provider, Provider.NanoGPT),
+                eq(userEnabledModels.modelId, args.model_id)
+            ),
+        }),
+        db.query.userKeys.findFirst({
+            where: and(eq(userKeys.userId, userId), eq(userKeys.provider, Provider.NanoGPT)),
+        }),
+        db.query.userRules.findMany({
+            where: eq(userRules.userId, userId),
+        }),
+        db.query.userSettings.findFirst({
+            where: eq(userSettings.userId, userId),
+        }),
+    ]);
 
-	let effectiveModelRecord = modelRecord;
+    let assistant: Doc<'assistants'> | undefined;
+    if (args.assistant_id) {
+        assistant = await db.query.assistants.findFirst({
+            where: and(eq(assistants.id, args.assistant_id), eq(assistants.userId, userId)),
+        });
+    }
+
+    let effectiveModelRecord = modelRecord;
 
 	// If model is not found/enabled, check if it's a valid NanoGPT model and auto-enable it
 	if (!effectiveModelRecord) {
@@ -1264,12 +1279,13 @@ export const POST: RequestHandler = async ({ request }) => {
 			model: finalModelRecord,
 			apiKey: actualKey,
 			rules: rulesRecords,
-			userSettingsData: userSettingsRecord ?? null,
-			abortSignal: abortController.signal,
-			reasoningEffort: args.reasoning_effort,
-			webSearchDepth: args.web_search_mode && args.web_search_mode !== 'off' ? args.web_search_mode : undefined,
-		})
-			.catch(async (error) => {
+            userSettingsData: userSettingsRecord ?? null,
+            abortSignal: abortController.signal,
+            reasoningEffort: args.reasoning_effort,
+            webSearchDepth: args.web_search_mode && args.web_search_mode !== 'off' ? args.web_search_mode : undefined,
+            assistant,
+        })
+            .catch(async (error) => {
 				log(`Background AI response generation error: ${error}`, startTime);
 				// Reset generating status on error
 				try {

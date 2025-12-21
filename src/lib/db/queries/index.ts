@@ -5,3 +5,4 @@ export * from './user-enabled-models';
 export * from './user-rules';
 export * from './conversations';
 export * from './messages';
+export * from './assistants';

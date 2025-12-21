@@ -36,6 +36,7 @@
         "@tailwindcss/vite": "^4.1.18",
         "@testing-library/jest-dom": "^6.9.1",
         "@testing-library/svelte": "^5.2.9",
+        "better-sqlite3": "^12.5.0",
         "bits-ui": "^2.14.4",
         "clsx": "^2.1.1",
         "concurrently": "^9.2.1",

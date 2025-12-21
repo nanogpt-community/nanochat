@@ -233,6 +233,20 @@ export const userMemories = sqliteTable(
     (table) => [index('user_memories_user_id_idx').on(table.userId)]
 );
 
+export const assistants = sqliteTable('assistants', {
+    id: text('id').primaryKey(),
+    userId: text('user_id')
+        .notNull()
+        .references(() => user.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    description: text('description'),
+    modelId: text('model_id').notNull(),
+    provider: text('provider').notNull(),
+    systemPrompt: text('system_prompt').notNull(),
+    createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+    updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});
+
 // ============================================================================
 // Relations
 // ============================================================================
@@ -247,6 +261,7 @@ export const userRelations = relations(user, ({ many, one }) => ({
     conversations: many(conversations),
     storage: many(storage),
     memories: one(userMemories),
+    assistants: many(assistants),
 }));
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -324,6 +339,13 @@ export const userMemoriesRelations = relations(userMemories, ({ one }) => ({
     }),
 }));
 
+export const assistantsRelations = relations(assistants, ({ one }) => ({
+    user: one(user, {
+        fields: [assistants.userId],
+        references: [user.id],
+    }),
+}));
+
 // ============================================================================
 // Type Exports
 // ============================================================================
@@ -348,3 +370,5 @@ export type Storage = typeof storage.$inferSelect;
 export type NewStorage = typeof storage.$inferInsert;
 export type UserMemory = typeof userMemories.$inferSelect;
 export type NewUserMemory = typeof userMemories.$inferInsert;
+export type Assistant = typeof assistants.$inferSelect;
+export type NewAssistant = typeof assistants.$inferInsert;

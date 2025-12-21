@@ -14,6 +14,8 @@ export type {
     Storage,
     User,
     Session,
+    Assistant,
+    NewAssistant,
 } from '$lib/db/schema';
 
 // Table name to type mapping 
@@ -27,6 +29,7 @@ type TableTypes = {
     storage: import('$lib/db/schema').Storage;
     user: import('$lib/db/schema').User;
     session: import('$lib/db/schema').Session;
+    assistants: import('$lib/db/schema').Assistant;
 };
 
 /**

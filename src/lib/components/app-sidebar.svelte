@@ -18,11 +18,12 @@
 	import XIcon from '~icons/lucide/x';
 	import { Button } from './ui/button';
 	import { callModal } from './ui/modal/global-modal.svelte';
-	import SplitIcon from '~icons/lucide/split';
-	import SearchIcon from '~icons/lucide/search';
-	import LogInIcon from '~icons/lucide/log-in';
+import SplitIcon from '~icons/lucide/split';
+import SearchIcon from '~icons/lucide/search';
+import LogInIcon from '~icons/lucide/log-in';
+import BotIcon from '~icons/lucide/bot';
 
-	let { searchModalOpen = $bindable(false) }: { searchModalOpen: boolean } = $props();
+let { searchModalOpen = $bindable(false) }: { searchModalOpen: boolean } = $props();
 
 	const controls = useSidebarControls();
 
@@ -159,16 +160,23 @@
 		</Tooltip>
 	</div>
 	<div class="mt-2 flex w-full flex-col gap-2 px-2">
-		<button
-			type="button"
-			class="text-muted-foreground/70 hover:text-foreground flex items-center gap-2 px-3 py-2 text-sm transition-all bg-secondary/20 rounded-lg border border-transparent hover:border-border"
-			onclick={() => (searchModalOpen = true)}
-		>
-			<SearchIcon class="size-4" />
-			<span>Search threads...</span>
-		</button>
-	</div>
-	<div class="relative flex min-h-0 flex-1 shrink-0 flex-col overflow-clip">
+        <button
+            type="button"
+            class="text-muted-foreground/70 hover:text-foreground flex items-center gap-2 px-3 py-2 text-sm transition-all bg-secondary/20 rounded-lg border border-transparent hover:border-border"
+            onclick={() => (searchModalOpen = true)}
+        >
+            <SearchIcon class="size-4" />
+            <span>Search threads...</span>
+        </button>
+        <a
+            href="/assistants"
+            class="text-muted-foreground/70 hover:text-foreground flex items-center gap-2 px-3 py-2 text-sm transition-all bg-secondary/20 rounded-lg border border-transparent hover:border-border"
+        >
+            <BotIcon class="size-4" />
+            <span>Assistants</span>
+        </a>
+    </div>
+    <div class="relative flex min-h-0 flex-1 shrink-0 flex-col overflow-clip">
 		<div
 			class="from-sidebar pointer-events-none absolute top-0 right-0 left-0 z-10 h-4 bg-gradient-to-b to-transparent"
 		></div>

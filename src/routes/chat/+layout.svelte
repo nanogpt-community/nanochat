@@ -43,17 +43,31 @@
 	import { callEnhancePrompt } from '../api/enhance-prompt/call.js';
 	import ShinyText from '$lib/components/animations/shiny-text.svelte';
 	import SparkleIcon from '~icons/lucide/sparkle';
-	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
-	import BrainIcon from '~icons/lucide/brain';
-	import * as casing from '$lib/utils/casing.js';
+import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
+import BrainIcon from '~icons/lucide/brain';
+import BotIcon from '~icons/lucide/bot';
+import * as casing from '$lib/utils/casing.js';
 
-	let { children } = $props();
+let { children } = $props();
 
-	let textarea = $state<HTMLTextAreaElement>();
-	let abortController = $state<AbortController | null>(null);
+let textarea = $state<HTMLTextAreaElement>();
+let abortController = $state<AbortController | null>(null);
 
-	$effect(() => {
-		// Enable initial models for new users
+const assistantsQuery = useCachedQuery(api.assistants.all, {
+    session_token: session.current?.session.token ?? '',
+});
+
+let selectedAssistantId = $state<string | null>(null);
+const selectedAssistant = $derived(assistantsQuery.data?.find(a => a.id === selectedAssistantId));
+
+$effect(() => {
+    if (selectedAssistant) {
+        settings.modelId = selectedAssistant.modelId;
+    }
+});
+
+$effect(() => {
+    // Enable initial models for new users
 		mutate(api.user_enabled_models.enable_initial.url, {
 			action: 'enableInitial',
 		}, {
@@ -127,8 +141,9 @@
 				message: message.current,
 				session_token: session.current?.session.token,
 				conversation_id: page.params.id ?? undefined,
-				model_id: settings.modelId,
-				images: imagesCopy.length > 0 ? imagesCopy : undefined,
+            model_id: settings.modelId,
+            assistant_id: selectedAssistantId ?? undefined,
+            images: imagesCopy.length > 0 ? imagesCopy : undefined,
 				web_search_mode: settings.webSearchMode,
 				reasoning_effort: currentModelSupportsReasoning ? settings.reasoningEffort : undefined,
 			});
@@ -692,12 +707,34 @@
 								></textarea>
 							</div>
 							<div class="mt-1 flex w-full flex-row items-end justify-between px-2 pb-1">
-								<div class="flex flex-wrap items-center gap-1.5">
-									<ModelPicker
-										class="bg-secondary/50 hover:bg-secondary text-muted-foreground flex h-9 items-center justify-center rounded-lg px-2.5 transition-colors"
-										onlyImageModels={selectedImages.length > 0}
-									/>
-									<div class="flex items-center gap-1.5">
+                                <div class="flex flex-wrap items-center gap-1.5">
+                                    <ModelPicker
+                                        class="bg-secondary/50 hover:bg-secondary text-muted-foreground flex h-9 items-center justify-center rounded-lg px-2.5 transition-colors"
+                                        onlyImageModels={selectedImages.length > 0}
+                                    />
+                                    <DropdownMenu.Root>
+                                        <DropdownMenu.Trigger class="bg-secondary/50 hover:bg-secondary text-muted-foreground flex h-9 items-center justify-center gap-2 rounded-lg px-2.5 transition-colors">
+                                            {#if selectedAssistant}
+                                                <BotIcon class="size-4" />
+                                                <span class="max-w-[100px] truncate text-xs">{selectedAssistant.name}</span>
+                                            {:else}
+                                                <BotIcon class="size-4 opacity-50" />
+                                            {/if}
+                                        </DropdownMenu.Trigger>
+                                        <DropdownMenu.Content>
+                                            <DropdownMenu.Label>Select Assistant</DropdownMenu.Label>
+                                            <DropdownMenu.Separator />
+                                            <DropdownMenu.Item onclick={() => selectedAssistantId = null}>
+                                                Default
+                                            </DropdownMenu.Item>
+                                            {#each assistantsQuery.data ?? [] as assistant}
+                                                <DropdownMenu.Item onclick={() => selectedAssistantId = assistant.id}>
+                                                    {assistant.name}
+                                                </DropdownMenu.Item>
+                                            {/each}
+                                        </DropdownMenu.Content>
+                                    </DropdownMenu.Root>
+                                    <div class="flex items-center gap-1.5">
 										<Tooltip>
 											{#snippet trigger(tooltip)}
 												<button

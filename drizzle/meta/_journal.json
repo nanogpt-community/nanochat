@@ -57,6 +57,13 @@
       "when": 1766171467015,
       "tag": "0007_lethal_king_bedlam",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1766264712566,
+      "tag": "0008_lean_riptide",
+      "breakpoints": true
     }
   ]
 }

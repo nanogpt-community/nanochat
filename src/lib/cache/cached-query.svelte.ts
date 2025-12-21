@@ -205,14 +205,18 @@ export const api = {
 		toggle_pinned: { url: '/api/db/user-models', method: 'POST' } as QueryConfig,
 		enable_initial: { url: '/api/db/user-models', method: 'POST' } as QueryConfig,
 	},
-	user_rules: {
-		all: { url: '/api/db/user-rules', method: 'GET' } as QueryConfig,
-		create: { url: '/api/db/user-rules', method: 'POST' } as QueryConfig,
-		update: { url: '/api/db/user-rules', method: 'POST' } as QueryConfig,
-		rename: { url: '/api/db/user-rules', method: 'POST' } as QueryConfig,
-		remove: { url: '/api/db/user-rules', method: 'POST' } as QueryConfig,
-	},
-	storage: {
+    user_rules: {
+        all: { url: '/api/db/user-rules', method: 'GET' } as QueryConfig,
+        create: { url: '/api/db/user-rules', method: 'POST' } as QueryConfig,
+        update: { url: '/api/db/user-rules', method: 'POST' } as QueryConfig,
+        rename: { url: '/api/db/user-rules', method: 'POST' } as QueryConfig,
+        remove: { url: '/api/db/user-rules', method: 'POST' } as QueryConfig,
+    },
+    assistants: {
+        all: { url: '/api/db/assistants', method: 'GET' } as QueryConfig,
+        create: { url: '/api/db/assistants', method: 'POST' } as QueryConfig,
+    },
+    storage: {
 		generateUploadUrl: { url: '/api/storage/upload-url', method: 'POST' } as QueryConfig,
 		getUrl: { url: '/api/storage/url', method: 'GET' } as QueryConfig,
 		deleteFile: { url: '/api/storage/delete', method: 'POST' } as QueryConfig,

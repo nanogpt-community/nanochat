@@ -13,7 +13,7 @@ import { building } from '$app/environment';
 import { migrate } from 'drizzle-orm/bun-sqlite/migrator';
 import { db } from '$lib/db';
 
-if (!building) {
+if (!building && process.env.NODE_ENV === 'production') {
 	try {
 		// Run migrations on startup
 		migrate(db, { migrationsFolder: 'drizzle' });
