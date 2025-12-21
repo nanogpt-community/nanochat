@@ -71,6 +71,13 @@
       "when": 1766322808974,
       "tag": "0009_parched_yellow_claw",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1766340708080,
+      "tag": "0010_bitter_stone_men",
+      "breakpoints": true
     }
   ]
 }
