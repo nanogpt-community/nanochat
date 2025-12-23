@@ -83,7 +83,12 @@ export function getNanoGPTModels() {
                             completion: '0',
                             image: JSON.stringify(m.cost) || '0',
                             request: '0'
-                        }
+                        },
+                        // Subscription info from API
+                        subscription: m.subscription ? {
+                            included: m.subscription.included ?? false,
+                            note: m.subscription.note ?? ''
+                        } : undefined,
                     }));
                 }
             }
@@ -107,7 +112,12 @@ export function getNanoGPTModels() {
                             completion: '0',
                             image: '0',
                             request: JSON.stringify(m.cost) || '0'
-                        }
+                        },
+                        // Subscription info from API
+                        subscription: m.subscription ? {
+                            included: m.subscription.included ?? false,
+                            note: m.subscription.note ?? ''
+                        } : undefined,
                     }));
                 }
             }
