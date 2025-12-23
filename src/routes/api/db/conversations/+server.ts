@@ -4,6 +4,7 @@ import { auth } from '$lib/auth';
 import {
     getUserConversations,
     getConversationById,
+    getPublicConversationById,
     createConversation,
     createConversationWithMessage,
     createBranchedConversation,
@@ -27,21 +28,49 @@ async function getSessionUserId(request: Request): Promise<string> {
 
 // GET - list all conversations or get by id
 export const GET: RequestHandler = async ({ request, url }) => {
-    const userId = await getSessionUserId(request);
     const conversationId = url.searchParams.get('id');
     const searchTerm = url.searchParams.get('search');
     const searchMode = url.searchParams.get('mode') as 'exact' | 'words' | 'fuzzy' | null;
 
+    // Try to get session, but don't fail if not logged in
+    let userId: string | undefined;
+    try {
+        const session = await auth.api.getSession({ headers: request.headers });
+        userId = session?.user?.id;
+    } catch {
+        // ignore
+    }
+
     if (searchTerm) {
+        if (!userId) throw error(401, 'Unauthorized');
         const results = await searchConversations(userId, searchTerm, searchMode ?? 'fuzzy');
         return json(results);
     }
 
     if (conversationId) {
-        const conversation = await getConversationById(conversationId, userId);
-        return json(conversation);
+        // If authenticated, try to get as user (handling own + public)
+        if (userId) {
+            try {
+                const conversation = await getConversationById(conversationId, userId);
+                if (conversation) return json(conversation);
+            } catch (e) {
+                // Ignore unauthorized error, try public fetch next
+            }
+        }
+
+        // If not authenticated or above failed/unauthorized, try strictly public fetch
+        const publicConversation = await getPublicConversationById(conversationId);
+        if (publicConversation) {
+            return json(publicConversation);
+        }
+
+        // If we get here, it's neither accessible by user nor public
+        // Return 404 to avoid leaking existence of private conversations
+        throw error(404, 'Conversation not found');
     }
 
+    // Default: List user conversations (requires auth)
+    if (!userId) throw error(401, 'Unauthorized');
     const conversations = await getUserConversations(userId);
     return json(conversations);
 };
