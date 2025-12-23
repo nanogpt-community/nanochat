@@ -87,6 +87,8 @@ export const userSettings = sqliteTable(
         contextMemoryEnabled: integer('context_memory_enabled', { mode: 'boolean' }).notNull().default(false),
         persistentMemoryEnabled: integer('persistent_memory_enabled', { mode: 'boolean' }).notNull().default(false),
         freeMessagesUsed: integer('free_messages_used').default(0),
+        dailyMessagesUsed: integer('daily_messages_used').default(0),
+        lastMessageDate: text('last_message_date'), // ISO date string (YYYY-MM-DD) for daily reset
         karakeepUrl: text('karakeep_url'),
         karakeepApiKey: text('karakeep_api_key'),
         createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),

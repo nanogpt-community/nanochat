@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { page } from '$app/state';
 	import { useCachedQuery, api } from '$lib/cache/cached-query.svelte';
 	import { LocalToasts } from '$lib/builders/local-toasts.svelte';
 	import { mutate } from '$lib/client/mutation.svelte';
@@ -38,12 +39,16 @@
 		if (key === null || !session.current?.user.id) return;
 
 		const res = await ResultAsync.fromPromise(
-			mutate(api.user_keys.set.url, {
-				provider,
-				key: `${key}`,
-			}, {
-				invalidatePatterns: [api.user_keys.get.url, api.user_enabled_models.get_enabled.url]
-			}),
+			mutate(
+				api.user_keys.set.url,
+				{
+					provider,
+					key: `${key}`,
+				},
+				{
+					invalidatePatterns: [api.user_keys.get.url, api.user_enabled_models.get_enabled.url],
+				}
+			),
 			(e) => e
 		);
 
@@ -69,6 +74,17 @@
 			return null;
 		}
 	);
+
+	// Get restrictions for showing daily limit instead of NanoGPT usage
+	const restrictions = $derived(page.data?.restrictions);
+	const usingServerKeyWithRestrictions = $derived(
+		restrictions?.usingServerKey && restrictions?.subscriptionOnly
+	);
+
+	// Query for user's daily limit usage
+	const userSettingsQuery = useCachedQuery(api.user_settings.get, {
+		session_token: session.current?.session.token ?? '',
+	});
 </script>
 
 <Card.Root>
@@ -97,42 +113,69 @@
 					<div class="bg-input h-6 w-[200px] animate-pulse rounded-md"></div>
 				{:else if apiKeyInfoResource.current}
 					{#if provider === 'nanogpt'}
-						<div class="flex flex-col gap-2 mt-2 p-3 bg-muted/50 rounded-lg text-xs">
-							<div class="grid grid-cols-2 gap-x-4 gap-y-2">
+						{#if usingServerKeyWithRestrictions}
+							<!-- Show daily message limit for server key users -->
+							<div class="bg-muted/50 mt-2 flex flex-col gap-2 rounded-lg p-3 text-xs">
 								<div class="flex flex-col">
-									<span class="text-muted-foreground">USD Balance</span>
-									<span class="font-mono">${apiKeyInfoResource.current.balance.usd}</span>
-								</div>
-								<div class="flex flex-col">
-									<span class="text-muted-foreground">Nano Balance</span>
-									<span class="font-mono">{apiKeyInfoResource.current.balance.nano} Ӿ</span>
-								</div>
-							</div>
-							
-							<div class="h-px bg-border my-1"></div>
-							
-							<div class="grid grid-cols-2 gap-x-4 gap-y-2">
-								<div class="flex flex-col">
-									<span class="text-muted-foreground">Daily Usage</span>
+									<span class="text-muted-foreground">Daily Message Limit</span>
 									<div class="flex items-end gap-1">
-										<span class="font-medium">{apiKeyInfoResource.current.subscription.daily.used}</span>
-										<span class="text-muted-foreground mb-px">/ {apiKeyInfoResource.current.subscription.daily.limit}</span>
+										<span class="font-medium">{userSettingsQuery.data?.dailyMessagesUsed ?? 0}</span
+										>
+										<span class="text-muted-foreground mb-px"
+											>/ {restrictions?.dailyLimit || 'unlimited'}</span
+										>
 									</div>
 								</div>
-								<div class="flex flex-col">
-									<span class="text-muted-foreground">Monthly Usage</span>
-									<div class="flex items-end gap-1">
-										<span class="font-medium">{apiKeyInfoResource.current.subscription.monthly.used}</span>
-										<span class="text-muted-foreground mb-px">/ {apiKeyInfoResource.current.subscription.monthly.limit}</span>
+								<p class="text-muted-foreground mt-1">
+									You're using the server API key. Add your own key for unlimited access.
+								</p>
+							</div>
+						{:else}
+							<div class="bg-muted/50 mt-2 flex flex-col gap-2 rounded-lg p-3 text-xs">
+								<div class="grid grid-cols-2 gap-x-4 gap-y-2">
+									<div class="flex flex-col">
+										<span class="text-muted-foreground">USD Balance</span>
+										<span class="font-mono">${apiKeyInfoResource.current.balance.usd}</span>
+									</div>
+									<div class="flex flex-col">
+										<span class="text-muted-foreground">Nano Balance</span>
+										<span class="font-mono">{apiKeyInfoResource.current.balance.nano} Ӿ</span>
+									</div>
+								</div>
+
+								<div class="bg-border my-1 h-px"></div>
+
+								<div class="grid grid-cols-2 gap-x-4 gap-y-2">
+									<div class="flex flex-col">
+										<span class="text-muted-foreground">Daily Usage</span>
+										<div class="flex items-end gap-1">
+											<span class="font-medium"
+												>{apiKeyInfoResource.current.subscription.daily.used}</span
+											>
+											<span class="text-muted-foreground mb-px"
+												>/ {apiKeyInfoResource.current.subscription.daily.limit}</span
+											>
+										</div>
+									</div>
+									<div class="flex flex-col">
+										<span class="text-muted-foreground">Monthly Usage</span>
+										<div class="flex items-end gap-1">
+											<span class="font-medium"
+												>{apiKeyInfoResource.current.subscription.monthly.used}</span
+											>
+											<span class="text-muted-foreground mb-px"
+												>/ {apiKeyInfoResource.current.subscription.monthly.limit}</span
+											>
+										</div>
 									</div>
 								</div>
 							</div>
-						</div>
+						{/if}
 					{:else}
 						<span class="text-muted-foreground flex h-6 place-items-center text-xs">
-							${(apiKeyInfoResource.current?.usage ?? 0).toFixed(3)} used ・ ${(apiKeyInfoResource.current?.limit_remaining ?? 0).toFixed(
-								3
-							)} remaining
+							${(apiKeyInfoResource.current?.usage ?? 0).toFixed(3)} used ・ ${(
+								apiKeyInfoResource.current?.limit_remaining ?? 0
+							).toFixed(3)} remaining
 						</span>
 					{/if}
 				{:else}

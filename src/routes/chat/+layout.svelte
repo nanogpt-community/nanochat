@@ -55,6 +55,9 @@
 	let textarea = $state<HTMLTextAreaElement>();
 	let abortController = $state<AbortController | null>(null);
 
+	// Get restrictions from page data (for server key users)
+	const restrictions = $derived(page.data?.restrictions);
+
 	$effect(() => {
 		// Enable initial models for new users
 		mutate(
@@ -782,71 +785,76 @@
 										</DropdownMenu.Root>
 									{/if}
 									<div class="flex items-center gap-1.5">
-										<Tooltip>
-											{#snippet trigger(tooltip)}
-												<button
-													type="button"
-													class={cn(
-														'bg-secondary/50 hover:bg-secondary text-muted-foreground relative flex size-8 items-center justify-center rounded-lg transition-colors',
-														settings.webSearchMode === 'standard' &&
-															'bg-primary/20 text-primary border-primary/50',
-														settings.webSearchMode === 'deep' &&
-															'border-amber-500/50 bg-amber-500/20 text-amber-500'
-													)}
-													onclick={() => {
-														if (settings.webSearchMode === 'off')
-															settings.webSearchMode = 'standard';
-														else if (settings.webSearchMode === 'standard')
-															settings.webSearchMode = 'deep';
-														else settings.webSearchMode = 'off';
-													}}
-													{...tooltip.trigger}
-												>
-													<SearchIcon class="size-4" />
-													{#if settings.webSearchMode === 'deep'}
-														<span
-															class="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-amber-500"
-														></span>
-													{/if}
-												</button>
-											{/snippet}
-											{settings.webSearchMode === 'off'
-												? 'Web Search: Off'
-												: settings.webSearchMode === 'standard'
-													? 'Web Search: Standard ($0.006)'
-													: 'Web Search: Deep ($0.06)'}
-										</Tooltip>
-										{#if settings.webSearchMode !== 'off'}
+										{#if !restrictions?.webDisabled}
 											<Tooltip>
 												{#snippet trigger(tooltip)}
 													<button
 														type="button"
 														class={cn(
-															'bg-secondary/50 hover:bg-secondary text-muted-foreground flex h-8 items-center justify-center rounded-lg px-2 text-xs font-medium transition-colors',
-															settings.webSearchProvider === 'tavily' &&
-																'bg-purple-500/20 text-purple-400',
-															settings.webSearchProvider === 'exa' && 'bg-blue-500/20 text-blue-400'
+															'bg-secondary/50 hover:bg-secondary text-muted-foreground relative flex size-8 items-center justify-center rounded-lg transition-colors',
+															settings.webSearchMode === 'standard' &&
+																'bg-primary/20 text-primary border-primary/50',
+															settings.webSearchMode === 'deep' &&
+																'border-amber-500/50 bg-amber-500/20 text-amber-500'
 														)}
 														onclick={() => {
-														if (settings.webSearchProvider === 'linkup') settings.webSearchProvider = 'tavily';
-														else if (settings.webSearchProvider === 'tavily') settings.webSearchProvider = 'exa';
-														else settings.webSearchProvider = 'linkup';
+															if (settings.webSearchMode === 'off')
+																settings.webSearchMode = 'standard';
+															else if (settings.webSearchMode === 'standard')
+																settings.webSearchMode = 'deep';
+															else settings.webSearchMode = 'off';
 														}}
 														{...tooltip.trigger}
 													>
-														{settings.webSearchProvider === 'linkup'
-															? 'Linkup'
-															: settings.webSearchProvider === 'tavily'
-																? 'Tavily'
-																: 'Exa'}
+														<SearchIcon class="size-4" />
+														{#if settings.webSearchMode === 'deep'}
+															<span
+																class="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-amber-500"
+															></span>
+														{/if}
 													</button>
 												{/snippet}
-												{settings.webSearchProvider === 'linkup'
-													? 'Using Linkup (default). Click to switch.'
-													: settings.webSearchProvider === 'tavily'
-														? 'Using Tavily. Click to switch.'
-														: 'Using Exa. Click to switch.'}
+												{settings.webSearchMode === 'off'
+													? 'Web Search: Off'
+													: settings.webSearchMode === 'standard'
+														? 'Web Search: Standard ($0.006)'
+														: 'Web Search: Deep ($0.06)'}
 											</Tooltip>
+											{#if settings.webSearchMode !== 'off'}
+												<Tooltip>
+													{#snippet trigger(tooltip)}
+														<button
+															type="button"
+															class={cn(
+																'bg-secondary/50 hover:bg-secondary text-muted-foreground flex h-8 items-center justify-center rounded-lg px-2 text-xs font-medium transition-colors',
+																settings.webSearchProvider === 'tavily' &&
+																	'bg-purple-500/20 text-purple-400',
+																settings.webSearchProvider === 'exa' &&
+																	'bg-blue-500/20 text-blue-400'
+															)}
+															onclick={() => {
+																if (settings.webSearchProvider === 'linkup')
+																	settings.webSearchProvider = 'tavily';
+																else if (settings.webSearchProvider === 'tavily')
+																	settings.webSearchProvider = 'exa';
+																else settings.webSearchProvider = 'linkup';
+															}}
+															{...tooltip.trigger}
+														>
+															{settings.webSearchProvider === 'linkup'
+																? 'Linkup'
+																: settings.webSearchProvider === 'tavily'
+																	? 'Tavily'
+																	: 'Exa'}
+														</button>
+													{/snippet}
+													{settings.webSearchProvider === 'linkup'
+														? 'Using Linkup (default). Click to switch.'
+														: settings.webSearchProvider === 'tavily'
+															? 'Using Tavily. Click to switch.'
+															: 'Using Exa. Click to switch.'}
+												</Tooltip>
+											{/if}
 										{/if}
 										{#if currentModelSupportsImages}
 											<button
