@@ -19,12 +19,14 @@ export const auth = betterAuth({
 			passkey: schema.passkey,
 		},
 	}),
+	trustedOrigins: env.BETTER_AUTH_TRUSTED_ORIGINS ? env.BETTER_AUTH_TRUSTED_ORIGINS.split(',') : [],
 	plugins: [
 		passkey({
 			rpID: new URL(env.BETTER_AUTH_URL || 'http://localhost:3000').hostname,
 			origin: [
 				env.BETTER_AUTH_URL || 'http://localhost:3000',
-				(env.BETTER_AUTH_URL || 'http://localhost:3000').replace(/:\d+$/, '')
+				(env.BETTER_AUTH_URL || 'http://localhost:3000').replace(/:\d+$/, ''),
+				...(env.BETTER_AUTH_TRUSTED_ORIGINS ? env.BETTER_AUTH_TRUSTED_ORIGINS.split(',') : [])
 			],
 			rpName: 'thom.chat',
 		})
