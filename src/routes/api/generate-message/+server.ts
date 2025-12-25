@@ -12,6 +12,7 @@ import {
 } from '$lib/db/schema';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { extractTextFromPDF } from '$lib/utils/pdf-extraction';
+import { extractTextFromEPUB } from '$lib/utils/epub-extraction';
 import { eq, and, asc, sql } from 'drizzle-orm';
 import { join, resolve } from 'path';
 import { auth } from '$lib/auth';
@@ -67,7 +68,7 @@ const reqBodySchema = z
 					url: z.string(),
 					storage_id: z.string(),
 					fileName: z.string().optional(),
-					fileType: z.enum(['pdf', 'markdown', 'text']),
+					fileType: z.enum(['pdf', 'markdown', 'text', 'epub']),
 				})
 			)
 			.optional(),
@@ -404,7 +405,7 @@ async function generateAIResponse({
 				url: string;
 				storage_id: string;
 				fileName?: string;
-				fileType: 'pdf' | 'markdown' | 'text';
+				fileType: 'pdf' | 'markdown' | 'text' | 'epub';
 			}> | null;
 
 			if (messageDocuments && messageDocuments.length > 0 && m.role === 'user') {
@@ -440,6 +441,21 @@ async function generateAIResponse({
 									type: 'text' as const,
 									text: `[${doc.fileType.toUpperCase()} Document: ${doc.fileName || 'Untitled'}]\n\n${content}`,
 								};
+							} else if (doc.fileType === 'epub') {
+								// For EPUB files, extract text content
+								try {
+									const epubText = await extractTextFromEPUB(storageRecord.path);
+									return {
+										type: 'text' as const,
+										text: `[EPUB Document: ${doc.fileName || 'Untitled'}]\n\n${epubText}`,
+									};
+								} catch (extractError) {
+									console.error(`Failed to extract EPUB text:`, extractError);
+									return {
+										type: 'text' as const,
+										text: `[EPUB Document: ${doc.fileName || 'Untitled'}] File ID: ${doc.storage_id}\n\n[Note: EPUB content could not be extracted automatically. The EPUB is stored and available for download.]`,
+									};
+								}
 							} else {
 								// For PDFs, try to extract text content
 								try {

@@ -3,7 +3,7 @@
 export interface FileValidationResult {
   isValid: boolean;
   error?: string;
-  fileType?: 'image' | 'pdf' | 'markdown' | 'text';
+  fileType?: 'image' | 'pdf' | 'markdown' | 'text' | 'epub';
 }
 
 export interface FileLimits {
@@ -34,10 +34,15 @@ export const FILE_TYPE_CONFIGS = {
     allowedExtensions: ['.txt'],
     allowedMimeTypes: ['text/plain'],
   },
+  epub: {
+    maxSize: 50 * 1024 * 1024, // 50MB - EPUBs can be large
+    allowedExtensions: ['.epub'],
+    allowedMimeTypes: ['application/epub+zip'],
+  },
 } as const;
 
 // Get file type from file
-export function getFileType(file: File): 'image' | 'pdf' | 'markdown' | 'text' | null {
+export function getFileType(file: File): 'image' | 'pdf' | 'markdown' | 'text' | 'epub' | null {
   const extension = getFileExtension(file.name);
   const mimeType = file.type.toLowerCase();
 
@@ -65,6 +70,12 @@ export function getFileType(file: File): 'image' | 'pdf' | 'markdown' | 'text' |
     return 'text';
   }
 
+  // Check EPUB files
+  if ((FILE_TYPE_CONFIGS.epub.allowedMimeTypes as readonly string[]).includes(mimeType) ||
+    (FILE_TYPE_CONFIGS.epub.allowedExtensions as readonly string[]).includes(extension)) {
+    return 'epub';
+  }
+
   return null;
 }
 
@@ -75,7 +86,7 @@ export function getFileExtension(filename: string): string {
 }
 
 // Validate file based on type
-export function validateFile(file: File, allowedTypes: Array<'image' | 'pdf' | 'markdown' | 'text'> = ['image', 'pdf', 'markdown', 'text']): FileValidationResult {
+export function validateFile(file: File, allowedTypes: Array<'image' | 'pdf' | 'markdown' | 'text' | 'epub'> = ['image', 'pdf', 'markdown', 'text', 'epub']): FileValidationResult {
   const fileType = getFileType(file);
 
   if (!fileType) {
@@ -119,14 +130,14 @@ export function validateFile(file: File, allowedTypes: Array<'image' | 'pdf' | '
 }
 
 // Validate multiple files
-export function validateFiles(files: FileList | File[], allowedTypes?: Array<'image' | 'pdf' | 'markdown' | 'text'>): {
+export function validateFiles(files: FileList | File[], allowedTypes?: Array<'image' | 'pdf' | 'markdown' | 'text' | 'epub'>): {
   validFiles: File[];
   errors: string[];
-  fileTypes: Array<'image' | 'pdf' | 'markdown' | 'text'>;
+  fileTypes: Array<'image' | 'pdf' | 'markdown' | 'text' | 'epub'>;
 } {
   const validFiles: File[] = [];
   const errors: string[] = [];
-  const fileTypes: Array<'image' | 'pdf' | 'markdown' | 'text'> = [];
+  const fileTypes: Array<'image' | 'pdf' | 'markdown' | 'text' | 'epub'> = [];
 
   Array.from(files).forEach(file => {
     const validation = validateFile(file, allowedTypes);
@@ -149,7 +160,7 @@ export function validateFiles(files: FileList | File[], allowedTypes?: Array<'im
 }
 
 // Get file icon based on type
-export function getFileIcon(fileType: 'image' | 'pdf' | 'markdown' | 'text'): string {
+export function getFileIcon(fileType: 'image' | 'pdf' | 'markdown' | 'text' | 'epub'): string {
   switch (fileType) {
     case 'image':
       return '🖼️';
@@ -159,6 +170,8 @@ export function getFileIcon(fileType: 'image' | 'pdf' | 'markdown' | 'text'): st
       return '📝';
     case 'text':
       return '📄';
+    case 'epub':
+      return '📚';
     default:
       return '📎';
   }

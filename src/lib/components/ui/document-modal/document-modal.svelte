@@ -8,7 +8,7 @@
 	export let open = false;
 	export let documentUrl = '';
 	export let fileName = '';
-	export let fileType: 'pdf' | 'markdown' | 'text' = 'pdf';
+	export let fileType: 'pdf' | 'markdown' | 'text' | 'epub' = 'pdf';
 	export let content = '';
 
 	const dispatch = createEventDispatcher();

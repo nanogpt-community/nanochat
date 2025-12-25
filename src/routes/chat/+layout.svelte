@@ -317,7 +317,12 @@
 	});
 	let selectedImages = $state<{ url: string; storage_id: string; fileName?: string }[]>([]);
 	let selectedDocuments = $state<
-		{ url: string; storage_id: string; fileName?: string; fileType: 'pdf' | 'markdown' | 'text' }[]
+		{
+			url: string;
+			storage_id: string;
+			fileName?: string;
+			fileType: 'pdf' | 'markdown' | 'text' | 'epub';
+		}[]
 	>([]);
 	let isUploading = $state(false);
 	let fileInput = $state<HTMLInputElement>();
@@ -390,17 +395,17 @@
 				url: string;
 				storage_id: string;
 				fileName?: string;
-				fileType: 'pdf' | 'markdown' | 'text';
+				fileType: 'pdf' | 'markdown' | 'text' | 'epub';
 			}[] = [];
 			try {
-				const validation = validateFiles(documentFiles, ['pdf', 'markdown', 'text']);
+				const validation = validateFiles(documentFiles, ['pdf', 'markdown', 'text', 'epub']);
 				if (validation.errors.length > 0) {
 					console.error('File validation errors:', validation.errors);
 					// TODO: Show user-friendly error messages
 					return;
 				}
 				for (const file of validation.validFiles) {
-					const fileType = getFileType(file) as 'pdf' | 'markdown' | 'text';
+					const fileType = getFileType(file) as 'pdf' | 'markdown' | 'text' | 'epub';
 					const uploadResult = await fetch('/api/storage', {
 						method: 'POST',
 						headers: { 'Content-Type': file.type },
@@ -463,7 +468,7 @@
 	// Get combined file upload builder for images and documents
 	const fileUpload = new FileUpload({
 		multiple: true,
-		accept: 'image/*,.pdf,.md,.markdown,.txt',
+		accept: 'image/*,application/pdf,.pdf,.md,.markdown,.txt,application/epub+zip,.epub',
 		maxSize: 20 * 1024 * 1024, // 20MB
 	});
 
@@ -502,7 +507,7 @@
 		open: boolean;
 		documentUrl: string;
 		fileName: string;
-		fileType: 'pdf' | 'markdown' | 'text';
+		fileType: 'pdf' | 'markdown' | 'text' | 'epub';
 		content: string;
 	}>({
 		open: false,
@@ -515,7 +520,7 @@
 	async function openDocumentModal(
 		documentUrl: string,
 		fileName: string,
-		fileType: 'pdf' | 'markdown' | 'text'
+		fileType: 'pdf' | 'markdown' | 'text' | 'epub'
 	) {
 		let content = '';
 
@@ -909,6 +914,8 @@
 													<span class="text-2xl">📝</span>
 												{:else if document.fileType === 'text'}
 													<span class="text-2xl">📄</span>
+												{:else if document.fileType === 'epub'}
+													<span class="text-2xl">📚</span>
 												{/if}
 											</button>
 											<button
@@ -1109,7 +1116,7 @@
 														{/if}
 													</button>
 												{/snippet}
-												Attach files (images, PDF, Markdown, Text)
+												Attach files (images, PDF, Markdown, Text, EPUB)
 											</Tooltip>
 										{/if}
 										{#if currentModelSupportsReasoning}

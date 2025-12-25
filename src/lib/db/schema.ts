@@ -200,7 +200,7 @@ export const messages = sqliteTable(
             Array<{ url: string; storage_id: string; fileName?: string }>
         >(),
         documents: text('documents', { mode: 'json' }).$type<
-            Array<{ url: string; storage_id: string; fileName?: string; fileType: 'pdf' | 'markdown' | 'text' }>
+            Array<{ url: string; storage_id: string; fileName?: string; fileType: 'pdf' | 'markdown' | 'text' | 'epub' }>
         >(),
         costUsd: real('cost_usd'),
         generationId: text('generation_id'),
