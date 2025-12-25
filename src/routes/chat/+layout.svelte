@@ -36,7 +36,6 @@
 	import { fade, scale } from 'svelte/transition';
 	import SendIcon from '~icons/lucide/arrow-up';
 	import ChevronDownIcon from '~icons/lucide/chevron-down';
-	import ImageIcon from '~icons/lucide/image';
 	import PanelLeftIcon from '~icons/lucide/panel-left';
 	import SearchIcon from '~icons/lucide/search';
 	import Settings2Icon from '~icons/lucide/settings-2';
@@ -321,9 +320,7 @@
 		{ url: string; storage_id: string; fileName?: string; fileType: 'pdf' | 'markdown' | 'text' }[]
 	>([]);
 	let isUploading = $state(false);
-	let isUploadingDocuments = $state(false);
 	let fileInput = $state<HTMLInputElement>();
-	let documentInput = $state<HTMLInputElement>();
 
 	usePrompt(
 		() => message.current,
@@ -388,7 +385,7 @@
 		}
 
 		if (documentFiles.length > 0) {
-			isUploadingDocuments = true;
+			isUploading = true;
 			const uploadedDocuments: {
 				url: string;
 				storage_id: string;
@@ -419,7 +416,7 @@
 			} catch (error) {
 				console.error('Document upload failed:', error);
 			} finally {
-				isUploadingDocuments = false;
+				isUploading = false;
 			}
 		}
 	}
@@ -463,16 +460,10 @@
 		}
 	}
 
-	// Get file upload builders (only if not restricted)
+	// Get combined file upload builder for images and documents
 	const fileUpload = new FileUpload({
 		multiple: true,
-		accept: 'image/*',
-		maxSize: 10 * 1024 * 1024, // 10MB
-	});
-
-	const documentUpload = new FileUpload({
-		multiple: true,
-		accept: '.pdf,.md,.markdown,.txt',
+		accept: 'image/*,.pdf,.md,.markdown,.txt',
 		maxSize: 20 * 1024 * 1024, // 20MB
 	});
 
@@ -484,16 +475,8 @@
 		}
 	});
 
-	$effect(() => {
-		if (documentUpload.selected.size > 0) {
-			handleFilesSelect(Array.from(documentUpload.selected));
-			documentUpload.clear();
-		}
-	});
-
-	// Define builders manually to satisfy type checker if needed, or simply use
-	const imageSelect = fileUpload.input;
-	const docSelect = documentUpload.input;
+	// Define builders manually to satisfy type checker if needed
+	const fileSelect = fileUpload.input;
 
 	// Image modal state
 	let imageModal = $state<{
@@ -705,8 +688,9 @@
 <Sidebar.Root
 	bind:open={sidebarOpen}
 	class="bg-sidebar fill-device-height overflow-clip"
-	{...currentModelSupportsImages ? omit(fileUpload.dropzone, ['onclick']) : {}}
-	{...omit(documentUpload.dropzone, ['onclick'])}
+	{...currentModelSupportsImages || currentModelSupportsDocuments
+		? omit(fileUpload.dropzone, ['onclick'])
+		: {}}
 >
 	<AppSidebar bind:searchModalOpen />
 
@@ -940,7 +924,6 @@
 							{/if}
 							<div class="relative flex flex-grow flex-row items-start">
 								<input {...fileUpload.input} bind:this={fileInput} />
-								<input {...documentUpload.input} bind:this={documentInput} />
 								<!-- svelte-ignore a11y_autofocus -->
 								<textarea
 									style={popover.trigger.style}
@@ -1107,37 +1090,27 @@
 												</Tooltip>
 											{/if}
 										{/if}
-										{#if currentModelSupportsImages}
-											<button
-												type="button"
-												class="bg-secondary/50 hover:bg-secondary text-muted-foreground flex size-8 items-center justify-center rounded-lg transition-colors disabled:opacity-50"
-												onclick={() => fileInput?.click()}
-												disabled={isUploading}
-											>
-												{#if isUploading}
-													<div
-														class="size-3 animate-spin rounded-full border-2 border-current border-t-transparent"
-													></div>
-												{:else}
-													<ImageIcon class="size-4" />
-												{/if}
-											</button>
-										{/if}
-										{#if currentModelSupportsDocuments}
-											<button
-												type="button"
-												class="bg-secondary/50 hover:bg-secondary text-muted-foreground flex size-8 items-center justify-center rounded-lg transition-colors disabled:opacity-50"
-												onclick={() => documentInput?.click()}
-												disabled={isUploadingDocuments}
-											>
-												{#if isUploadingDocuments}
-													<div
-														class="size-3 animate-spin rounded-full border-2 border-current border-t-transparent"
-													></div>
-												{:else}
-													<PaperclipIcon class="size-4" />
-												{/if}
-											</button>
+										{#if currentModelSupportsImages || currentModelSupportsDocuments}
+											<Tooltip>
+												{#snippet trigger(tooltip)}
+													<button
+														type="button"
+														class="bg-secondary/50 hover:bg-secondary text-muted-foreground flex size-8 items-center justify-center rounded-lg transition-colors disabled:opacity-50"
+														onclick={() => fileInput?.click()}
+														disabled={isUploading}
+														{...tooltip.trigger}
+													>
+														{#if isUploading}
+															<div
+																class="size-3 animate-spin rounded-full border-2 border-current border-t-transparent"
+															></div>
+														{:else}
+															<PaperclipIcon class="size-4" />
+														{/if}
+													</button>
+												{/snippet}
+												Attach files (images, PDF, Markdown, Text)
+											</Tooltip>
 										{/if}
 										{#if currentModelSupportsReasoning}
 											<button
@@ -1184,7 +1157,7 @@
 		</div>
 	</Sidebar.Inset>
 
-	{#if (fileUpload.isDragging || documentUpload.isDragging) && (currentModelSupportsImages || currentModelSupportsDocuments)}
+	{#if fileUpload.isDragging && (currentModelSupportsImages || currentModelSupportsDocuments)}
 		<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/10 backdrop-blur-sm">
 			<div class="text-center">
 				<UploadIcon class="text-primary mx-auto mb-4 h-16 w-16" />
