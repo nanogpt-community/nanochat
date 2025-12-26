@@ -92,6 +92,7 @@ export const userSettings = sqliteTable(
         lastMessageDate: text('last_message_date'), // ISO date string (YYYY-MM-DD) for daily reset
         karakeepUrl: text('karakeep_url'),
         karakeepApiKey: text('karakeep_api_key'),
+        theme: text('theme'),
         createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
         updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
     },

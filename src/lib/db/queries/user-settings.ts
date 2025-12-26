@@ -26,6 +26,7 @@ export async function createUserSettings(
             freeMessagesUsed: data?.freeMessagesUsed ?? 0,
             karakeepUrl: data?.karakeepUrl ?? null,
             karakeepApiKey: data?.karakeepApiKey ?? null,
+            theme: data?.theme ?? null,
             createdAt: now,
             updatedAt: now,
         })

@@ -113,6 +113,13 @@
       "when": 1766508121757,
       "tag": "0015_exotic_fabian_cortez",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "6",
+      "when": 1766710048100,
+      "tag": "0016_elite_mastermind",
+      "breakpoints": true
     }
   ]
 }

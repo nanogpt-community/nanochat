@@ -12,6 +12,15 @@
 	import type { Doc } from '$lib/db/types';
 	import { Input } from '$lib/components/ui/input';
 	import Rule from './rule.svelte';
+	import ThemeSelector from '$lib/components/account/ThemeSelector.svelte';
+	import type { UserSettings } from '$lib/api';
+	import {
+		Root as Card,
+		Content as CardContent,
+		Description as CardDescription,
+		Header as CardHeader,
+		Title as CardTitle,
+	} from '$lib/components/ui/card';
 
 	const newRuleCollapsible = new Collapsible({
 		open: false,
@@ -20,6 +29,13 @@
 	let creatingRule = $state(false);
 
 	const userRulesQuery: QueryResult<Doc<'user_rules'>[]> = useCachedQuery(api.user_rules.all, {});
+	const settings = useCachedQuery<UserSettings>(api.user_settings.get, {});
+
+	let currentTheme = $state(settings.data?.theme ?? null);
+
+	$effect(() => {
+		if (settings.data?.theme !== undefined) currentTheme = settings.data.theme;
+	});
 
 	async function submitNewRule(e: SubmitEvent) {
 		e.preventDefault();
@@ -57,6 +73,16 @@
 <h2 class="text-muted-foreground mt-2 text-sm">Customize your experience with nanochat.</h2>
 
 <div class="mt-8 flex flex-col gap-4">
+	<!-- Theme Section -->
+	<Card>
+		<CardHeader>
+			<CardTitle>Theme</CardTitle>
+			<CardDescription>Choose a color theme for the application.</CardDescription>
+		</CardHeader>
+		<CardContent>
+			<ThemeSelector bind:currentTheme />
+		</CardContent>
+	</Card>
 	<div class="flex place-items-center justify-between">
 		<h3 class="text-xl font-bold">Rules</h3>
 		<Button

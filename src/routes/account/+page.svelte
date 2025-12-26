@@ -286,7 +286,7 @@
 				</div>
 				<Switch bind:value={() => youtubeTranscriptsEnabled, toggleYoutubeTranscripts} />
 			</div>
-		</CardContent>
+	</CardContent>
 	</Card>
 
 	<!-- Karakeep Integration Section (Collapsible) -->

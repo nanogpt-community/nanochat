@@ -9,11 +9,37 @@
 	import { MetaTags } from 'svelte-meta-tags';
 	import { page } from '$app/state';
 	import { setupLastChat } from '$lib/state/last-chat.svelte';
+	import { getTheme, applyTheme } from '$lib/themes/themes';
+	import { session } from '$lib/state/session.svelte';
+	import { onMount } from 'svelte';
 
 	let { children } = $props();
 
 	const lastChat = setupLastChat();
 	models.init();
+
+	// Apply saved theme on mount
+	onMount(async () => {
+		if (browser && session.current?.user.id) {
+			try {
+				const response = await fetch('/api/db/user-settings', {
+					method: 'GET',
+					credentials: 'include',
+				});
+				if (response.ok) {
+					const settings = await response.json();
+					if (settings.theme) {
+						const theme = getTheme(settings.theme);
+						if (theme) {
+							applyTheme(theme);
+						}
+					}
+				}
+			} catch (error) {
+				console.error('Failed to load theme:', error);
+			}
+		}
+	});
 
 	$effect(() => {
 		if (page.url.pathname.startsWith('/chat')) {
