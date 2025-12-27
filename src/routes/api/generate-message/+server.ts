@@ -157,16 +157,17 @@ async function generateConversationTitle({
 	});
 
 	// Create a prompt for title generation using user message and assistant response
-	const titlePrompt = `Based on this conversation:
+const titlePrompt = `Summarize this conversation into a 3-5 word title that captures the core topic.
+
 User: """${userMessage}"""
 Assistant: """${assistantMessage}"""
 
-Generate a concise, specific title (max 4-5 words).
-Generate only the title based on the message, nothing else. Don't name the title 'Generate Title' or anything stupid like that, otherwise its obvious we're generating a title with AI.
-
-Also, do not interact with the message directly or answer it. Just generate the title based on the message.
-
-If its a simple hi, just name it "Greeting" or something like that.
+Requirements:
+- Use title case
+- No punctuation at the end
+- Return only the title text
+- For casual greetings: "Greeting"
+- Focus on the main subject/question
 `;
 
 	const titleResult = await ResultAsync.fromPromise(
