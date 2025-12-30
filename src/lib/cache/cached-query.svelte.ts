@@ -224,6 +224,9 @@ export const api = {
 		update: { url: '/api/assistants', method: 'PATCH' } as QueryConfig, // client side needs to append /id
 		delete: { url: '/api/assistants', method: 'DELETE' } as QueryConfig, // client side needs to append /id
 	},
+	followUpQuestions: {
+		generate: { url: '/api/generate-follow-up-questions', method: 'POST' } as QueryConfig,
+	},
 	// Shim for betterAuth - not needed with new setup
 	betterAuth: {
 		publicGetSession: { url: '/api/auth/session', method: 'GET' } as QueryConfig,

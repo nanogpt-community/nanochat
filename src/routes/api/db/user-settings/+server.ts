@@ -35,11 +35,12 @@ export const POST: RequestHandler = async ({ request }) => {
 				privacyMode: body.privacyMode,
 				contextMemoryEnabled: body.contextMemoryEnabled,
 				persistentMemoryEnabled: body.persistentMemoryEnabled,
-                youtubeTranscriptsEnabled: body.youtubeTranscriptsEnabled,
-                karakeepUrl: body.karakeepUrl,
-                karakeepApiKey: body.karakeepApiKey,
-                theme: body.theme,
-            });
+				youtubeTranscriptsEnabled: body.youtubeTranscriptsEnabled,
+				followUpQuestionsEnabled: body.followUpQuestionsEnabled,
+				karakeepUrl: body.karakeepUrl,
+				karakeepApiKey: body.karakeepApiKey,
+				theme: body.theme,
+			});
 			return json(settings);
 		}
 

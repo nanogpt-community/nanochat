@@ -13,6 +13,8 @@
 	import ShinyText from '$lib/components/animations/shiny-text.svelte';
 	import GlobeIcon from '~icons/lucide/globe';
 	import LoaderCircleIcon from '~icons/lucide/loader-circle';
+	import { callGenerateFollowUpQuestions } from '../../../routes/api/generate-follow-up-questions/call';
+	import FollowUpQuestions from '$lib/components/ui/follow-up-questions.svelte';
 
 	const messages = useCachedQuery<Message[]>(api.messages.getAllFromConversation, () => ({
 		conversationId: page.params.id ?? '',
@@ -21,6 +23,11 @@
 	const conversation = useCachedQuery<Conversation>(api.conversations.getById, () => ({
 		id: page.params.id as Id<'conversations'>,
 	}));
+
+	const userSettings = useCachedQuery<{ followUpQuestionsEnabled?: boolean }>(
+		api.user_settings.get,
+		{}
+	);
 
 	const lastMessage = $derived(messages?.data?.[messages.data?.length - 1] ?? null);
 
@@ -77,6 +84,9 @@
 	// Track previous generating state to detect when generation completes
 	let wasGenerating = $state(false);
 
+	let showSuggestionsDelay = $state<Record<string, number>>({});
+	let currentSuggestionsMessageId = $state<string | null>(null);
+
 	$effect(() => {
 		const isGenerating = conversation.data?.generating ?? false;
 
@@ -88,12 +98,81 @@
 			}, 750);
 			return () => clearInterval(interval);
 		} else if (wasGenerating) {
-			// Generation just completed - invalidate sidebar to update title and generating status
+			// Generation just completed
 			wasGenerating = false;
 			invalidateQueryPattern(api.conversations.get.url);
-			// Also refetch final messages state
 			messages.refetch?.();
+
+			// NEW: Trigger follow-up questions for last assistant message
+			const lastMsg = messages.data?.[messages.data?.length - 1];
+			if (
+				lastMsg?.role === 'assistant' &&
+				lastMsg.content &&
+				!lastMsg.followUpSuggestions &&
+				userSettings.data?.followUpQuestionsEnabled !== false
+			) {
+				showSuggestionsDelay[lastMsg.id] = Date.now();
+				currentSuggestionsMessageId = lastMsg.id;
+				const conversationId = page.params.id;
+				if (conversationId) {
+					generateSuggestions(lastMsg.id, conversationId);
+				}
+			}
 		}
+	});
+
+	// NEW: Track message refetch to detect if new message was added
+	$effect(() => {
+		if (!messages.data) return;
+
+		const lastMsg = messages.data[messages.data?.length - 1];
+
+		if (currentSuggestionsMessageId && lastMsg?.id !== currentSuggestionsMessageId) {
+			delete showSuggestionsDelay[currentSuggestionsMessageId];
+			currentSuggestionsMessageId = null;
+		}
+	});
+
+	// NEW: Generate follow-up suggestions function
+	async function generateSuggestions(messageId: string, conversationId: string) {
+		const res = await callGenerateFollowUpQuestions({
+			conversationId,
+			messageId,
+		});
+
+		if (res.isOk()) {
+			console.log('[follow-up] Suggestions generated successfully');
+			invalidateQueryPattern(api.messages.getAllFromConversation.url);
+		} else {
+			console.log('[follow-up] Failed to generate suggestions (logged in backend)');
+			currentSuggestionsMessageId = null;
+		}
+	}
+
+	// NEW: Determine if suggestions should be visible
+	const lastMessageWithSuggestions = $derived.by(() => {
+		const lastMsg = messages.data?.[messages.data?.length - 1];
+
+		if (!lastMsg || lastMsg.id !== currentSuggestionsMessageId) {
+			return null;
+		}
+
+		if (!lastMsg.followUpSuggestions || lastMsg.followUpSuggestions.length === 0) {
+			return null;
+		}
+
+		if (conversation.data?.generating) {
+			return null;
+		}
+
+		const delayTime = showSuggestionsDelay[lastMsg.id] ?? 0;
+		const elapsed = Date.now() - delayTime;
+
+		if (elapsed < 2500) {
+			return null;
+		}
+
+		return lastMsg;
 	});
 </script>
 
@@ -132,5 +211,29 @@
 				</div>
 			{/if}
 		{/if}
+
+		<!-- NEW: Show suggestions ONLY for the current session's last message after delay -->
+		{#if lastMessageWithSuggestions && lastMessageWithSuggestions.followUpSuggestions}
+			<div class="animate-fade-in mt-4">
+				<FollowUpQuestions suggestions={lastMessageWithSuggestions.followUpSuggestions} />
+			</div>
+		{/if}
 	{/if}
 </div>
+
+<style>
+	.animate-fade-in {
+		animation: fadeIn 0.3s ease-out;
+	}
+
+	@keyframes fadeIn {
+		from {
+			opacity: 0;
+			transform: translateY(10px);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
+	}
+</style>
