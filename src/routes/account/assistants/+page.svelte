@@ -211,9 +211,21 @@
 						placeholder="You are a helpful assistant that..."
 						class="bg-background/50 border-border/50 focus:border-primary/50 min-h-[180px] w-full min-w-[400px] resize leading-relaxed transition-colors"
 					/>
-					<p class="text-muted-foreground text-xs">
-						Define your assistant's personality, expertise, and how it should respond.
-					</p>
+					<div class="text-muted-foreground space-y-1 text-xs">
+						<p>Define your assistant's personality, expertise, and how it should respond.</p>
+						<details class="mt-2">
+							<summary class="hover:text-foreground cursor-pointer transition-colors">Available variables</summary>
+							<div class="bg-muted/30 mt-2 space-y-1 rounded-md p-3 font-mono text-xs">
+								<div><code class="text-primary">{'{cur_date}'}</code> - Current date (YYYY-MM-DD)</div>
+								<div><code class="text-primary">{'{cur_time}'}</code> - Current time (HH:MM:SS)</div>
+								<div><code class="text-primary">{'{cur_datetime}'}</code> - Current date and time (ISO format)</div>
+								<div><code class="text-primary">{'{model_name}'}</code> - Name of the AI model</div>
+								<div><code class="text-primary">{'{model_id}'}</code> - ID of the AI model</div>
+								<div><code class="text-primary">{'{provider}'}</code> - Provider name (e.g., 'nanogpt')</div>
+								<div><code class="text-primary">{'{user_name}'}</code> - Name of the current user</div>
+							</div>
+						</details>
+					</div>
 				</div>
 
 				<!-- Default Settings Section -->

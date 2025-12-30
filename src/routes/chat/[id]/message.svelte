@@ -362,9 +362,21 @@
 					</span>
 				{/if}
 				{#if message.webSearchEnabled}
-					<span class="text-muted-foreground text-xs">
-						<GlobeIcon class="text-primary inline-block size-4 shrink-0" />
-					</span>
+					<Tooltip>
+						{#snippet trigger(tooltip)}
+							<span class="text-muted-foreground flex items-center gap-1 text-xs" {...tooltip.trigger}>
+								<GlobeIcon class="text-primary inline-block size-4 shrink-0" />
+								{#if annotations && annotations.length > 0}
+									<span class="text-primary">×{annotations.length}</span>
+								{/if}
+							</span>
+						{/snippet}
+						{#if annotations && annotations.length > 0}
+							Web search: {annotations.length} result{annotations.length === 1 ? '' : 's'} found
+						{:else}
+							Web search enabled
+						{/if}
+					</Tooltip>
 				{/if}
 
 				{#if message.costUsd != null}

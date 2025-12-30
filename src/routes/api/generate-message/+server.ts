@@ -38,6 +38,7 @@ import {
 	isWebDisabledForServerKey,
 	isSubscriptionOnlyMode,
 } from '$lib/backend/message-limits';
+import { substituteSystemPromptVariables } from '$lib/utils/system-prompt-variables';
 
 // Set to true to enable debug logging
 const ENABLE_LOGGING = true;
@@ -218,6 +219,7 @@ async function generateAIResponse({
 	webSearchDepth,
 	webSearchProvider,
 	webFeaturesDisabled,
+	userName,
 }: {
 	conversationId: string;
 	userId: string;
@@ -231,6 +233,7 @@ async function generateAIResponse({
 	webSearchDepth?: 'standard' | 'deep';
 	webSearchProvider?: 'linkup' | 'tavily' | 'exa' | 'kagi';
 	webFeaturesDisabled?: boolean;
+	userName?: string;
 }) {
 	log('Starting AI response generation in background', startTime);
 
@@ -524,7 +527,14 @@ async function generateAIResponse({
 		});
 
 		if (assistant?.systemPrompt) {
-			systemContent += `${assistant.systemPrompt}\n\n`;
+			// Substitute variables in system prompt
+			const substitutedPrompt = substituteSystemPromptVariables(assistant.systemPrompt, {
+				modelId: model.modelId,
+				modelName: model.modelId, // NanoGPT doesn't have separate model names
+				provider: model.provider,
+				userName: userName,
+			});
+			systemContent += `${substitutedPrompt}\n\n`;
 		}
 	}
 
@@ -1505,6 +1515,7 @@ export const POST: RequestHandler = async ({ request }) => {
 					: undefined,
 			webSearchProvider: args.web_search_provider,
 			webFeaturesDisabled: usingServerKey && isWebDisabledForServerKey(),
+			userName: session.user?.name ?? undefined,
 		})
 			.catch(async (error) => {
 				log(`Background AI response generation error: ${error}`, startTime);
