@@ -11,6 +11,7 @@
 	import PlusIcon from '~icons/lucide/plus';
 	import XIcon from '~icons/lucide/x';
 	import TicketIcon from '~icons/lucide/ticket';
+	import ImageIcon from '~icons/lucide/image';
 	import ModelCard from './model-card.svelte';
 	import { supportsImages, supportsReasoning } from '$lib/utils/model-capabilities';
 
@@ -32,6 +33,10 @@
 		value: false,
 	});
 
+	const imageToggle = new Toggle({
+		value: false,
+	});
+
 	let initiallyEnabled = $state<string[]>([]);
 	$effect(() => {
 		if (Object.keys(models.enabled).length && initiallyEnabled.length === 0) {
@@ -47,6 +52,10 @@
 			haystack: models.from(Provider.NanoGPT).filter((m) => {
 				// Filter by subscription if toggle is enabled
 				if (subscriptionToggle.value && !m.subscription?.included) {
+					return false;
+				}
+				// Filter by image output capability if toggle is enabled
+				if (imageToggle.value && !m.architecture?.output_modalities?.includes('image')) {
 					return false;
 				}
 				return true;
@@ -91,6 +100,16 @@
 		>
 			<TicketIcon class="inline size-3" />
 			Subscription
+			<XIcon class="inline size-3 group-aria-[pressed=false]:hidden" />
+			<PlusIcon class="inline size-3 group-aria-[pressed=true]:hidden" />
+		</button>
+		<button
+			{...imageToggle.trigger}
+			aria-label="Image Models Only"
+			class="group text-primary-foreground aria-[pressed=false]:border-border aria-[pressed=false]:bg-background aria-[pressed=false]:text-foreground flex place-items-center gap-1 rounded-full border border-violet-500 bg-violet-500 px-2 py-1 text-xs transition-all"
+		>
+			<ImageIcon class="inline size-3" />
+			Image
 			<XIcon class="inline size-3 group-aria-[pressed=false]:hidden" />
 			<PlusIcon class="inline size-3 group-aria-[pressed=true]:hidden" />
 		</button>

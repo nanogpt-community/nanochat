@@ -7,14 +7,19 @@
 	import { session } from '$lib/state/session.svelte.js';
 	import { ResultAsync } from 'neverthrow';
 	import { getFirstSentence } from '$lib/utils/strings';
-	import { supportsImages, supportsReasoning, supportsVideo, isImageOnlyModel } from '$lib/utils/model-capabilities';
+	import {
+		supportsImages,
+		supportsReasoning,
+		supportsVideo,
+		supportsVision,
+		isImageOnlyModel,
+	} from '$lib/utils/model-capabilities';
 	import type { NanoGPTModel } from '$lib/backend/models/nano-gpt';
 	import Tooltip from '$lib/components/ui/tooltip.svelte';
 	import EyeIcon from '~icons/lucide/eye';
 	import BrainIcon from '~icons/lucide/brain';
 	import VideoIcon from '~icons/lucide/video';
 	import TicketIcon from '~icons/lucide/ticket';
-
 
 	type Model = {
 		id: string;
@@ -41,14 +46,21 @@
 		if (!session.current?.user.id) return;
 
 		const res = await ResultAsync.fromPromise(
-			mutate(api.user_enabled_models.set.url, {
-				action: 'set',
-				provider,
-				modelId: model.id,
-				enabled: v,
-			}, {
-				invalidatePatterns: [api.user_enabled_models.get_enabled.url, api.user_enabled_models.is_enabled.url]
-			}),
+			mutate(
+				api.user_enabled_models.set.url,
+				{
+					action: 'set',
+					provider,
+					modelId: model.id,
+					enabled: v,
+				},
+				{
+					invalidatePatterns: [
+						api.user_enabled_models.get_enabled.url,
+						api.user_enabled_models.is_enabled.url,
+					],
+				}
+			),
 			(e) => e
 		);
 
@@ -81,8 +93,6 @@
 	</Card.Header>
 	<Card.Content>
 		<div class="flex place-items-center gap-1">
-
-
 			{#if model && provider === 'nanogpt' && supportsReasoning(model)}
 				<Tooltip>
 					{#snippet trigger(tooltip)}
@@ -94,6 +104,19 @@
 						</div>
 					{/snippet}
 					Supports reasoning
+				</Tooltip>
+			{/if}
+			{#if model && provider === 'nanogpt' && supportsVision(model)}
+				<Tooltip>
+					{#snippet trigger(tooltip)}
+						<div
+							{...tooltip.trigger}
+							class="rounded-md border-cyan-500 bg-cyan-500/50 p-1 text-cyan-400"
+						>
+							<EyeIcon class="size-3" />
+						</div>
+					{/snippet}
+					Supports vision (image input)
 				</Tooltip>
 			{/if}
 			{#if model && provider === 'nanogpt' && supportsVideo(model)}

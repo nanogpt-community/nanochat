@@ -11,6 +11,10 @@ export function supportsVideo(model: NanoGPTModel): boolean {
 	return model.architecture?.output_modalities?.includes('video') ?? false;
 }
 
+export function supportsVision(model: NanoGPTModel): boolean {
+	return model.architecture?.input_modalities?.includes('image') ?? false;
+}
+
 export function isImageOnlyModel(model: NanoGPTModel): boolean {
 	return (model.architecture?.output_modalities?.includes('image') &&
 		model.architecture?.output_modalities?.length === 1) ?? false;
