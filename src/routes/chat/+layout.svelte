@@ -752,7 +752,11 @@
 			})}
 		>
 			{#if page.params.id && currentConversationQuery.data}
-				<ExportButton conversationId={page.params.id} />
+				<ExportButton
+					conversationId={page.params.id}
+					messages={messages.data}
+					conversation={currentConversationQuery.data}
+				/>
 				<ShareButton conversationId={page.params.id as Id<'conversations'>} />
 			{/if}
 			<Tooltip>

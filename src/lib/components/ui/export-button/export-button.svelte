@@ -1,12 +1,19 @@
 <script lang="ts">
 	import { useCachedQuery, api } from '$lib/cache/cached-query.svelte';
 	import type { Doc } from '$lib/db/types';
+	import type { Message, Conversation } from '$lib/api';
 	import { Button } from '$lib/components/ui/button';
 	import Tooltip from '$lib/components/ui/tooltip.svelte';
 	import DownloadIcon from '~icons/lucide/download';
 
-	let { conversationId } = $props<{
+	let {
+		conversationId,
+		messages: propMessages,
+		conversation: propConversation,
+	} = $props<{
 		conversationId: string;
+		messages?: Message[];
+		conversation?: Conversation;
 	}>();
 
 	const conversationQuery = useCachedQuery(api.conversations.getById, () => ({
@@ -16,6 +23,10 @@
 	const messagesQuery = useCachedQuery(api.messages.getAllFromConversation, () => ({
 		conversationId,
 	}));
+
+	// Use prop data if available (live), otherwise fall back to cached query data
+	const effectiveMessages = $derived(propMessages ?? messagesQuery.data);
+	const effectiveConversation = $derived(propConversation ?? conversationQuery.data);
 
 	function formatDate(timestamp: Date | number | undefined): string {
 		if (!timestamp) return '';
@@ -30,8 +41,8 @@
 	}
 
 	function generateMarkdown(): string {
-		const conversation = conversationQuery.data as Doc<'conversations'> | undefined;
-		const messages = messagesQuery.data as Doc<'messages'>[] | undefined;
+		const conversation = effectiveConversation;
+		const messages = effectiveMessages;
 
 		if (!conversation || !messages) return '';
 
@@ -45,9 +56,9 @@
 		for (const message of messages) {
 			const role = message.role === 'user' ? '**You**' : '**Assistant**';
 			const modelInfo = message.modelId ? ` *(${message.modelId})*` : '';
-			
+
 			markdown += `### ${role}${message.role === 'assistant' ? modelInfo : ''}\n\n`;
-			
+
 			// Add images if present
 			if (message.images && message.images.length > 0) {
 				for (const image of message.images) {
@@ -55,12 +66,12 @@
 					markdown += `![${fileName}](${image.url})\n\n`;
 				}
 			}
-			
+
 			// Add reasoning if present
 			if (message.reasoning) {
 				markdown += `<details>\n<summary>💭 Reasoning</summary>\n\n${message.reasoning}\n\n</details>\n\n`;
 			}
-			
+
 			markdown += `${message.content}\n\n`;
 			markdown += `---\n\n`;
 		}
@@ -69,13 +80,13 @@
 	}
 
 	function downloadMarkdown() {
-		const conversation = conversationQuery.data as Doc<'conversations'> | undefined;
+		const conversation = effectiveConversation;
 		if (!conversation) return;
 
 		const markdown = generateMarkdown();
 		const blob = new Blob([markdown], { type: 'text/markdown;charset=utf-8' });
 		const url = URL.createObjectURL(blob);
-		
+
 		const a = document.createElement('a');
 		a.href = url;
 		// Sanitize title for filename
@@ -99,7 +110,7 @@
 			variant="ghost"
 			size="icon"
 			class="size-8"
-			disabled={!conversationQuery.data || !messagesQuery.data}
+			disabled={!effectiveConversation || !effectiveMessages}
 			{...tooltip.trigger}
 		>
 			<DownloadIcon class="size-4" />
