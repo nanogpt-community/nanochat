@@ -1452,6 +1452,26 @@ export const POST: RequestHandler = async ({ request }) => {
 					})
 					.where(eq(conversations.id, conversationId));
 
+				// Update conversation title for image generation
+				const conversation = await db.query.conversations.findFirst({
+					where: and(eq(conversations.id, conversationId), eq(conversations.userId, userId)),
+				});
+
+				if (conversation?.title === 'New Chat' && args.message) {
+					// Create a descriptive title from the image prompt
+					const imageTitle = args.message.length > 50
+						? args.message.substring(0, 47) + '...'
+						: args.message;
+					const capitalizedTitle = imageTitle.charAt(0).toUpperCase() + imageTitle.slice(1);
+
+					await db
+						.update(conversations)
+						.set({ title: capitalizedTitle, updatedAt: new Date() })
+						.where(eq(conversations.id, conversationId));
+
+					log(`Image generation: Updated title to "${capitalizedTitle}"`, startTime);
+				}
+
 				log('Image generation completed', startTime);
 			} catch (error) {
 				log(`Image generation failed: ${error}`, startTime);
