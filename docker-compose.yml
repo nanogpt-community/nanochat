@@ -1,6 +1,7 @@
 services:
   app:
-    build: .
+    # build: .
+    image: ghcr.io/nanogpt-community/nanochat:latest
     ports:
       - "3432:3000"
     volumes:
