@@ -34,6 +34,8 @@ COPY --from=builder /app/build ./build
 COPY --from=builder /app/drizzle ./drizzle
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/bun.lock ./bun.lock
+COPY --from=builder /app/drizzle.config.ts ./drizzle.config.ts
+COPY --from=builder /app/src/lib/db/schema.ts ./src/lib/db/schema.ts
 
 # Install production dependencies only with frozen lockfile
 RUN --mount=type=cache,target=/root/.bun/install/cache \
@@ -48,4 +50,4 @@ ENV PORT=3000
 ENV HOST=0.0.0.0
 ENV NODE_ENV=production
 
-CMD ["bun", "build/index.js"]
+CMD ["sh", "-c", "bun run db:push && bun build/index.js"]

@@ -35,7 +35,7 @@ src/lib/backend/convex/_generated
 *.crt
 *.key
 Caddyfile
-docker-prod.yml
+docker-prod.*
 nanogpt-docs
 opencode.json
 follow-up.md

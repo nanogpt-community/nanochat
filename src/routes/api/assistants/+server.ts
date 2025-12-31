@@ -22,6 +22,7 @@ export async function GET({ locals }: RequestEvent) {
             id: generateId(),
             userId,
             name: 'Default',
+            description: null,
             systemPrompt: '',
             isDefault: true,
             defaultModelId: null,
