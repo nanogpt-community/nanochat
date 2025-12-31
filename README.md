@@ -37,7 +37,7 @@
 - `cd nanochat`
 - `cp .env.example .env`
 - Edit the .env file with your configuration
-- `docker compose up --build`
+- `docker compose up`
 
 ## Setup (Bun)
 
