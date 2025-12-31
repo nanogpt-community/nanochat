@@ -102,6 +102,8 @@ export const userSettings = sqliteTable(
 		karakeepUrl: text('karakeep_url'),
 		karakeepApiKey: text('karakeep_api_key'),
 		theme: text('theme'),
+		titleModelId: text('title_model_id'),
+		followUpModelId: text('follow_up_model_id'),
 		createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
 		updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 	},

@@ -134,6 +134,13 @@
       "when": 1767187483051,
       "tag": "0018_naive_starjammers",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "6",
+      "when": 1767190486146,
+      "tag": "0019_chilly_mole_man",
+      "breakpoints": true
     }
   ]
 }

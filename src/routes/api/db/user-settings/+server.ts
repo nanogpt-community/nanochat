@@ -40,6 +40,8 @@ export const POST: RequestHandler = async ({ request }) => {
 				karakeepUrl: body.karakeepUrl,
 				karakeepApiKey: body.karakeepApiKey,
 				theme: body.theme,
+				titleModelId: body.titleModelId,
+				followUpModelId: body.followUpModelId,
 			});
 			return json(settings);
 		}

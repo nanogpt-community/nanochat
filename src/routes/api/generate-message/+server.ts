@@ -127,6 +127,7 @@ async function generateConversationTitle({
 	apiKey,
 	userMessage,
 	assistantMessage,
+	userSettingsData,
 }: {
 	conversationId: string;
 	userId: string;
@@ -134,6 +135,7 @@ async function generateConversationTitle({
 	apiKey: string;
 	userMessage: string;
 	assistantMessage: string;
+	userSettingsData: Doc<'user_settings'> | null;
 }) {
 	log('Starting conversation title generation', startTime);
 
@@ -174,7 +176,7 @@ Requirements:
 
 	const titleResult = await ResultAsync.fromPromise(
 		openai.chat.completions.create({
-			model: 'zai-org/GLM-4.5-Air',
+			model: userSettingsData?.titleModelId || 'zai-org/GLM-4.5-Air',
 			messages: [{ role: 'user', content: titlePrompt }],
 			max_tokens: 20,
 			temperature: 0.5,
@@ -787,6 +789,7 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 				apiKey,
 				userMessage: lastUserMessage.content,
 				assistantMessage: content,
+				userSettingsData,
 			}).catch((e) => log(`Background title generation error: ${e}`, startTime));
 		}
 

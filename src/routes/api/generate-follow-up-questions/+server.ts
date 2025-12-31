@@ -4,7 +4,7 @@ import { ResultAsync } from 'neverthrow';
 import { z } from 'zod/v4';
 import { OpenAI } from 'openai';
 import { db } from '$lib/db';
-import { messages, userKeys } from '$lib/db/schema';
+import { messages, userKeys, userSettings } from '$lib/db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { auth } from '$lib/auth';
 import { Provider } from '$lib/types';
@@ -63,6 +63,12 @@ export const POST: RequestHandler = async ({ request }) => {
 		return error(403, 'NanoGPT API key required');
 	}
 
+	const userSettingsData = await db.query.userSettings.findFirst({
+		where: eq(userSettings.userId, session.user.id),
+	});
+
+	const modelId = userSettingsData?.followUpModelId || MODEL;
+
 	const targetMessage = await db.query.messages.findFirst({
 		where: eq(messages.id, args.messageId),
 	});
@@ -93,7 +99,7 @@ export const POST: RequestHandler = async ({ request }) => {
 
 	const suggestionsResult = await ResultAsync.fromPromise(
 		openai.chat.completions.create({
-			model: MODEL,
+			model: modelId,
 			messages: [{ role: 'user', content: prompt }],
 			temperature: 0.7,
 		}),

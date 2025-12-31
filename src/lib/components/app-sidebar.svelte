@@ -22,10 +22,48 @@
 	import SplitIcon from '~icons/lucide/split';
 	import SearchIcon from '~icons/lucide/search';
 	import LogInIcon from '~icons/lucide/log-in';
+	import PencilIcon from '~icons/lucide/pencil';
+	import CheckIcon from '~icons/lucide/check';
+	import { Input } from '$lib/components/ui/input';
 
 	let { searchModalOpen = $bindable(false) }: { searchModalOpen: boolean } = $props();
 
 	const controls = useSidebarControls();
+
+	let editingConversationId = $state<string | null>(null);
+	let editingTitle = $state('');
+
+	function startRenaming(conversation: Doc<'conversations'>) {
+		editingConversationId = conversation.id;
+		editingTitle = conversation.title;
+	}
+
+	async function saveRename() {
+		if (!editingConversationId || !session.current?.session.token) return;
+
+		const id = editingConversationId;
+		const title = editingTitle.trim();
+
+		// Optimistic update
+		editingConversationId = null;
+
+		await mutate(api.conversations.updateTitle.url, {
+			action: 'updateTitle',
+			conversationId: id,
+			title,
+		});
+
+		invalidateQueryPattern(api.conversations.get.url);
+	}
+
+	function cancelRename() {
+		editingConversationId = null;
+		editingTitle = '';
+	}
+
+	function autofocus(node: HTMLElement) {
+		node.focus();
+	}
 
 	async function togglePin(conversationId: string) {
 		if (!session.current?.session.token) return;
@@ -227,7 +265,7 @@
 									}
 								)}
 							>
-								<p class="truncate rounded-lg py-2 pr-4 pl-3 whitespace-nowrap">
+								<div class="truncate rounded-lg py-2 pr-4 pl-3 whitespace-nowrap">
 									{#if conversation.branchedFrom}
 										<Tooltip>
 											{#snippet trigger(tooltip)}
@@ -247,8 +285,51 @@
 											Go to original conversation
 										</Tooltip>
 									{/if}
-									<span class="font-medium">{conversation?.title ?? 'Untitled'}</span>
-								</p>
+									{#if editingConversationId === conversation.id}
+										<div class="flex items-center gap-1 pr-2">
+											<input
+												class="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex h-7 w-full rounded-md border px-2 py-1 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+												bind:value={editingTitle}
+												onclick={(e) => {
+													e.preventDefault();
+													e.stopPropagation();
+												}}
+												onkeydown={(e) => {
+													if (e.key === 'Enter') {
+														e.preventDefault();
+														saveRename();
+													} else if (e.key === 'Escape') {
+														e.preventDefault();
+														cancelRename();
+													}
+												}}
+												use:autofocus
+											/>
+											<button
+												class="hover:bg-muted rounded-md p-1 text-green-500"
+												onclick={(e) => {
+													e.preventDefault();
+													e.stopPropagation();
+													saveRename();
+												}}
+											>
+												<CheckIcon class="size-4" />
+											</button>
+											<button
+												class="hover:bg-muted rounded-md p-1 text-red-500"
+												onclick={(e) => {
+													e.preventDefault();
+													e.stopPropagation();
+													cancelRename();
+												}}
+											>
+												<XIcon class="size-4" />
+											</button>
+										</div>
+									{:else}
+										<span class="font-medium">{conversation?.title ?? 'Untitled'}</span>
+									{/if}
+								</div>
 								<div class="pr-2">
 									{#if conversation.generating}
 										<div
@@ -263,7 +344,24 @@
 										'pointer-events-none absolute inset-y-0.5 right-0 flex translate-x-full items-center gap-2 rounded-r-lg pr-2 pl-6 transition group-hover:pointer-events-auto group-hover:translate-0',
 										'to-sidebar-accent via-sidebar-accent bg-gradient-to-r from-transparent from-10% via-21% ',
 									]}
+									class:hidden={editingConversationId === conversation.id}
 								>
+									<Tooltip>
+										{#snippet trigger(tooltip)}
+											<button
+												{...tooltip.trigger}
+												class="hover:bg-muted rounded-md p-1"
+												onclick={(e) => {
+													e.preventDefault();
+													e.stopPropagation();
+													startRenaming(conversation);
+												}}
+											>
+												<PencilIcon class="size-4" />
+											</button>
+										{/snippet}
+										Rename thread
+									</Tooltip>
 									<Tooltip>
 										{#snippet trigger(tooltip)}
 											<button

@@ -20,6 +20,8 @@
 	import ChevronDown from '~icons/lucide/chevron-down';
 	import ChevronRight from '~icons/lucide/chevron-right';
 	import Trash2 from '~icons/lucide/trash-2';
+	import { models } from '$lib/state/models.svelte';
+	import { Provider } from '$lib/types.js';
 
 	let { data } = $props();
 	const settings = useCachedQuery<UserSettings>(api.user_settings.get, {});
@@ -29,6 +31,52 @@
 	let persistentMemoryEnabled = $derived(settings.data?.persistentMemoryEnabled ?? false);
 	let youtubeTranscriptsEnabled = $derived(settings.data?.youtubeTranscriptsEnabled ?? false);
 	let followUpQuestionsEnabled = $derived(settings.data?.followUpQuestionsEnabled ?? true);
+	let titleModelId = $state(settings.data?.titleModelId ?? '');
+	let followUpModelId = $state(settings.data?.followUpModelId ?? '');
+
+	$effect(() => {
+		if (settings.data?.titleModelId) titleModelId = settings.data.titleModelId;
+		if (settings.data?.followUpModelId) followUpModelId = settings.data.followUpModelId;
+	});
+
+	const enabledModels = $derived(
+		Object.values(Provider)
+			.flatMap((provider) => models.from(provider))
+			.filter((m) => m.enabled)
+			.map((m) => ({ value: m.id, label: m.name }))
+	);
+
+	async function updateTitleModel(id: string) {
+		titleModelId = id;
+		if (!session.current?.user.id) return;
+
+		await mutate(
+			api.user_settings.set.url,
+			{
+				action: 'update',
+				titleModelId: id,
+			},
+			{
+				invalidatePatterns: [api.user_settings.get.url],
+			}
+		);
+	}
+
+	async function updateFollowUpModel(id: string) {
+		followUpModelId = id;
+		if (!session.current?.user.id) return;
+
+		await mutate(
+			api.user_settings.set.url,
+			{
+				action: 'update',
+				followUpModelId: id,
+			},
+			{
+				invalidatePatterns: [api.user_settings.get.url],
+			}
+		);
+	}
 
 	let karakeepUrl = $state(settings.data?.karakeepUrl ?? '');
 	let karakeepApiKey = $state(settings.data?.karakeepApiKey ?? '');
@@ -316,6 +364,53 @@
 					>
 				</div>
 				<Switch bind:value={() => followUpQuestionsEnabled, toggleFollowUpQuestions} />
+			</div>
+
+			<div class="mt-2 border-t pt-4">
+				<h3 class="mb-3 font-medium">Model Preferences</h3>
+				<div class="grid gap-4">
+					<div class="flex flex-col gap-2">
+						<label
+							class="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+						>
+							Chat Title Generation Model
+							<select
+								class="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus:ring-ring mt-2 flex h-10 w-full items-center justify-between rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+								value={titleModelId}
+								onchange={(e) => updateTitleModel(e.currentTarget.value)}
+							>
+								<option value="">Default (GLM-4.5-Air)</option>
+								{#each enabledModels as model}
+									<option value={model.value}>{model.label}</option>
+								{/each}
+							</select>
+						</label>
+						<p class="text-muted-foreground text-xs">
+							Select the model used to generate chat titles.
+						</p>
+					</div>
+
+					<div class="flex flex-col gap-2">
+						<label
+							class="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+						>
+							Follow-up Questions Model
+							<select
+								class="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus:ring-ring mt-2 flex h-10 w-full items-center justify-between rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+								value={followUpModelId}
+								onchange={(e) => updateFollowUpModel(e.currentTarget.value)}
+							>
+								<option value="">Default (GLM-4.5-Air)</option>
+								{#each enabledModels as model}
+									<option value={model.value}>{model.label}</option>
+								{/each}
+							</select>
+						</label>
+						<p class="text-muted-foreground text-xs">
+							Select the model used to generate follow-up questions.
+						</p>
+					</div>
+				</div>
 			</div>
 		</CardContent>
 	</Card>

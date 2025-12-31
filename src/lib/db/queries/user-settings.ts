@@ -28,6 +28,8 @@ export async function createUserSettings(
 			karakeepUrl: data?.karakeepUrl ?? null,
 			karakeepApiKey: data?.karakeepApiKey ?? null,
 			theme: data?.theme ?? null,
+			titleModelId: data?.titleModelId ?? null,
+			followUpModelId: data?.followUpModelId ?? null,
 			createdAt: now,
 			updatedAt: now,
 		})
