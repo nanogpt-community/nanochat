@@ -225,6 +225,19 @@ export const api = {
 		update: { url: '/api/assistants', method: 'PATCH' } as QueryConfig, // client side needs to append /id
 		delete: { url: '/api/assistants', method: 'DELETE' } as QueryConfig, // client side needs to append /id
 	},
+	projects: {
+		list: { url: '/api/projects', method: 'GET' } as QueryConfig,
+		get: { url: '/api/projects', method: 'GET' } as QueryConfig, // client side needs to append /id
+		create: { url: '/api/projects', method: 'POST' } as QueryConfig,
+		update: { url: '/api/projects', method: 'PATCH' } as QueryConfig, // client side needs to append /id
+		delete: { url: '/api/projects', method: 'DELETE' } as QueryConfig, // client side needs to append /id
+		files: { url: '/api/projects', method: 'GET' } as QueryConfig, // client side needs to append /id/files
+		uploadFile: { url: '/api/projects', method: 'POST' } as QueryConfig, // client side needs to append /id/files
+		deleteFile: { url: '/api/projects', method: 'DELETE' } as QueryConfig, // client side needs to append /id/files
+		members: { url: '/api/projects', method: 'GET' } as QueryConfig, // client side needs to append /id/members
+		addMember: { url: '/api/projects', method: 'POST' } as QueryConfig, // client side needs to append /id/members
+		removeMember: { url: '/api/projects', method: 'DELETE' } as QueryConfig, // client side needs to append /id/members
+	},
 	followUpQuestions: {
 		generate: { url: '/api/generate-follow-up-questions', method: 'POST' } as QueryConfig,
 	},

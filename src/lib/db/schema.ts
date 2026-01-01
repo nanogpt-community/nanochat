@@ -173,6 +173,27 @@ export const userRules = sqliteTable(
 	]
 );
 
+// Projects - folders for organizing chats with custom instructions and shared files
+export const projects = sqliteTable(
+	'projects',
+	{
+		id: text('id').primaryKey(),
+		userId: text('user_id')
+			.notNull()
+			.references(() => user.id, { onDelete: 'cascade' }),
+		name: text('name').notNull(),
+		description: text('description'),
+		systemPrompt: text('system_prompt'), // Custom instructions for this project
+		color: text('color'), // Optional color for sidebar display
+		createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+		updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+	},
+	(table) => [
+		index('projects_user_id_idx').on(table.userId),
+		index('projects_user_updated_idx').on(table.userId, table.updatedAt),
+	]
+);
+
 export const conversations = sqliteTable(
 	'conversations',
 	{
@@ -188,10 +209,14 @@ export const conversations = sqliteTable(
 		public: integer('public', { mode: 'boolean' }).default(false),
 		branchedFrom: text('branched_from'),
 		assistantId: text('assistant_id').references(() => assistants.id),
+		projectId: text('project_id').references(() => projects.id, { onDelete: 'set null' }),
 		temporary: integer('temporary', { mode: 'boolean' }).default(false),
 		createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
 	},
-	(table) => [index('conversations_user_id_idx').on(table.userId)]
+	(table) => [
+		index('conversations_user_id_idx').on(table.userId),
+		index('conversations_project_id_idx').on(table.projectId),
+	]
 );
 
 export const messages = sqliteTable(
@@ -280,6 +305,45 @@ export const assistants = sqliteTable(
 		updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 	},
 	(table) => [index('assistants_user_id_idx').on(table.userId)]
+);
+
+// Project files - documents attached to a project for context
+export const projectFiles = sqliteTable(
+	'project_files',
+	{
+		id: text('id').primaryKey(),
+		projectId: text('project_id')
+			.notNull()
+			.references(() => projects.id, { onDelete: 'cascade' }),
+		storageId: text('storage_id')
+			.notNull()
+			.references(() => storage.id, { onDelete: 'cascade' }),
+		fileName: text('file_name').notNull(),
+		fileType: text('file_type').notNull(), // 'pdf' | 'markdown' | 'text' | 'epub'
+		extractedContent: text('extracted_content'), // Pre-extracted text content for context
+		createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+	},
+	(table) => [index('project_files_project_id_idx').on(table.projectId)]
+);
+
+// Project members - for collaboration/sharing
+export const projectMembers = sqliteTable(
+	'project_members',
+	{
+		id: text('id').primaryKey(),
+		projectId: text('project_id')
+			.notNull()
+			.references(() => projects.id, { onDelete: 'cascade' }),
+		userId: text('user_id')
+			.notNull()
+			.references(() => user.id, { onDelete: 'cascade' }),
+		role: text('role').notNull().default('viewer'), // 'owner' | 'editor' | 'viewer'
+		createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+	},
+	(table) => [
+		index('project_members_project_id_idx').on(table.projectId),
+		index('project_members_user_id_idx').on(table.userId),
+	]
 );
 
 // Performance tracking tables
@@ -383,6 +447,8 @@ export const userRelations = relations(user, ({ many, one }) => ({
 	storage: many(storage),
 	memories: one(userMemories),
 	assistants: many(assistants),
+	projects: many(projects),
+	projectMemberships: many(projectMembers),
 	messageRatings: many(messageRatings),
 	messageInteractions: many(messageInteractions),
 	modelPerformanceStats: many(modelPerformanceStats),
@@ -443,6 +509,42 @@ export const conversationsRelations = relations(conversations, ({ one, many }) =
 	assistant: one(assistants, {
 		fields: [conversations.assistantId],
 		references: [assistants.id],
+	}),
+	project: one(projects, {
+		fields: [conversations.projectId],
+		references: [projects.id],
+	}),
+}));
+
+export const projectsRelations = relations(projects, ({ one, many }) => ({
+	user: one(user, {
+		fields: [projects.userId],
+		references: [user.id],
+	}),
+	conversations: many(conversations),
+	files: many(projectFiles),
+	members: many(projectMembers),
+}));
+
+export const projectFilesRelations = relations(projectFiles, ({ one }) => ({
+	project: one(projects, {
+		fields: [projectFiles.projectId],
+		references: [projects.id],
+	}),
+	storage: one(storage, {
+		fields: [projectFiles.storageId],
+		references: [storage.id],
+	}),
+}));
+
+export const projectMembersRelations = relations(projectMembers, ({ one }) => ({
+	project: one(projects, {
+		fields: [projectMembers.projectId],
+		references: [projects.id],
+	}),
+	user: one(user, {
+		fields: [projectMembers.userId],
+		references: [user.id],
 	}),
 }));
 
@@ -537,3 +639,9 @@ export type MessageInteraction = typeof messageInteractions.$inferSelect;
 export type NewMessageInteraction = typeof messageInteractions.$inferInsert;
 export type ModelPerformanceStats = typeof modelPerformanceStats.$inferSelect;
 export type NewModelPerformanceStats = typeof modelPerformanceStats.$inferInsert;
+export type Project = typeof projects.$inferSelect;
+export type NewProject = typeof projects.$inferInsert;
+export type ProjectFile = typeof projectFiles.$inferSelect;
+export type NewProjectFile = typeof projectFiles.$inferInsert;
+export type ProjectMember = typeof projectMembers.$inferSelect;
+export type NewProjectMember = typeof projectMembers.$inferInsert;

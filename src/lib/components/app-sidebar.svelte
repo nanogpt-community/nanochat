@@ -3,7 +3,7 @@
 	import { page } from '$app/state';
 	import { useCachedQuery, api, invalidateQueryPattern } from '$lib/cache/cached-query.svelte';
 	import type { Doc, Id } from '$lib/db/types';
-	import type { Conversation, UserSettings } from '$lib/api';
+	import type { Conversation, UserSettings, Project } from '$lib/api';
 	import * as Sidebar from '$lib/components/ui/sidebar';
 	import { useSidebarControls } from '$lib/components/ui/sidebar';
 	import Tooltip from '$lib/components/ui/tooltip.svelte';
@@ -24,7 +24,14 @@
 	import LogInIcon from '~icons/lucide/log-in';
 	import PencilIcon from '~icons/lucide/pencil';
 	import CheckIcon from '~icons/lucide/check';
+	import FolderIcon from '~icons/lucide/folder';
+	import FolderOpenIcon from '~icons/lucide/folder-open';
+	import PlusIcon from '~icons/lucide/plus';
+	import ChevronRightIcon from '~icons/lucide/chevron-right';
 	import { Input } from '$lib/components/ui/input';
+	import CreateProjectModal from '$lib/components/projects/create-project-modal.svelte';
+	import ProjectSettingsModal from '$lib/components/projects/project-settings-modal.svelte';
+	import SettingsIcon from '~icons/lucide/settings';
 
 	let { searchModalOpen = $bindable(false) }: { searchModalOpen: boolean } = $props();
 
@@ -32,6 +39,15 @@
 
 	let editingConversationId = $state<string | null>(null);
 	let editingTitle = $state('');
+	let createProjectModalOpen = $state(false);
+
+	let projectSettingsOpen = $state(false);
+	let editingProject = $state<Project | null>(null);
+
+	function openProjectSettings(project: Project) {
+		editingProject = project;
+		projectSettingsOpen = true;
+	}
 
 	function startRenaming(conversation: Doc<'conversations'>) {
 		editingConversationId = conversation.id;
@@ -106,6 +122,16 @@
 		session_token: session.current?.session.token ?? '',
 	});
 
+	const projectsQuery = useCachedQuery<Project[]>(api.projects.list, {
+		session_token: session.current?.session.token ?? '',
+	});
+
+	let expandedProjects = $state<Record<string, boolean>>({});
+
+	function toggleProject(projectId: string) {
+		expandedProjects[projectId] = !expandedProjects[projectId];
+	}
+
 	// Track previous generating state to detect when generation completes
 	let wasGenerating = $state(false);
 	const hasGeneratingConversation = $derived(
@@ -149,6 +175,9 @@
 
 		conversations.forEach((conversation) => {
 			if (!conversation) return;
+			// Skip conversations that belong to a project (they are shown under the project)
+			if (conversation.projectId) return;
+
 			// Pinned conversations go to pinned group regardless of time
 			if (conversation.pinned) {
 				groups.pinned.push(conversation);
@@ -233,6 +262,98 @@
 			<span>Search threads...</span>
 		</button>
 	</div>
+
+	<!-- Projects Section -->
+	<div class="mt-4 px-2">
+		<div class="mb-1 flex items-center justify-between px-2">
+			<h3 class="text-muted-foreground text-xs font-semibold tracking-wider uppercase">Projects</h3>
+			<button
+				class="text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded p-0.5 transition-colors"
+				onclick={() => (createProjectModalOpen = true)}
+			>
+				<PlusIcon class="size-3.5" />
+			</button>
+		</div>
+		<div class="flex flex-col gap-0.5">
+			{#if projectsQuery.isLoading}
+				<div class="text-muted-foreground px-2 py-1 text-xs">Loading...</div>
+			{:else if !projectsQuery.data || projectsQuery.data.length === 0}
+				<div class="text-muted-foreground px-2 py-1 text-xs italic">
+					No projects. Create one above.
+				</div>
+			{:else}
+				{#each projectsQuery.data as project (project.id)}
+					{@const isExpanded = expandedProjects[project.id]}
+					{@const projectConversations =
+						conversationsQuery.data?.filter((c) => c.projectId === project.id) ?? []}
+
+					<div class="flex flex-col">
+						<div class="group/project flex w-full items-center gap-1">
+							<button
+								class="hover:bg-sidebar-accent hover:text-sidebar-accent-foreground flex flex-1 items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm font-medium transition-colors"
+								onclick={() => toggleProject(project.id)}
+							>
+								<ChevronRightIcon
+									class={cn(
+										'text-muted-foreground size-4 transition-transform duration-200',
+										isExpanded && 'rotate-90'
+									)}
+								/>
+								{#if isExpanded}
+									<FolderOpenIcon class="text-primary size-4" />
+								{:else}
+									<FolderIcon class="size-4" />
+								{/if}
+								<span class="truncate">{project.name}</span>
+							</button>
+							<button
+								class="text-muted-foreground hover:text-foreground p-1 opacity-0 transition-opacity group-hover/project:opacity-100"
+								onclick={(e) => {
+									e.stopPropagation();
+									openProjectSettings(project);
+								}}
+							>
+								<SettingsIcon class="size-3.5" />
+							</button>
+						</div>
+
+						{#if isExpanded}
+							<div class="border-border/40 my-1 ml-4.5 flex flex-col gap-0.5 border-l pl-4">
+								{#if projectConversations.length === 0}
+									<div class="text-muted-foreground px-2 py-1 text-xs italic">No chats yet</div>
+								{:else}
+									{#each projectConversations as conversation (conversation.id)}
+										{@const isActive = page.params.id === conversation.id}
+										<a
+											href={`/chat/${conversation.id}`}
+											onclick={controls.closeMobile}
+											class={cn(
+												'group hover:bg-sidebar-accent hover:text-sidebar-accent-foreground flex w-full items-center justify-between rounded-md px-2 py-1 text-left text-sm transition-colors',
+												isActive && 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
+											)}
+										>
+											<span class="truncate">{conversation.title || 'Untitled'}</span>
+											{#if conversation.generating}
+												<LoaderCircleIcon class="size-3 animate-spin" />
+											{/if}
+										</a>
+									{/each}
+								{/if}
+								<a
+									href={`/chat?projectId=${project.id}`}
+									class="text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/50 mt-1 flex items-center gap-1.5 rounded-md px-2 py-1 text-xs transition-colors"
+								>
+									<PlusIcon class="size-3" />
+									<span>New chat in project</span>
+								</a>
+							</div>
+						{/if}
+					</div>
+				{/each}
+			{/if}
+		</div>
+	</div>
+
 	<div class="relative flex min-h-0 flex-1 shrink-0 flex-col overflow-clip">
 		<div
 			class="from-sidebar pointer-events-none absolute top-0 right-0 left-0 z-10 h-4 bg-gradient-to-b to-transparent"
@@ -452,4 +573,7 @@
 			</Button>
 		{/if}
 	</div>
+
+	<CreateProjectModal bind:open={createProjectModalOpen} />
+	<ProjectSettingsModal bind:open={projectSettingsOpen} bind:project={editingProject} />
 </Sidebar.Sidebar>

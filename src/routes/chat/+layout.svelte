@@ -249,6 +249,7 @@
 				web_search_mode: settings.webSearchMode,
 				web_search_provider: settings.webSearchProvider,
 				assistant_id: selectedAssistantId.current || undefined,
+				project_id: page.url.searchParams.get('projectId') || undefined,
 				reasoning_effort: currentModelSupportsReasoning ? settings.reasoningEffort : undefined,
 				temporary: settings.temporaryMode || undefined,
 			});

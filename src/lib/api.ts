@@ -15,7 +15,10 @@ export type {
     Storage,
     User,
     Session,
-    Assistant
+    Assistant,
+    Project,
+    ProjectFile,
+    ProjectMember,
 } from '$lib/db/schema';
 
 // Type aliases for backwards compatibility with Convex patterns
@@ -30,6 +33,10 @@ interface DocTypes {
     conversations: import('$lib/db/schema').Conversation;
     messages: import('$lib/db/schema').Message;
     storage: import('$lib/db/schema').Storage;
+    assistants: import('$lib/db/schema').Assistant;
+    projects: import('$lib/db/schema').Project;
+    project_files: import('$lib/db/schema').ProjectFile;
+    project_members: import('$lib/db/schema').ProjectMember;
 }
 
 // API endpoints mapping - these replace the Convex API object

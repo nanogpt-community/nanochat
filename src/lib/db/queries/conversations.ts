@@ -4,13 +4,26 @@ import { eq, desc, and, or, isNull } from 'drizzle-orm';
 import enhancedSearch from '$lib/utils/fuzzy-search';
 import { getFirstSentence } from '$lib/utils/strings';
 
-export async function getUserConversations(userId: string): Promise<Conversation[]> {
+export async function getUserConversations(
+    userId: string,
+    projectId?: string | null
+): Promise<Conversation[]> {
+    const filters = [
+        eq(conversations.userId, userId),
+        // Filter out temporary conversations
+        or(eq(conversations.temporary, false), isNull(conversations.temporary)),
+    ];
+
+    if (projectId !== undefined) {
+        if (projectId === null) {
+            filters.push(isNull(conversations.projectId));
+        } else {
+            filters.push(eq(conversations.projectId, projectId));
+        }
+    }
+
     return db.query.conversations.findMany({
-        where: and(
-            eq(conversations.userId, userId),
-            // Filter out temporary conversations (temporary is false or null)
-            or(eq(conversations.temporary, false), isNull(conversations.temporary))
-        ),
+        where: and(...filters),
         orderBy: [desc(conversations.updatedAt)],
     });
 }
@@ -42,7 +55,11 @@ export async function getPublicConversationById(
     return result ?? null;
 }
 
-export async function createConversation(userId: string, title?: string): Promise<Conversation> {
+export async function createConversation(
+    userId: string,
+    title?: string,
+    projectId?: string | null
+): Promise<Conversation> {
     const now = new Date();
     const [result] = await db
         .insert(conversations)
@@ -50,6 +67,7 @@ export async function createConversation(userId: string, title?: string): Promis
             id: generateId(),
             userId,
             title: title ?? 'Untitled',
+            projectId,
             createdAt: now,
             updatedAt: now,
         })
@@ -65,6 +83,7 @@ export async function createConversationWithMessage(
         role: 'user' | 'assistant' | 'system';
         images?: Array<{ url: string; storage_id: string; fileName?: string }>;
         webSearchEnabled?: boolean;
+        projectId?: string | null;
     }
 ): Promise<{ conversationId: string; messageId: string }> {
     const now = new Date();
@@ -76,6 +95,7 @@ export async function createConversationWithMessage(
         id: conversationId,
         userId,
         title: getFirstSentence(messageData.content)[0] || 'Untitled',
+        projectId: messageData.projectId,
         generating: true,
         createdAt: now,
         updatedAt: now,

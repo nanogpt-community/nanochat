@@ -71,7 +71,14 @@ export const GET: RequestHandler = async ({ request, url }) => {
 
     // Default: List user conversations (requires auth)
     if (!userId) throw error(401, 'Unauthorized');
-    const conversations = await getUserConversations(userId);
+
+    // projectId can be "null" (string) to explicity request non-project conversations
+    // or a uuid for a specific project
+    // or undefined/missing to get all (backward compatibility)
+    const projectIdParam = url.searchParams.get('projectId');
+    const projectId = projectIdParam === 'null' ? null : (projectIdParam || undefined);
+
+    const conversations = await getUserConversations(userId, projectId);
     return json(conversations);
 };
 
@@ -83,7 +90,7 @@ export const POST: RequestHandler = async ({ request }) => {
 
     switch (action) {
         case 'create': {
-            const conversation = await createConversation(userId, body.title);
+            const conversation = await createConversation(userId, body.title, body.projectId);
             return json(conversation);
         }
 
@@ -94,6 +101,7 @@ export const POST: RequestHandler = async ({ request }) => {
                 role: body.role,
                 images: body.images,
                 webSearchEnabled: body.webSearchEnabled,
+                projectId: body.projectId,
             });
             return json(result);
         }

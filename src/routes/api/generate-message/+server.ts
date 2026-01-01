@@ -9,6 +9,8 @@ import {
 	messages,
 	storage,
 	assistants,
+	projects,
+	projectFiles,
 } from '$lib/db/schema';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { extractTextFromPDF } from '$lib/utils/pdf-extraction';
@@ -48,6 +50,7 @@ const reqBodySchema = z
 		message: z.string().optional(),
 		model_id: z.string(),
 		assistant_id: z.string().optional(),
+		project_id: z.string().optional(),
 
 		session_token: z.string(),
 		conversation_id: z.string().optional(),
@@ -543,6 +546,43 @@ async function generateAIResponse({
 		}
 	}
 
+	// Fetch project if assigned to conversation
+	if (conversation?.projectId) {
+		const project = await db.query.projects.findFirst({
+			where: eq(projects.id, conversation.projectId),
+			with: {
+				files: true,
+			},
+		});
+
+		if (project) {
+			// Add project custom instructions
+			if (project.systemPrompt) {
+				const substitutedPrompt = substituteSystemPromptVariables(project.systemPrompt, {
+					modelId: model.modelId,
+					modelName: model.modelId,
+					provider: model.provider,
+					userName: userName,
+				});
+				systemContent += `\n[PROJECT INSTRUCTIONS]\n${substitutedPrompt}\n\n`;
+			}
+
+			// Add project files context
+			if (project.files && project.files.length > 0) {
+				let projectKnowledge = '';
+				for (const file of project.files) {
+					if (file.extractedContent) {
+						projectKnowledge += `\n--- START OF FILE: ${file.fileName} ---\n${file.extractedContent}\n--- END OF FILE: ${file.fileName} ---\n`;
+					}
+				}
+
+				if (projectKnowledge) {
+					systemContent += `\n[PROJECT KNOWLEDGE BASE]\nThe following files are attached to this project. Use them as context to answer user queries.\n${projectKnowledge}\n\n`;
+				}
+			}
+		}
+	}
+
 	// Add scraped URL content (if any)
 	if (scrapedContent) {
 		systemContent += scrapedContent;
@@ -761,18 +801,18 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 		}
 
 		const contentHtmlResult = await contentHtmlResultPromise;
-		
+
 		if (contentHtmlResult.isErr()) {
 			log(`Background: Failed to render HTML: ${contentHtmlResult.error}`, startTime);
 		}
-		
+
 		// Compute end-to-end generation time in milliseconds
 		const responseTimeMs = Date.now() - generationStart;
 		log(
 			`Background stream processing completed. Processed ${chunkCount} chunks, final content length: ${content.length}, responseTimeMs=${responseTimeMs}`,
 			startTime
 		);
-		
+
 		// Update message with final data
 		await db
 			.update(messages)
@@ -1247,6 +1287,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			pinned: false,
 			costUsd: 0,
 			assistantId: args.assistant_id,
+			projectId: args.project_id,
 			temporary: isTemporaryChat,
 			createdAt: now,
 			updatedAt: now,

@@ -3,6 +3,7 @@ import type { RequestHandler } from './$types';
 import { auth } from '$lib/auth';
 import { existsSync, mkdirSync, writeFileSync, unlinkSync } from 'fs';
 import { join, resolve } from 'path';
+import { saveFile, deleteFile } from '$lib/backend/storage';
 import { db, generateId } from '$lib/db';
 import { storage } from '$lib/db/schema';
 import { eq } from 'drizzle-orm';
@@ -29,35 +30,21 @@ export const POST: RequestHandler = async ({ request }) => {
     const contentType = request.headers.get('content-type') || 'application/octet-stream';
     const body = await request.arrayBuffer();
 
-    const id = generateId();
-    const extension = (contentType.split('/')[1] || 'bin').replace(/[^a-zA-Z0-9]/g, '') || 'bin';
-    const filename = `${id}.${extension}`;
-    const filepath = join(UPLOAD_DIR, filename);
+    // We typically don't have original filename in raw POST body upload unless in header
+    // Helper function defaults if not provided, or we can assume a name
+    const filename = request.headers.get('x-filename') || `upload-${Date.now()}`;
 
-    // Prevent path traversal
-    if (!resolve(filepath).startsWith(resolve(UPLOAD_DIR))) {
-        throw error(403, 'Invalid file path');
+    try {
+        const savedFile = await saveFile(Buffer.from(body), filename, contentType, userId);
+
+        return json({
+            storageId: savedFile.id,
+            url: `/api/storage/${savedFile.id}`,
+        });
+    } catch (e) {
+        console.error(e);
+        return error(500, 'Failed to save file');
     }
-
-    // Write file to disk
-    writeFileSync(filepath, Buffer.from(body));
-
-    // Store metadata in database
-    const now = new Date();
-    await db.insert(storage).values({
-        id,
-        userId,
-        filename,
-        mimeType: contentType,
-        size: body.byteLength,
-        path: filepath,
-        createdAt: now,
-    });
-
-    return json({
-        storageId: id,
-        url: `/api/storage/${id}`,
-    });
 };
 
 // GET - Get file URL or download file

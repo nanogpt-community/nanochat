@@ -87,6 +87,7 @@ export function createTemporaryConversation(title: string = 'Temporary Chat'): T
         branchedFrom: null,
         assistantId: null,
         isTemporary: true,
+        projectId: null,
     };
 
     state.conversations.set(id, conversation);
