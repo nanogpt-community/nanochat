@@ -381,21 +381,63 @@
 		// return supportsDocuments(currentModel);
 	});
 
+	// Helper to check if file is an image (by MIME type or extension)
+	// Chrome Android often returns empty file.type for images from gallery
+	const IMAGE_EXTENSIONS = [
+		'jpg',
+		'jpeg',
+		'png',
+		'gif',
+		'webp',
+		'bmp',
+		'svg',
+		'heic',
+		'heif',
+		'avif',
+	];
+	const EXTENSION_TO_MIME: Record<string, string> = {
+		jpg: 'image/jpeg',
+		jpeg: 'image/jpeg',
+		png: 'image/png',
+		gif: 'image/gif',
+		webp: 'image/webp',
+		bmp: 'image/bmp',
+		svg: 'image/svg+xml',
+		heic: 'image/heic',
+		heif: 'image/heif',
+		avif: 'image/avif',
+	};
+
+	function isImageFile(f: File): boolean {
+		if (f.type.startsWith('image/')) return true;
+		// Fallback: check extension for Chrome Android where MIME type may be empty
+		const ext = f.name.split('.').pop()?.toLowerCase();
+		return ext ? IMAGE_EXTENSIONS.includes(ext) : false;
+	}
+
+	function getImageMimeType(f: File): string {
+		if (f.type) return f.type;
+		// Derive MIME type from extension for Chrome Android
+		const ext = f.name.split('.').pop()?.toLowerCase();
+		return ext ? (EXTENSION_TO_MIME[ext] ?? 'image/jpeg') : 'image/jpeg';
+	}
+
 	async function handleFilesSelect(files: File[]) {
 		if (!files.length || !session.current?.session.token) return;
 
-		const imageFiles = files.filter((f) => f.type.startsWith('image/'));
-		const documentFiles = files.filter((f) => !f.type.startsWith('image/'));
+		const imageFiles = files.filter(isImageFile);
+		const documentFiles = files.filter((f) => !isImageFile(f));
 
 		if (imageFiles.length > 0) {
 			isUploading = true;
 			const uploadedImages: { url: string; storage_id: string; fileName?: string }[] = [];
 			try {
 				for (const file of imageFiles) {
+					const mimeType = getImageMimeType(file);
 					const compressedFile = await compressImage(file, 1024 * 1024);
 					const uploadResult = await fetch('/api/storage', {
 						method: 'POST',
-						headers: { 'Content-Type': file.type },
+						headers: { 'Content-Type': mimeType },
 						credentials: 'include',
 						body: compressedFile,
 					});
@@ -965,17 +1007,17 @@
 							{/if}
 							<div class="relative flex flex-grow flex-row items-start">
 								<input
-								{...fileUpload.input}
-								bind:this={fileInput}
-								oninput={(e) => {
-									// Fallback for Chrome Mobile Android where onchange may not fire for images
-									const input = e.currentTarget as HTMLInputElement;
-									if (input.files && input.files.length > 0) {
-										handleFilesSelect(Array.from(input.files));
-										input.value = ''; // Clear to allow re-selection of same file
-									}
-								}}
-							/>
+									{...fileUpload.input}
+									bind:this={fileInput}
+									oninput={(e) => {
+										// Fallback for Chrome Mobile Android where onchange may not fire for images
+										const input = e.currentTarget as HTMLInputElement;
+										if (input.files && input.files.length > 0) {
+											handleFilesSelect(Array.from(input.files));
+											input.value = ''; // Clear to allow re-selection of same file
+										}
+									}}
+								/>
 								<!-- svelte-ignore a11y_autofocus -->
 								<textarea
 									style={popover.trigger.style}
