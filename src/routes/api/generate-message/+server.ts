@@ -11,6 +11,8 @@ import {
 	assistants,
 	projects,
 	projectFiles,
+	apiKeys,
+	user,
 } from '$lib/db/schema';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { extractTextFromPDF } from '$lib/utils/pdf-extraction';
@@ -52,7 +54,7 @@ const reqBodySchema = z
 		assistant_id: z.string().optional(),
 		project_id: z.string().optional(),
 
-		session_token: z.string(),
+		session_token: z.string().optional(),
 		conversation_id: z.string().optional(),
 		web_search_enabled: z.boolean().optional(),
 		web_search_mode: z.enum(['off', 'standard', 'deep']).optional(),
@@ -121,6 +123,47 @@ async function getUserIdFromSession(sessionToken: string): Promise<Result<string
 		return ok(session.userId);
 	} catch (e) {
 		return err(`Failed to get user from session: ${e}`);
+	}
+}
+
+// Helper to get user ID from API key (Bearer token)
+async function getUserIdFromApiKey(authHeader: string | null): Promise<Result<string, string>> {
+	if (!authHeader) {
+		return err('Missing Authorization header. Use: Authorization: Bearer <your_api_key>');
+	}
+
+	if (!authHeader.startsWith('Bearer ')) {
+		return err('Invalid Authorization header format. Expected: Bearer <your_api_key>');
+	}
+
+	const keyValue = authHeader.slice(7); // Remove 'Bearer ' prefix
+
+	if (!keyValue) {
+		return err('Empty API key. Provide your key after "Bearer "');
+	}
+
+	if (!keyValue.startsWith('nc_')) {
+		return err('Invalid API key format. Keys should start with "nc_". Generate one at /account/developer');
+	}
+
+	try {
+		const apiKeyRecord = await db.query.apiKeys.findFirst({
+			where: eq(apiKeys.key, keyValue),
+		});
+
+		if (!apiKeyRecord) {
+			return err('API key not found or has been revoked. Generate a new key at /account/developer');
+		}
+
+		// Update lastUsedAt timestamp
+		await db
+			.update(apiKeys)
+			.set({ lastUsedAt: new Date() })
+			.where(eq(apiKeys.id, apiKeyRecord.id));
+
+		return ok(apiKeyRecord.userId);
+	} catch (e) {
+		return err(`Internal error validating API key. Please try again or contact support.`);
 	}
 }
 
@@ -1131,18 +1174,42 @@ export const POST: RequestHandler = async ({ request }) => {
 
 	log('Schema validation passed', startTime);
 
-	// Get user from session
-	const session = await auth.api.getSession({ headers: request.headers });
-	if (!session?.user?.id) {
-		log('No session found', startTime);
-		return error(401, 'Unauthorized');
+	// Try API key auth first (Bearer token), then session cookie, then session_token
+	const authHeader = request.headers.get('Authorization');
+	let userId: string;
+
+	if (authHeader?.startsWith('Bearer nc_')) {
+		// API key authentication
+		const userIdResult = await getUserIdFromApiKey(authHeader);
+		if (userIdResult.isErr()) {
+			log(`API key auth failed: ${userIdResult.error}`, startTime);
+			return error(401, userIdResult.error);
+		}
+		userId = userIdResult.value;
+		log('API key authentication successful', startTime);
+	} else if (args.session_token) {
+		// Session token authentication (for external API calls with session token)
+		const userIdResult = await getUserIdFromSession(args.session_token);
+		if (userIdResult.isErr()) {
+			log(`Session token auth failed: ${userIdResult.error}`, startTime);
+			return error(401, userIdResult.error);
+		}
+		userId = userIdResult.value;
+		log('Session token authentication successful', startTime);
+	} else {
+		// Cookie-based session authentication (for web UI)
+		const session = await auth.api.getSession({ headers: request.headers });
+		if (!session?.user?.id) {
+			log('No valid authentication found', startTime);
+			return error(401, 'Authentication required: provide Bearer token or session_token');
+		}
+		userId = session.user.id;
+		log('Cookie session authentication successful', startTime);
 	}
 
-	const userId = session.user.id;
-	log('Session authenticated successfully', startTime);
 
-	// Fetch model, API key, rules, and user settings in parallel
-	const [modelRecord, keyRecord, rulesRecords, userSettingsRecord] = await Promise.all([
+	// Fetch model, API key, rules, user settings, and user in parallel
+	const [modelRecord, keyRecord, rulesRecords, userSettingsRecord, userRecord] = await Promise.all([
 		db.query.userEnabledModels.findFirst({
 			where: and(
 				eq(userEnabledModels.userId, userId),
@@ -1158,6 +1225,9 @@ export const POST: RequestHandler = async ({ request }) => {
 		}),
 		db.query.userSettings.findFirst({
 			where: eq(userSettings.userId, userId),
+		}),
+		db.query.user.findFirst({
+			where: eq(user.id, userId),
 		}),
 	]);
 
@@ -1602,7 +1672,7 @@ export const POST: RequestHandler = async ({ request }) => {
 					: undefined,
 			webSearchProvider: args.web_search_provider,
 			webFeaturesDisabled: usingServerKey && isWebDisabledForServerKey(),
-			userName: session.user?.name ?? undefined,
+			userName: userRecord?.name ?? undefined,
 			isTemporary: isTemporaryChat,
 			providerId: args.provider_id,
 		})
