@@ -153,6 +153,23 @@ export const userEnabledModels = sqliteTable(
 	]
 );
 
+export const apiKeys = sqliteTable(
+	'api_keys',
+	{
+		id: text('id').primaryKey(),
+		userId: text('user_id')
+			.notNull()
+			.references(() => user.id, { onDelete: 'cascade' }),
+		key: text('key').notNull().unique(),
+		name: text('name').notNull(),
+		lastUsedAt: integer('last_used_at', { mode: 'timestamp' }),
+		createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+	},
+	(table) => [
+		index('api_keys_user_id_idx').on(table.userId),
+	]
+);
+
 export const userRules = sqliteTable(
 	'user_rules',
 	{
@@ -441,6 +458,7 @@ export const userRelations = relations(user, ({ many, one }) => ({
 	accounts: many(account),
 	settings: one(userSettings),
 	keys: many(userKeys),
+	apiKeys: many(apiKeys),
 	enabledModels: many(userEnabledModels),
 	rules: many(userRules),
 	conversations: many(conversations),
@@ -478,6 +496,13 @@ export const userSettingsRelations = relations(userSettings, ({ one }) => ({
 export const userKeysRelations = relations(userKeys, ({ one }) => ({
 	user: one(user, {
 		fields: [userKeys.userId],
+		references: [user.id],
+	}),
+}));
+
+export const apiKeysRelations = relations(apiKeys, ({ one }) => ({
+	user: one(user, {
+		fields: [apiKeys.userId],
 		references: [user.id],
 	}),
 }));
@@ -645,3 +670,5 @@ export type ProjectFile = typeof projectFiles.$inferSelect;
 export type NewProjectFile = typeof projectFiles.$inferInsert;
 export type ProjectMember = typeof projectMembers.$inferSelect;
 export type NewProjectMember = typeof projectMembers.$inferInsert;
+export type ApiKey = typeof apiKeys.$inferSelect;
+export type NewApiKey = typeof apiKeys.$inferInsert;
