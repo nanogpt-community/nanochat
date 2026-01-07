@@ -1,0 +1,14 @@
+services:
+  app:
+    build: .
+    #image: ghcr.io/nanogpt-community/nanochat:latest
+    ports:
+      - "3432:3000"
+    volumes:
+      - ./data:/app/data
+    env_file:
+      - .env
+    environment:
+      - ORIGIN=${BETTER_AUTH_URL}
+      - BETTER_AUTH_URL=${BETTER_AUTH_URL}
+    restart: unless-stopped
