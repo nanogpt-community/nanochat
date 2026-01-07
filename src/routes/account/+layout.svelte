@@ -50,6 +50,10 @@
 			title: 'Analytics',
 			href: '/account/analytics',
 		},
+		{
+			title: 'Developer',
+			href: '/account/developer',
+		},
 	];
 	// Use first 5 actions for the shortcuts display (global ones)
 	const displayedActions = KEYBIND_ACTIONS.slice(0, 5);
