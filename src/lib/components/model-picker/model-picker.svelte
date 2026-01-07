@@ -37,6 +37,7 @@
 	import { isFirefox } from '$lib/hooks/is-firefox.svelte';
 	import ModelInfoPanel from './model-info-panel.svelte';
 	import type { NanoGPTModel } from '$lib/backend/models/nano-gpt';
+	import { fade, fly } from 'svelte/transition';
 
 	// Helper to check if model is pinned
 	function isPinned(model: { pinned?: boolean }): boolean {
@@ -127,6 +128,11 @@
 	});
 
 	let open = $state(false);
+
+	// Touch gesture handling for mobile drawer
+	let touchStartY = $state(0);
+	let isDragging = $state(false);
+	let drawerTranslateY = $state(0);
 
 	let activeModel = $state('');
 
@@ -248,8 +254,328 @@
 
 <svelte:window use:shortcut={getKeybindOptions('openModelPicker', () => (open = true))} />
 
-<Popover.Root bind:open>
-	<Popover.Trigger
+{#snippet pickerContent()}
+	<div class={cn('flex h-full w-full overflow-hidden', isMobile.current && 'flex-col')}>
+		<!-- Provider Bar - Horizontal on mobile, Vertical sidebar on desktop -->
+		<div
+			class={cn(
+				'border-border bg-muted/30 flex gap-1 p-2',
+				isMobile.current ? 'flex-row overflow-x-auto border-b' : 'flex-col border-r'
+			)}
+		>
+			<!-- Favorites/All button -->
+			<button
+				class={cn(
+					'hover:bg-accent flex flex-shrink-0 items-center justify-center rounded-lg transition-colors',
+					isMobile.current ? 'p-3' : 'p-2',
+					selectedProvider === null && 'bg-accent text-accent-foreground'
+				)}
+				onclick={() => {
+					search = '';
+					selectedProvider = null;
+				}}
+			>
+				<StarIcon class={cn(isMobile.current ? 'size-6' : 'size-5')} />
+			</button>
+
+			<!-- Provider icons -->
+			{#each uniqueProviders as provider (provider.iconUrl)}
+				<button
+					class={cn(
+						'hover:bg-accent flex flex-shrink-0 items-center justify-center rounded-lg transition-colors',
+						isMobile.current ? 'p-3' : 'p-2',
+						selectedProvider === provider.iconUrl && 'bg-accent text-accent-foreground'
+					)}
+					onclick={() => {
+						search = '';
+						selectedProvider = provider.iconUrl;
+					}}
+				>
+					<img
+						src={getIconUrl(provider.iconUrl)}
+						alt="Provider"
+						class={cn(isMobile.current ? 'size-6' : 'size-5', 'object-contain')}
+					/>
+				</button>
+			{/each}
+		</div>
+
+		<!-- Main content -->
+		<div class="min-w-0 flex-1 overflow-hidden">
+			<Command.Root
+				class={cn('flex h-full w-full flex-col overflow-hidden')}
+				bind:value={activeModel}
+				shouldFilter={false}
+			>
+				<label
+					class={cn(
+						'border-border relative flex items-center gap-2 border-b text-sm',
+						isMobile.current ? 'px-3 py-3' : 'px-4 py-3'
+					)}
+				>
+					<SearchIcon class={cn('text-muted-foreground', isMobile.current ? 'size-5' : 'size-4')} />
+					<Command.Input
+						class="placeholder:text-muted-foreground w-full bg-transparent outline-none"
+						placeholder="Search models..."
+						bind:value={search}
+						onkeydown={(e) => {
+							// Arrow key navigation
+							if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+								e.preventDefault();
+								const currentIndex = filteredModels.findIndex((m) => m.modelId === activeModel);
+								let newIndex: number;
+
+								if (e.key === 'ArrowDown') {
+									newIndex = currentIndex < filteredModels.length - 1 ? currentIndex + 1 : 0;
+								} else {
+									newIndex = currentIndex > 0 ? currentIndex - 1 : filteredModels.length - 1;
+								}
+
+								const newModel = filteredModels[newIndex];
+								if (newModel) {
+									activeModel = newModel.modelId;
+								}
+								return;
+							}
+
+							// Enter to select
+							if (e.key === 'Enter' && activeModel) {
+								e.preventDefault();
+								modelSelected(activeModel);
+								return;
+							}
+
+							// Get pin config with fallback to defaults
+							const pinConfig = keybinds.pinModel ?? DEFAULT_KEYBINDS.pinModel;
+
+							// Check modifiers - compare as booleans
+							const hasCtrlOrMeta = e.ctrlKey || e.metaKey;
+							const ctrlRequired = pinConfig.ctrl === true;
+							const shiftRequired = pinConfig.shift === true;
+							const altRequired = pinConfig.alt === true;
+
+							const ctrlMatch = ctrlRequired === hasCtrlOrMeta;
+							const shiftMatch = shiftRequired === e.shiftKey;
+							const altMatch = altRequired === e.altKey;
+							const keyMatch = e.key.toLowerCase() === String(pinConfig.key).toLowerCase();
+
+							if (ctrlMatch && shiftMatch && altMatch && keyMatch && activeModelInfo) {
+								e.preventDefault();
+								e.stopPropagation();
+								togglePin(activeModelInfo.id);
+							}
+						}}
+					/>
+					{#if !isMobile.current}
+						<FilterIcon class="text-muted-foreground size-4 opacity-50" />
+					{/if}
+				</label>
+				<Command.List
+					class={cn('flex flex-col gap-0.5 overflow-y-auto', isMobile.current ? 'p-2' : 'p-1')}
+					style={isMobile.current ? 'max-height: calc(85vh - 160px);' : 'max-height: 400px;'}
+				>
+					{#each filteredModels as model (model.id)}
+						{@const formatted = formatModelName(model.modelId)}
+						{@const nanoGPTModel = modelsState
+							.from(Provider.NanoGPT)
+							.find((m) => m.id === model.modelId)}
+						{@const modelIconUrl = getIconUrl(nanoGPTModel?.icon_url, model.modelId)}
+						{@const disabled = false}
+
+						<Command.Item
+							value={model.modelId}
+							class={cn(
+								'flex gap-3 overflow-hidden rounded-lg',
+								isMobile.current ? 'p-3' : 'p-2',
+								'relative cursor-pointer scroll-m-36 select-none',
+								'hover:bg-accent/50 active:bg-accent/70',
+								'data-selected:bg-accent/50 data-selected:text-accent-foreground',
+								disabled && 'opacity-50',
+								activeModel === model.modelId && 'bg-accent/50 text-accent-foreground'
+							)}
+							onSelect={() => modelSelected(model.modelId)}
+							onmouseenter={() => !isMobile.current && (activeModel = model.modelId)}
+						>
+							<!-- Provider Icon -->
+							<div class="flex flex-shrink-0 items-start pt-0.5">
+								{#if modelIconUrl}
+									<img
+										src={modelIconUrl}
+										alt=""
+										class={cn(isMobile.current ? 'size-6' : 'size-5', 'object-contain')}
+									/>
+								{:else}
+									<div
+										class={cn(
+											'bg-muted text-muted-foreground flex items-center justify-center rounded text-xs',
+											isMobile.current ? 'size-6' : 'size-5'
+										)}
+									>
+										?
+									</div>
+								{/if}
+							</div>
+
+							<!-- Model Info -->
+							<div class="min-w-0 flex-1 overflow-hidden">
+								<div class="flex items-center gap-2">
+									<span
+										class={cn('truncate font-semibold', isMobile.current ? 'text-base' : 'text-sm')}
+									>
+										{formatted.full}
+									</span>
+
+									<!-- Favorite star toggle -->
+									<button
+										class={cn(
+											'flex-shrink-0 rounded p-0.5 transition-colors',
+											isPinned(model)
+												? 'text-yellow-400'
+												: 'text-muted-foreground/50 hover:text-yellow-400'
+										)}
+										onclick={(e) => togglePin(model.id, e)}
+									>
+										<StarIcon
+											class={cn(
+												isMobile.current ? 'size-4' : 'size-3.5',
+												isPinned(model) && 'fill-current'
+											)}
+										/>
+									</button>
+
+									<!-- Mobile: Compact capability indicators -->
+									{#if isMobile.current}
+										<div class="ml-auto flex items-center gap-1">
+											{#if nanoGPTModel && supportsVision(nanoGPTModel)}
+												<div class="rounded bg-purple-500/20 p-1 text-purple-400">
+													<EyeIcon class="size-3" />
+												</div>
+											{/if}
+											{#if nanoGPTModel && supportsReasoning(nanoGPTModel)}
+												<div class="rounded bg-green-500/20 p-1 text-green-400">
+													<BrainIcon class="size-3" />
+												</div>
+											{/if}
+											{#if nanoGPTModel && isImageOnlyModel(nanoGPTModel)}
+												<div class="rounded bg-blue-500/20 p-1 text-blue-400">
+													<ImageIcon class="size-3" />
+												</div>
+											{/if}
+											{#if nanoGPTModel && supportsVideo(nanoGPTModel)}
+												<div class="rounded bg-cyan-500/20 p-1 text-cyan-400">
+													<VideoIcon class="size-3" />
+												</div>
+											{/if}
+										</div>
+									{/if}
+								</div>
+
+								<!-- Description - Hidden on mobile for compactness -->
+								{#if nanoGPTModel?.description && !isMobile.current}
+									<p class="text-muted-foreground mt-0.5 max-w-full truncate text-xs">
+										{nanoGPTModel.description}
+									</p>
+								{/if}
+							</div>
+
+							<!-- Capability badges - Desktop only with tooltips -->
+							{#if !isMobile.current}
+								<div class="flex flex-shrink-0 items-center gap-1.5">
+									{#if nanoGPTModel && supportsVision(nanoGPTModel)}
+										<Tooltip>
+											{#snippet trigger(tooltip)}
+												<div
+													{...tooltip.trigger}
+													class="rounded-md bg-purple-500/20 p-1.5 text-purple-400"
+												>
+													<EyeIcon class="size-3.5" />
+												</div>
+											{/snippet}
+											Supports vision
+										</Tooltip>
+									{/if}
+
+									{#if nanoGPTModel && supportsReasoning(nanoGPTModel)}
+										<Tooltip>
+											{#snippet trigger(tooltip)}
+												<div
+													{...tooltip.trigger}
+													class="rounded-md bg-green-500/20 p-1.5 text-green-400"
+												>
+													<BrainIcon class="size-3.5" />
+												</div>
+											{/snippet}
+											Supports reasoning
+										</Tooltip>
+									{/if}
+
+									{#if nanoGPTModel && isImageOnlyModel(nanoGPTModel)}
+										<Tooltip>
+											{#snippet trigger(tooltip)}
+												<div
+													{...tooltip.trigger}
+													class="rounded-md bg-blue-500/20 p-1.5 text-blue-400"
+												>
+													<ImageIcon class="size-3.5" />
+												</div>
+											{/snippet}
+											Image generation
+										</Tooltip>
+									{/if}
+
+									{#if nanoGPTModel && supportsVideo(nanoGPTModel)}
+										<Tooltip>
+											{#snippet trigger(tooltip)}
+												<div
+													{...tooltip.trigger}
+													class="rounded-md bg-cyan-500/20 p-1.5 text-cyan-400"
+												>
+													<VideoIcon class="size-3.5" />
+												</div>
+											{/snippet}
+											Supports video generation
+										</Tooltip>
+									{/if}
+
+									<!-- Info button -->
+									<Tooltip>
+										{#snippet trigger(tooltip)}
+											<button
+												{...tooltip.trigger}
+												class="text-muted-foreground/50 hover:text-muted-foreground rounded-full p-1 transition-colors"
+												onclick={(e) => {
+													e.stopPropagation();
+													if (nanoGPTModel) {
+														infoModel = infoModel?.id === nanoGPTModel.id ? null : nanoGPTModel;
+													}
+												}}
+											>
+												<InfoIcon class="size-4" />
+											</button>
+										{/snippet}
+										Model info
+									</Tooltip>
+								</div>
+							{/if}
+						</Command.Item>
+					{/each}
+				</Command.List>
+			</Command.Root>
+		</div>
+
+		<!-- Info Panel - Desktop only, mobile uses full-screen overlay -->
+		{#if infoModel && !isMobile.current}
+			<ModelInfoPanel
+				model={infoModel}
+				iconUrl={getIconUrl(infoModel.icon_url, infoModel.id)}
+				onClose={() => (infoModel = null)}
+			/>
+		{/if}
+	</div>
+{/snippet}
+
+{#snippet trigger()}
+	<div
 		class={cn(
 			'ring-offset-background focus:ring-ring flex items-center justify-between rounded-lg px-2 py-1 text-xs transition hover:text-white focus:ring-2 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50',
 			className
@@ -266,318 +592,114 @@
 				{/if}
 			</span>
 		</div>
-	</Popover.Trigger>
+	</div>
+{/snippet}
 
-	<Popover.Content
-		portalProps={{
-			disabled: isFirefox,
-		}}
-		side="bottom"
-		align="start"
-		sideOffset={4}
-		collisionPadding={20}
-		hideWhenDetached={true}
-		onOpenAutoFocus={(e) => e.preventDefault()}
-		class={cn(
-			'overflow-hidden p-0 transition-all duration-200',
-			infoModel ? 'w-[840px]' : 'w-[520px]',
-			'data-[side=bottom]:translate-y-1 data-[side=top]:-translate-y-1',
-			{
-				'max-w-[calc(100vw-2rem)]': isMobile.current,
-			}
-		)}
-	>
-		{#if enabledArr.length === 0}
-			<div class="text-muted-foreground flex items-center justify-center p-8">
-				<p>Loading models...</p>
+<!-- Mobile Drawer -->
+{#if isMobile.current}
+	{@const CLOSE_THRESHOLD = 100}
+	<button onclick={() => (open = true)} class={className}>
+		{@render trigger()}
+	</button>
+
+	{#if open}
+		<div
+			class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm"
+			transition:fade={{ duration: 150 }}
+			onclick={() => (open = false)}
+		></div>
+		<div
+			class="bg-background fixed inset-x-0 bottom-0 z-50 h-[85vh] touch-none rounded-t-xl border-t shadow-xl"
+			style="transform: translateY({drawerTranslateY}px);"
+			transition:fly={{ y: 100, duration: 200 }}
+			ontouchstart={(e) => {
+				// Track touch start position
+				touchStartY = e.touches[0]?.clientY ?? 0;
+				isDragging = true;
+			}}
+			ontouchmove={(e) => {
+				if (!isDragging) return;
+				e.preventDefault(); // Prevent pull-to-refresh
+				const currentY = e.touches[0]?.clientY ?? 0;
+				const deltaY = currentY - touchStartY;
+				// Only allow dragging down
+				drawerTranslateY = Math.max(0, deltaY);
+			}}
+			ontouchend={() => {
+				isDragging = false;
+				if (drawerTranslateY > CLOSE_THRESHOLD) {
+					open = false;
+				}
+				drawerTranslateY = 0;
+			}}
+		>
+			<!-- Drag handle area -->
+			<div
+				class="border-border flex cursor-grab items-center justify-center border-b p-3 active:cursor-grabbing"
+			>
+				<div class="bg-muted h-1.5 w-12 rounded-full"></div>
 			</div>
-		{:else}
-			<div class="flex w-full overflow-hidden">
-				<!-- Provider Sidebar -->
-				<div class="border-border bg-muted/30 flex flex-col gap-1 border-r p-2">
-					<!-- Favorites/All button -->
-					<button
-						class={cn(
-							'hover:bg-accent flex items-center justify-center rounded-lg p-2 transition-colors',
-							selectedProvider === null && 'bg-accent text-accent-foreground'
-						)}
-						onclick={() => {
-							search = '';
-							selectedProvider = null;
-						}}
-					>
-						<StarIcon class="size-5" />
-					</button>
+			<div class="h-full w-full overflow-hidden pb-8">
+				{@render pickerContent()}
+			</div>
+		</div>
+	{/if}
+{:else}
+	<!-- Desktop Popover -->
+	<Popover.Root bind:open>
+		<Popover.Trigger>
+			{@render trigger()}
+		</Popover.Trigger>
 
-					<!-- Provider icons -->
-					{#each uniqueProviders as provider (provider.iconUrl)}
-						<button
-							class={cn(
-								'hover:bg-accent flex items-center justify-center rounded-lg p-2 transition-colors',
-								selectedProvider === provider.iconUrl && 'bg-accent text-accent-foreground'
-							)}
-							onclick={() => {
-								search = '';
-								selectedProvider = provider.iconUrl;
-							}}
-						>
-							<img
-								src={getIconUrl(provider.iconUrl)}
-								alt="Provider"
-								class="size-5 object-contain"
-							/>
-						</button>
-					{/each}
+		<Popover.Content
+			portalProps={{
+				disabled: isFirefox,
+			}}
+			side="bottom"
+			align="start"
+			sideOffset={4}
+			collisionPadding={20}
+			hideWhenDetached={true}
+			onOpenAutoFocus={(e) => e.preventDefault()}
+			class={cn(
+				'overflow-hidden p-0 transition-all duration-200',
+				infoModel ? 'w-[840px]' : 'w-[520px]',
+				'data-[side=bottom]:translate-y-1 data-[side=top]:-translate-y-1'
+			)}
+		>
+			{#if enabledArr.length === 0}
+				<div class="text-muted-foreground flex items-center justify-center p-8">
+					<p>Loading models...</p>
+				</div>
+			{:else}
+				<div class="w-full">
+					{@render pickerContent()}
 				</div>
 
-				<!-- Main content -->
-				<div class="min-w-0 flex-1 overflow-hidden">
-					<Command.Root
-						class={cn('flex h-full w-full flex-col overflow-hidden')}
-						bind:value={activeModel}
-						shouldFilter={false}
-					>
-						<label
-							class="border-border relative flex items-center gap-2 border-b px-4 py-3 text-sm"
-						>
-							<SearchIcon class="text-muted-foreground size-4" />
-							<Command.Input
-								class="placeholder:text-muted-foreground w-full bg-transparent outline-none"
-								placeholder="Search models..."
-								bind:value={search}
-								onkeydown={(e) => {
-									// Arrow key navigation
-									if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-										e.preventDefault();
-										const currentIndex = filteredModels.findIndex((m) => m.modelId === activeModel);
-										let newIndex: number;
-
-										if (e.key === 'ArrowDown') {
-											newIndex = currentIndex < filteredModels.length - 1 ? currentIndex + 1 : 0;
-										} else {
-											newIndex = currentIndex > 0 ? currentIndex - 1 : filteredModels.length - 1;
-										}
-
-										const newModel = filteredModels[newIndex];
-										if (newModel) {
-											activeModel = newModel.modelId;
-										}
-										return;
-									}
-
-									// Enter to select
-									if (e.key === 'Enter' && activeModel) {
-										e.preventDefault();
-										modelSelected(activeModel);
-										return;
-									}
-
-									// Get pin config with fallback to defaults
-									const pinConfig = keybinds.pinModel ?? DEFAULT_KEYBINDS.pinModel;
-
-									// Check modifiers - compare as booleans
-									const hasCtrlOrMeta = e.ctrlKey || e.metaKey;
-									const ctrlRequired = pinConfig.ctrl === true;
-									const shiftRequired = pinConfig.shift === true;
-									const altRequired = pinConfig.alt === true;
-
-									const ctrlMatch = ctrlRequired === hasCtrlOrMeta;
-									const shiftMatch = shiftRequired === e.shiftKey;
-									const altMatch = altRequired === e.altKey;
-									const keyMatch = e.key.toLowerCase() === String(pinConfig.key).toLowerCase();
-
-									if (ctrlMatch && shiftMatch && altMatch && keyMatch && activeModelInfo) {
-										e.preventDefault();
-										e.stopPropagation();
-										togglePin(activeModelInfo.id);
-									}
-								}}
-							/>
-							<FilterIcon class="text-muted-foreground size-4 opacity-50" />
-						</label>
-						<Command.List
-							class="flex flex-col gap-0.5 overflow-y-auto p-1"
-							style="max-height: 400px;"
-						>
-							{#each filteredModels as model (model.id)}
-								{@const formatted = formatModelName(model.modelId)}
-								{@const nanoGPTModel = modelsState
-									.from(Provider.NanoGPT)
-									.find((m) => m.id === model.modelId)}
-								{@const modelIconUrl = getIconUrl(nanoGPTModel?.icon_url, model.modelId)}
-								{@const disabled = false}
-
-								<Command.Item
-									value={model.modelId}
-									class={cn(
-										'flex gap-3 overflow-hidden rounded-lg p-2',
-										'relative cursor-pointer scroll-m-36 select-none',
-										'hover:bg-accent/50',
-										'data-selected:bg-accent/50 data-selected:text-accent-foreground',
-										disabled && 'opacity-50',
-										activeModel === model.modelId && 'bg-accent/50 text-accent-foreground'
-									)}
-									onSelect={() => modelSelected(model.modelId)}
-									onmouseenter={() => (activeModel = model.modelId)}
-								>
-									<!-- Provider Icon -->
-									<div class="flex flex-shrink-0 items-start pt-0.5">
-										{#if modelIconUrl}
-											<img src={modelIconUrl} alt="" class="size-5 object-contain" />
-										{:else}
-											<div
-												class="bg-muted text-muted-foreground flex size-5 items-center justify-center rounded text-xs"
-											>
-												?
-											</div>
-										{/if}
-									</div>
-
-									<!-- Model Info -->
-									<div class="min-w-0 flex-1 overflow-hidden">
-										<div class="flex items-center gap-2">
-											<span class="truncate text-sm font-semibold">
-												{formatted.full}
-											</span>
-
-											<!-- Favorite star toggle -->
-											<button
-												class={cn(
-													'flex-shrink-0 rounded p-0.5 transition-colors',
-													isPinned(model)
-														? 'text-yellow-400'
-														: 'text-muted-foreground/50 hover:text-yellow-400'
-												)}
-												onclick={(e) => togglePin(model.id, e)}
-											>
-												<StarIcon class={cn('size-3.5', isPinned(model) && 'fill-current')} />
-											</button>
-										</div>
-
-										<!-- Description -->
-										{#if nanoGPTModel?.description}
-											<p class="text-muted-foreground mt-0.5 max-w-full truncate text-xs">
-												{nanoGPTModel.description}
-											</p>
-										{/if}
-									</div>
-
-									<!-- Capability badges -->
-									<div class="flex flex-shrink-0 items-center gap-1.5">
-										{#if nanoGPTModel && supportsVision(nanoGPTModel)}
-											<Tooltip>
-												{#snippet trigger(tooltip)}
-													<div
-														{...tooltip.trigger}
-														class="rounded-md bg-purple-500/20 p-1.5 text-purple-400"
-													>
-														<EyeIcon class="size-3.5" />
-													</div>
-												{/snippet}
-												Supports vision
-											</Tooltip>
-										{/if}
-
-										{#if nanoGPTModel && supportsReasoning(nanoGPTModel)}
-											<Tooltip>
-												{#snippet trigger(tooltip)}
-													<div
-														{...tooltip.trigger}
-														class="rounded-md bg-green-500/20 p-1.5 text-green-400"
-													>
-														<BrainIcon class="size-3.5" />
-													</div>
-												{/snippet}
-												Supports reasoning
-											</Tooltip>
-										{/if}
-
-										{#if nanoGPTModel && isImageOnlyModel(nanoGPTModel)}
-											<Tooltip>
-												{#snippet trigger(tooltip)}
-													<div
-														{...tooltip.trigger}
-														class="rounded-md bg-blue-500/20 p-1.5 text-blue-400"
-													>
-														<ImageIcon class="size-3.5" />
-													</div>
-												{/snippet}
-												Image generation
-											</Tooltip>
-										{/if}
-
-										{#if nanoGPTModel && supportsVideo(nanoGPTModel)}
-											<Tooltip>
-												{#snippet trigger(tooltip)}
-													<div
-														{...tooltip.trigger}
-														class="rounded-md bg-cyan-500/20 p-1.5 text-cyan-400"
-													>
-														<VideoIcon class="size-3.5" />
-													</div>
-												{/snippet}
-												Supports video generation
-											</Tooltip>
-										{/if}
-
-										<!-- Info button -->
-										<Tooltip>
-											{#snippet trigger(tooltip)}
-												<button
-													{...tooltip.trigger}
-													class="text-muted-foreground/50 hover:text-muted-foreground rounded-full p-1 transition-colors"
-													onclick={(e) => {
-														e.stopPropagation();
-														if (nanoGPTModel) {
-															infoModel = infoModel?.id === nanoGPTModel.id ? null : nanoGPTModel;
-														}
-													}}
-												>
-													<InfoIcon class="size-4" />
-												</button>
-											{/snippet}
-											Model info
-										</Tooltip>
-									</div>
-								</Command.Item>
-							{/each}
-						</Command.List>
-					</Command.Root>
-				</div>
-
-				<!-- Info Panel -->
-				{#if infoModel}
-					<ModelInfoPanel
-						model={infoModel}
-						iconUrl={getIconUrl(infoModel.icon_url, infoModel.id)}
-						onClose={() => (infoModel = null)}
-					/>
-				{/if}
-			</div>
-
-			<!-- Footer with pin shortcut -->
-			{#if !isMobile.current && activeModelInfo}
-				<div class="border-border flex place-items-center justify-between border-t p-2">
-					<div>
-						<Button
-							variant="ghost"
-							loading={pinning}
-							class="bg-popover"
-							size="sm"
-							onclick={() => togglePin(activeModelInfo.id)}
-						>
-							<span class="text-muted-foreground">
-								{isPinned(activeModelInfo) ? 'Unpin' : 'Pin'}
-							</span>
-							<span>
-								{#each formatKeybind(keybinds.pinModel) as key}
-									<Kbd size="xs">{key}</Kbd>
-								{/each}
-							</span>
-						</Button>
+				<!-- Footer with pin shortcut -->
+				{#if !isMobile.current && activeModelInfo}
+					<div class="border-border flex place-items-center justify-between border-t p-2">
+						<div>
+							<Button
+								variant="ghost"
+								loading={pinning}
+								class="bg-popover"
+								size="sm"
+								onclick={() => togglePin(activeModelInfo.id)}
+							>
+								<span class="text-muted-foreground">
+									{isPinned(activeModelInfo) ? 'Unpin' : 'Pin'}
+								</span>
+								<span>
+									{#each formatKeybind(keybinds.pinModel) as key}
+										<Kbd size="xs">{key}</Kbd>
+									{/each}
+								</span>
+							</Button>
+						</div>
 					</div>
-				</div>
+				{/if}
 			{/if}
-		{/if}
-	</Popover.Content>
-</Popover.Root>
+		</Popover.Content>
+	</Popover.Root>
+{/if}

@@ -242,7 +242,7 @@
 			{#snippet trigger(tooltip)}
 				<a
 					href="/chat"
-					class="bg-primary text-primary-foreground font-fake-proxima w-full rounded-lg px-4 py-2 text-center text-sm font-semibold tracking-[-0.01em] transition-all duration-200 hover:opacity-90"
+					class="bg-primary text-primary-foreground font-fake-proxima w-full rounded-lg px-4 py-3 text-center text-sm font-semibold tracking-[-0.01em] transition-all duration-200 hover:opacity-90"
 					{...tooltip.trigger}
 					onclick={controls.closeMobile}
 				>
@@ -290,7 +290,7 @@
 					<div class="flex flex-col">
 						<div class="group/project flex w-full items-center gap-1">
 							<button
-								class="hover:bg-sidebar-accent hover:text-sidebar-accent-foreground flex flex-1 items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm font-medium transition-colors"
+								class="hover:bg-sidebar-accent hover:text-sidebar-accent-foreground flex flex-1 items-center gap-2 rounded-md px-2 py-2 text-left text-sm font-medium transition-colors"
 								onclick={() => toggleProject(project.id)}
 							>
 								<ChevronRightIcon
@@ -328,7 +328,7 @@
 											href={`/chat/${conversation.id}`}
 											onclick={controls.closeMobile}
 											class={cn(
-												'group hover:bg-sidebar-accent hover:text-sidebar-accent-foreground flex w-full items-center justify-between rounded-md px-2 py-1 text-left text-sm transition-colors',
+												'group hover:bg-sidebar-accent hover:text-sidebar-accent-foreground flex w-full items-center justify-between rounded-md px-2 py-2 text-left text-sm transition-colors',
 												isActive && 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
 											)}
 										>
@@ -341,6 +341,7 @@
 								{/if}
 								<a
 									href={`/chat?projectId=${project.id}`}
+									onclick={controls.closeMobile}
 									class="text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/50 mt-1 flex items-center gap-1.5 rounded-md px-2 py-1 text-xs transition-colors"
 								>
 									<PlusIcon class="size-3" />
@@ -532,7 +533,12 @@
 	</div>
 	<div class="px-2 py-2">
 		{#if page.data.session !== null}
-			<Button href="/account" variant="ghost" class="h-auto w-full justify-start gap-3 px-3 py-2">
+			<Button
+				href="/account"
+				variant="ghost"
+				class="h-auto w-full justify-start gap-3 px-3 py-2"
+				onclick={controls.closeMobile}
+			>
 				<Avatar src={page.data.session?.user.image ?? undefined}>
 					{#snippet children(avatar)}
 						<img
@@ -567,7 +573,12 @@
 				</div>
 			</Button>
 		{:else}
-			<Button href="/login" variant="ghost" class="w-full justify-start gap-2 px-3">
+			<Button
+				href="/login"
+				variant="ghost"
+				class="w-full justify-start gap-2 px-3"
+				onclick={controls.closeMobile}
+			>
 				<LogInIcon class="size-4" />
 				Login
 			</Button>
@@ -576,4 +587,5 @@
 
 	<CreateProjectModal bind:open={createProjectModalOpen} />
 	<ProjectSettingsModal bind:open={projectSettingsOpen} bind:project={editingProject} />
+	<div class="h-safe-area-bottom"></div>
 </Sidebar.Sidebar>

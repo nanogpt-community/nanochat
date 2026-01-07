@@ -59,6 +59,7 @@
 	import BotIcon from '~icons/lucide/bot';
 	import PlusIcon from '~icons/lucide/plus';
 	import GhostIcon from '~icons/lucide/ghost';
+	import EllipsisVerticalIcon from '~icons/lucide/ellipsis-vertical';
 	import { isTemporaryConversation } from '$lib/state/temporary-chat.svelte';
 
 	let { children } = $props();
@@ -791,49 +792,97 @@
 		{/if}
 
 		<!-- header - top right -->
+		<!-- header - top right -->
 		<div
-			class={cn('bg-sidebar/50 fixed top-4 right-4 z-50 flex rounded-lg p-1 backdrop-blur-lg ', {
+			class={cn('bg-sidebar/50 fixed top-4 right-4 z-50 flex rounded-lg p-1 backdrop-blur-lg', {
 				'hidden md:flex': sidebarOpen,
 			})}
 		>
-			{#if page.params.id && currentConversationQuery.data}
-				<ExportButton
-					conversationId={page.params.id}
-					messages={messages.data}
-					conversation={currentConversationQuery.data}
-				/>
-				<ShareButton conversationId={page.params.id as Id<'conversations'>} />
-			{/if}
-			<Tooltip>
-				{#snippet trigger(tooltip)}
-					<Button
-						onclick={openSearchModal}
-						variant="ghost"
-						size="icon"
-						class="size-8"
-						{...tooltip.trigger}
+			<div class="hidden items-center gap-1 md:flex">
+				{#if page.params.id && currentConversationQuery.data}
+					<ExportButton
+						conversationId={page.params.id}
+						messages={messages.data}
+						conversation={currentConversationQuery.data}
+					/>
+					<ShareButton conversationId={page.params.id as Id<'conversations'>} />
+				{/if}
+				<Tooltip>
+					{#snippet trigger(tooltip)}
+						<Button
+							onclick={openSearchModal}
+							variant="ghost"
+							size="icon"
+							class="size-8"
+							{...tooltip.trigger}
+						>
+							<SearchIcon class="!size-4" />
+							<span class="sr-only">Search</span>
+						</Button>
+					{/snippet}
+					Search ({cmdOrCtrl} + K)
+				</Tooltip>
+				<Tooltip>
+					{#snippet trigger(tooltip)}
+						<Button variant="ghost" size="icon" class="size-8" href="/account" {...tooltip.trigger}>
+							<Settings2Icon />
+						</Button>
+					{/snippet}
+					Settings
+				</Tooltip>
+				<LightSwitch variant="ghost" class="size-8" />
+			</div>
+
+			<div class="flex items-center md:hidden">
+				<DropdownMenu.Root>
+					<DropdownMenu.Trigger
+						class="hover:bg-secondary/80 flex size-8 items-center justify-center rounded-lg transition-colors"
 					>
-						<SearchIcon class="!size-4" />
-						<span class="sr-only">Search</span>
-					</Button>
-				{/snippet}
-				Search ({cmdOrCtrl} + K)
-			</Tooltip>
-			<Tooltip>
-				{#snippet trigger(tooltip)}
-					<Button variant="ghost" size="icon" class="size-8" href="/account" {...tooltip.trigger}>
-						<Settings2Icon />
-					</Button>
-				{/snippet}
-				Settings
-			</Tooltip>
-			<LightSwitch variant="ghost" class="size-8" />
+						<EllipsisVerticalIcon class="size-5" />
+					</DropdownMenu.Trigger>
+					<DropdownMenu.Content align="end">
+						{#if page.params.id && currentConversationQuery.data}
+							<div class="flex flex-col gap-1 p-1">
+								<ExportButton
+									conversationId={page.params.id}
+									messages={messages.data}
+									conversation={currentConversationQuery.data}
+									variant="ghost"
+									class="w-full justify-start px-2"
+								>
+									<span class="ml-2">Export Chat</span>
+								</ExportButton>
+								<ShareButton
+									conversationId={page.params.id as Id<'conversations'>}
+									variant="ghost"
+									class="w-full justify-start px-2"
+								>
+									<span class="ml-2">Share Chat</span>
+								</ShareButton>
+							</div>
+							<DropdownMenu.Separator />
+						{/if}
+						<DropdownMenu.Item onclick={openSearchModal}>
+							<SearchIcon class="mr-2 size-4" />
+							<span>Search</span>
+						</DropdownMenu.Item>
+						<DropdownMenu.Item onclick={() => goto('/account')}>
+							<Settings2Icon class="mr-2 size-4" />
+							<span>Settings</span>
+						</DropdownMenu.Item>
+						<div class="flex items-center justify-between px-2 py-1.5 text-sm">
+							<span>Theme</span>
+							<LightSwitch variant="ghost" class="size-6" />
+						</div>
+					</DropdownMenu.Content>
+				</DropdownMenu.Root>
+			</div>
 		</div>
 		<div class="relative">
 			<div bind:this={conversationList} class="fill-device-height overflow-y-auto">
 				<div
 					class={cn('mx-auto flex max-w-3xl flex-col', {
-						'pt-10': page.url.pathname !== '/chat',
+						'pt-14 md:pt-10': page.url.pathname !== '/chat',
 					})}
 					style="padding-bottom: {page.url.pathname !== '/chat' ? wrapperSize.height : 0}px;"
 				>
@@ -862,7 +911,7 @@
 			</div>
 
 			<div
-				class="group absolute right-0 bottom-4 left-0 mx-auto mt-auto flex w-full max-w-3xl flex-col gap-1 px-4"
+				class="group safe-area-pb absolute right-0 bottom-0 left-0 mx-auto mt-auto flex w-full max-w-3xl flex-col gap-1 px-2 pb-2 md:bottom-4 md:px-4 md:pb-0"
 				bind:this={textareaWrapper}
 			>
 				{#if settings.temporaryMode}
@@ -1069,20 +1118,23 @@
 									use:autosize.attachment
 								></textarea>
 							</div>
-							<div class="mt-1 flex w-full flex-row items-end justify-between px-2 pb-1">
-								<div class="flex flex-wrap items-center gap-1.5">
+							<div class="mt-1 flex w-full items-center justify-between gap-2 px-2 pb-2 md:pb-1">
+								<!-- Left side: Model picker + action buttons -->
+								<div class="flex items-center gap-1.5">
 									<ModelPicker
 										class="bg-secondary/50 hover:bg-secondary text-muted-foreground flex h-9 items-center justify-center rounded-lg px-2.5 transition-colors"
 										onlyImageModels={selectedImages.length > 0}
 									/>
+									<!-- Desktop only: Provider picker -->
 									<ProviderPicker
-										class="bg-secondary/50 hover:bg-secondary text-muted-foreground flex h-9 items-center justify-center rounded-lg px-1.5 transition-colors"
+										class="bg-secondary/50 hover:bg-secondary text-muted-foreground hidden h-9 items-center justify-center rounded-lg px-1.5 transition-colors md:flex"
 										modelId={settings.modelId}
 									/>
+									<!-- Desktop only: Assistant picker -->
 									{#if assistantsQuery.data && assistantsQuery.data.length > 0}
 										<DropdownMenu.Root>
 											<DropdownMenu.Trigger
-												class="bg-secondary/50 hover:bg-secondary text-muted-foreground flex h-9 items-center justify-center gap-2 rounded-lg px-2.5 transition-colors"
+												class="bg-secondary/50 hover:bg-secondary text-muted-foreground hidden h-9 items-center justify-center gap-2 rounded-lg px-2.5 transition-colors md:flex"
 											>
 												<BotIcon class="size-4" />
 												<span class="max-w-[100px] truncate text-sm"
@@ -1110,7 +1162,8 @@
 											</DropdownMenu.Content>
 										</DropdownMenu.Root>
 									{/if}
-									<div class="flex items-center gap-1.5">
+									<!-- Desktop: All action buttons inline -->
+									<div class="hidden items-center gap-1.5 md:flex">
 										{#if !restrictions?.webDisabled}
 											<Tooltip>
 												{#snippet trigger(tooltip)}
@@ -1247,27 +1300,102 @@
 												: 'Temporary Mode: OFF'}
 										</Tooltip>
 									</div>
-								</div>
-								<div class="mb-0.5">
-									<Tooltip placement="top">
-										{#snippet trigger(tooltip)}
+									<!-- Mobile: Essential buttons only -->
+									<div class="flex items-center gap-1 md:hidden">
+										{#if currentModelSupportsImages || currentModelSupportsDocuments}
 											<button
-												type={isGenerating ? 'button' : 'submit'}
-												onclick={isGenerating ? stopGeneration : undefined}
-												disabled={isGenerating ? false : !message.current.trim()}
-												class="bg-primary text-primary-foreground flex size-8 items-center justify-center rounded-lg shadow-lg transition-all hover:opacity-90 active:scale-95 disabled:scale-100 disabled:cursor-not-allowed disabled:opacity-50"
-												{...tooltip.trigger}
+												type="button"
+												class="bg-secondary/50 hover:bg-secondary text-muted-foreground flex size-9 items-center justify-center rounded-lg transition-colors disabled:opacity-50"
+												onclick={() => fileInput?.click()}
+												disabled={isUploading}
 											>
-												{#if isGenerating}
-													<StopIcon class="size-4" />
+												{#if isUploading}
+													<div
+														class="size-4 animate-spin rounded-full border-2 border-current border-t-transparent"
+													></div>
 												{:else}
-													<SendIcon class="size-4" />
+													<PaperclipIcon class="size-4" />
 												{/if}
 											</button>
-										{/snippet}
-										{isGenerating ? 'Stop generation' : 'Send message'}
-									</Tooltip>
+										{/if}
+										<!-- Mobile More menu -->
+										<DropdownMenu.Root>
+											<DropdownMenu.Trigger
+												class="bg-secondary/50 hover:bg-secondary text-muted-foreground flex size-9 items-center justify-center rounded-lg transition-colors"
+											>
+												<EllipsisVerticalIcon class="size-4" />
+											</DropdownMenu.Trigger>
+											<DropdownMenu.Content align="start">
+												{#if assistantsQuery.data && assistantsQuery.data.length > 0}
+													<DropdownMenu.Sub>
+														<DropdownMenu.SubTrigger>
+															<BotIcon class="mr-2 size-4" />
+															{selectedAssistant?.name ?? 'Assistant'}
+														</DropdownMenu.SubTrigger>
+														<DropdownMenu.SubContent>
+															{#each assistantsQuery.data as assistant (assistant.id)}
+																<DropdownMenu.CheckboxItem
+																	checked={selectedAssistantId.current === assistant.id}
+																	onclick={() => (selectedAssistantId.current = assistant.id)}
+																>
+																	{assistant.name}
+																</DropdownMenu.CheckboxItem>
+															{/each}
+														</DropdownMenu.SubContent>
+													</DropdownMenu.Sub>
+													<DropdownMenu.Separator />
+												{/if}
+												{#if !restrictions?.webDisabled}
+													<DropdownMenu.Item
+														onclick={() => {
+															if (settings.webSearchMode === 'off')
+																settings.webSearchMode = 'standard';
+															else if (settings.webSearchMode === 'standard')
+																settings.webSearchMode = 'deep';
+															else settings.webSearchMode = 'off';
+														}}
+													>
+														<SearchIcon class="mr-2 size-4" />
+														Web Search: {settings.webSearchMode === 'off'
+															? 'Off'
+															: settings.webSearchMode === 'standard'
+																? 'Standard'
+																: 'Deep'}
+													</DropdownMenu.Item>
+												{/if}
+												{#if currentModelSupportsReasoning}
+													<DropdownMenu.Item
+														onclick={() =>
+															(settings.reasoningEffort =
+																settings.reasoningEffort === 'low' ? 'medium' : 'low')}
+													>
+														<BrainIcon class="mr-2 size-4" />
+														Reasoning: {settings.reasoningEffort === 'low' ? 'Off' : 'On'}
+													</DropdownMenu.Item>
+												{/if}
+												<DropdownMenu.Item
+													onclick={() => (settings.temporaryMode = !settings.temporaryMode)}
+												>
+													<GhostIcon class="mr-2 size-4" />
+													Temporary: {settings.temporaryMode ? 'On' : 'Off'}
+												</DropdownMenu.Item>
+											</DropdownMenu.Content>
+										</DropdownMenu.Root>
+									</div>
 								</div>
+								<!-- Right side: Send button -->
+								<button
+									type={isGenerating ? 'button' : 'submit'}
+									onclick={isGenerating ? stopGeneration : undefined}
+									disabled={isGenerating ? false : !message.current.trim()}
+									class="bg-primary text-primary-foreground flex size-9 items-center justify-center rounded-full shadow-lg transition-all hover:opacity-90 active:scale-95 disabled:scale-100 disabled:cursor-not-allowed disabled:opacity-50 md:size-8 md:rounded-lg"
+								>
+									{#if isGenerating}
+										<StopIcon class="size-4" />
+									{:else}
+										<SendIcon class="size-4" />
+									{/if}
+								</button>
 							</div>
 						</div>
 					</form>

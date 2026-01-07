@@ -6,11 +6,18 @@ export class SidebarRootState {
 	openMobile = $state(false);
 	isMobile = new IsMobile();
 
-	showSidebar = $derived(this.isMobile.current ? this.openMobile : this.open);
-
+	// When switching to mobile, ensure sidebar is closed by default
 	constructor() {
 		this.toggle = this.toggle.bind(this);
+
+		$effect(() => {
+			if (this.isMobile.current) {
+				this.openMobile = false;
+			}
+		});
 	}
+
+	showSidebar = $derived(this.isMobile.current ? this.openMobile : this.open);
 
 	toggle() {
 		if (this.isMobile.current) {
@@ -27,6 +34,7 @@ export class SidebarRootState {
 	}
 }
 
+
 export class SidebarTriggerState {
 	constructor(readonly root: SidebarRootState) {
 		this.toggle = this.toggle.bind(this);
@@ -38,7 +46,7 @@ export class SidebarTriggerState {
 }
 
 export class SidebarSidebarState {
-	constructor(readonly root: SidebarRootState) {}
+	constructor(readonly root: SidebarRootState) { }
 }
 
 export class SidebarControlState {
