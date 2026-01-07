@@ -370,12 +370,7 @@
 						<FilterIcon class="text-muted-foreground size-4 opacity-50" />
 					{/if}
 				</label>
-				<div
-					class={cn(
-						'max-h-[400px] min-h-0 flex-1 overflow-y-auto',
-						isMobile.current ? 'p-2' : 'p-1'
-					)}
-				>
+				<div class={cn('min-h-0 flex-1 overflow-y-auto', isMobile.current ? 'p-2' : 'p-1')}>
 					<Command.List class="flex flex-col gap-0.5">
 						{#each filteredModels as model (model.id)}
 							{@const formatted = formatModelName(model.modelId)}
@@ -664,7 +659,7 @@
 			class={cn(
 				'flex flex-col overflow-hidden p-0 transition-all duration-200',
 				infoModel ? 'w-[840px]' : 'w-[520px]',
-				'max-h-[calc(100vh-120px)]',
+				'h-[500px] max-h-[calc(100vh-120px)]',
 				'data-[side=bottom]:translate-y-1 data-[side=top]:-translate-y-1'
 			)}
 		>

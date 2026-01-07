@@ -31,6 +31,7 @@
 - Configurable System Themes
 - Model Performance Tracking and Analytics.
 - Projects
+- Benchmark Data from artificialanalysis.ai API
 
 ## Setup (Docker)
 

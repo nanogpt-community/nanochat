@@ -245,6 +245,9 @@ export const api = {
 	betterAuth: {
 		publicGetSession: { url: '/api/auth/session', method: 'GET' } as QueryConfig,
 	},
+	artificial_analysis: {
+		benchmarks: { url: '/api/artificial-analysis/benchmarks', method: 'GET' } as QueryConfig,
+	},
 } as const;
 
 export function invalidateQuery(query: QueryConfig, queryArgs?: unknown): void {
