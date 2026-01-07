@@ -24,7 +24,7 @@ jobs:
       matrix:
         include:
           - platform: linux/amd64
-            runner: ubuntu-latest
+            runner: blacksmith-4vcpu-ubuntu-2404
           - platform: linux/arm64
             runner: blacksmith-4vcpu-ubuntu-2404-arm
     permissions:
