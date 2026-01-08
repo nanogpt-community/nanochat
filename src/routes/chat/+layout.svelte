@@ -1465,7 +1465,7 @@
 													<button
 														type="button"
 														class={cn(
-															'bg-secondary/50 hover:bg-secondary text-muted-foreground flex h-8 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-medium transition-colors',
+															'bg-secondary/50 hover:bg-secondary text-muted-foreground relative flex size-8 items-center justify-center rounded-lg transition-colors',
 															settings.reasoningEffort === 'medium' && 'bg-primary/20 text-primary',
 															settings.reasoningEffort === 'high' &&
 																'bg-amber-500/20 text-amber-500'
@@ -1480,11 +1480,11 @@
 														{...tooltip.trigger}
 													>
 														<BrainIcon class="size-4" />
-														{settings.reasoningEffort === 'low'
-															? 'Think'
-															: settings.reasoningEffort === 'medium'
-																? 'Think'
-																: 'Think+'}
+														{#if settings.reasoningEffort === 'high'}
+															<span
+																class="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-amber-500"
+															></span>
+														{/if}
 													</button>
 												{/snippet}
 												{settings.reasoningEffort === 'low'
@@ -1494,26 +1494,6 @@
 														: 'Extended Thinking: High — Deep reasoning for complex problems (uses most tokens)'}
 											</Tooltip>
 										{/if}
-										<Tooltip>
-											{#snippet trigger(tooltip)}
-												<button
-													type="button"
-													class={cn(
-														'bg-secondary/50 hover:bg-secondary text-muted-foreground flex size-8 items-center justify-center rounded-lg transition-colors',
-														settings.temporaryMode &&
-															'border-orange-500/50 bg-orange-500/20 text-orange-500'
-													)}
-													onclick={() => (settings.temporaryMode = !settings.temporaryMode)}
-													{...tooltip.trigger}
-												>
-													<GhostIcon class="size-4" />
-												</button>
-											{/snippet}
-											{settings.temporaryMode
-												? "Temporary Mode: ON (chats won't be saved)"
-												: 'Temporary Mode: OFF'}
-										</Tooltip>
-
 										<Tooltip>
 											{#snippet trigger(tooltip)}
 												<button
@@ -1539,29 +1519,43 @@
 											{/snippet}
 											{audioRecorder.isRecording ? 'Stop Recording' : 'Voice Input'}
 										</Tooltip>
-										{#if currentModelSupportsVideo}
-											<Tooltip>
-												{#snippet trigger(tooltip)}
-													<button
-														type="button"
-														class={cn(
-															'bg-secondary/50 hover:bg-secondary text-muted-foreground flex size-8 items-center justify-center rounded-lg transition-colors',
-															videoModalOpen && 'bg-blue-500/20 text-blue-500'
-														)}
-														onclick={() => (videoModalOpen = true)}
-														{...tooltip.trigger}
-													>
+										<!-- More Options dropdown for less-used features -->
+										<DropdownMenu.Root>
+											<DropdownMenu.Trigger
+												class={cn(
+													'bg-secondary/50 hover:bg-secondary text-muted-foreground flex size-8 items-center justify-center rounded-lg transition-colors',
+													(settings.temporaryMode ||
+														(currentModelSupportsVideo && Object.keys(videoParams).length > 0)) &&
+														'bg-primary/20 text-primary'
+												)}
+											>
+												<EllipsisVerticalIcon class="size-4" />
+											</DropdownMenu.Trigger>
+											<DropdownMenu.Content align="end">
+												<DropdownMenu.Item
+													onclick={() => (settings.temporaryMode = !settings.temporaryMode)}
+												>
+													<GhostIcon
+														class={cn('mr-2 size-4', settings.temporaryMode && 'text-orange-500')}
+													/>
+													Temporary Mode: {settings.temporaryMode ? 'On' : 'Off'}
+												</DropdownMenu.Item>
+												{#if currentModelSupportsVideo}
+													<DropdownMenu.Item onclick={() => (videoModalOpen = true)}>
+														<VideoIcon
+															class={cn(
+																'mr-2 size-4',
+																Object.keys(videoParams).length > 0 && 'text-blue-500'
+															)}
+														/>
+														Video Settings
 														{#if Object.keys(videoParams).length > 0}
-															<div
-																class="bg-primary absolute top-1 right-1 h-1.5 w-1.5 rounded-full"
-															></div>
+															<span class="ml-auto text-xs text-blue-500">•</span>
 														{/if}
-														<Settings2Icon class="size-4" />
-													</button>
-												{/snippet}
-												Video Settings
-											</Tooltip>
-										{/if}
+													</DropdownMenu.Item>
+												{/if}
+											</DropdownMenu.Content>
+										</DropdownMenu.Root>
 									</div>
 									<!-- Mobile: Essential buttons only -->
 									<div class="flex items-center gap-1 md:hidden">
@@ -1577,7 +1571,6 @@
 														class="size-4 animate-spin rounded-full border-2 border-current border-t-transparent"
 													></div>
 												{:else}
-													<PaperclipIcon class="size-4" />
 													<PaperclipIcon class="size-4" />
 												{/if}
 											</button>
@@ -1604,11 +1597,20 @@
 										<!-- Mobile More menu -->
 										<DropdownMenu.Root>
 											<DropdownMenu.Trigger
-												class="bg-secondary/50 hover:bg-secondary text-muted-foreground flex size-9 items-center justify-center rounded-lg transition-colors"
+												class={cn(
+													'bg-secondary/50 hover:bg-secondary text-muted-foreground relative flex size-9 items-center justify-center rounded-lg transition-colors',
+													(settings.webSearchMode !== 'off' || 
+													 (currentModelSupportsReasoning && settings.reasoningEffort !== 'low') || 
+													 settings.temporaryMode) &&
+														'bg-primary/20 text-primary'
+												)}
 											>
 												<EllipsisVerticalIcon class="size-4" />
+												{#if settings.webSearchMode !== 'off' || (currentModelSupportsReasoning && settings.reasoningEffort !== 'low') || settings.temporaryMode}
+													<span class="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-primary"></span>
+												{/if}
 											</DropdownMenu.Trigger>
-											<DropdownMenu.Content align="start">
+											<DropdownMenu.Content align="end">
 												{#if assistantsQuery.data && assistantsQuery.data.length > 0}
 													<DropdownMenu.Sub>
 														<DropdownMenu.SubTrigger>
@@ -1638,7 +1640,10 @@
 															else settings.webSearchMode = 'off';
 														}}
 													>
-														<SearchIcon class="mr-2 size-4" />
+														<SearchIcon class={cn('mr-2 size-4', {
+														'text-primary': settings.webSearchMode === 'standard',
+														'text-amber-500': settings.webSearchMode === 'deep',
+													})} />
 														Web Search: {settings.webSearchMode === 'off'
 															? 'Off'
 															: settings.webSearchMode === 'standard'
@@ -1672,9 +1677,21 @@
 												<DropdownMenu.Item
 													onclick={() => (settings.temporaryMode = !settings.temporaryMode)}
 												>
-													<GhostIcon class="mr-2 size-4" />
+													<GhostIcon class={cn('mr-2 size-4', settings.temporaryMode && 'text-orange-500')} />
 													Temporary: {settings.temporaryMode ? 'On' : 'Off'}
 												</DropdownMenu.Item>
+												{#if currentModelSupportsVideo}
+													<DropdownMenu.Separator />
+													<DropdownMenu.Item
+														onclick={() => (videoModalOpen = true)}
+													>
+														<VideoIcon class={cn('mr-2 size-4', Object.keys(videoParams).length > 0 && 'text-blue-500')} />
+														Video Settings
+														{#if Object.keys(videoParams).length > 0}
+															<span class="ml-auto text-xs text-blue-500">•</span>
+														{/if}
+													</DropdownMenu.Item>
+												{/if}
 											</DropdownMenu.Content>
 										</DropdownMenu.Root>
 									</div>
