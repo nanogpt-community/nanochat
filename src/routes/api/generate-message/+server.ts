@@ -766,6 +766,8 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 	const annotations: Annotation[] = [];
 	let usage: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number } | null =
 		null;
+	// Track time when first content token arrives for accurate tok/sec calculation
+	let firstTokenTime: number | null = null;
 
 	try {
 		for await (const chunk of stream) {
@@ -781,6 +783,11 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 			annotations.push(...(chunk.choices[0]?.delta?.annotations ?? []));
 
 			if (!content && !reasoning) continue;
+
+			// Record time of first content token for accurate tok/sec
+			if (firstTokenTime === null) {
+				firstTokenTime = Date.now();
+			}
 
 			generationId = chunk.id;
 
@@ -853,10 +860,16 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 			log(`Background: Failed to render HTML: ${contentHtmlResult.error}`, startTime);
 		}
 
-		// Compute end-to-end generation time in milliseconds
-		const responseTimeMs = Date.now() - generationStart;
+		// Compute streaming time for accurate tok/sec calculation
+		// responseTimeMs = time from first token to completion (streaming time only)
+		// This excludes TTFT (time-to-first-token) for more accurate tok/sec
+		const streamEndTime = Date.now();
+		const responseTimeMs = firstTokenTime !== null
+			? streamEndTime - firstTokenTime
+			: streamEndTime - generationStart; // fallback to total time if no tokens received
+		const ttftMs = firstTokenTime !== null ? firstTokenTime - generationStart : null;
 		log(
-			`Background stream processing completed. Processed ${chunkCount} chunks, final content length: ${content.length}, responseTimeMs=${responseTimeMs}`,
+			`Background stream processing completed. Processed ${chunkCount} chunks, final content length: ${content.length}, TTFT=${ttftMs}ms, streamingTime=${responseTimeMs}ms`,
 			startTime
 		);
 
