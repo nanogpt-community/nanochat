@@ -598,28 +598,28 @@
 					</div>
 				</div>
 			</div>
-		</CardContent>
-	</Card>
 
-	<Card>
-		<CardContent class="p-6">
-			<h3 class="mb-3 font-medium">Speech to Text</h3>
-			<div class="grid gap-4">
-				<div class="flex flex-col gap-2">
-					<label
-						class="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-					>
-						Model
-						<select
-							class="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus:ring-ring mt-2 flex h-10 w-full items-center justify-between rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-							bind:value={localSettings.sttModel}
+			<div class="mt-2 border-t pt-4">
+				<h3 class="mb-3 font-medium">Speech to Text</h3>
+				<div class="grid gap-4">
+					<div class="flex flex-col gap-2">
+						<label
+							class="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
 						>
-							{#each sttModels as model}
-								<option value={model.value}>{model.label}</option>
-							{/each}
-						</select>
-					</label>
-					<p class="text-muted-foreground text-xs">Choose an STT model for voice transcription.</p>
+							Model
+							<select
+								class="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus:ring-ring mt-2 flex h-10 w-full items-center justify-between rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+								bind:value={localSettings.sttModel}
+							>
+								{#each sttModels as model}
+									<option value={model.value}>{model.label}</option>
+								{/each}
+							</select>
+						</label>
+						<p class="text-muted-foreground text-xs">
+							Choose an STT model for voice transcription.
+						</p>
+					</div>
 				</div>
 			</div>
 		</CardContent>

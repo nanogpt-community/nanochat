@@ -30,6 +30,14 @@ export interface NanoGPTModel {
         included: boolean;
         note: string;
     };
+    additionalParams?: Record<string, {
+        label: string;
+        description: string;
+        type: 'select' | 'boolean' | 'switch' | 'text' | 'number';
+        default: any;
+        options?: { value: string; label: string }[];
+    }>;
+    defaultSettings?: Record<string, any>;
 }
 
 export function getNanoGPTModels() {
@@ -134,6 +142,8 @@ export function getNanoGPTModels() {
                             included: m.subscription.included ?? false,
                             note: m.subscription.note ?? ''
                         } : undefined,
+                        additionalParams: m.additionalParams,
+                        defaultSettings: m.defaultSettings
                     }));
                 }
             }

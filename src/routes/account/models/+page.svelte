@@ -12,8 +12,9 @@
 	import XIcon from '~icons/lucide/x';
 	import TicketIcon from '~icons/lucide/ticket';
 	import ImageIcon from '~icons/lucide/image';
+	import VideoIcon from '~icons/lucide/video';
 	import ModelCard from './model-card.svelte';
-	import { supportsImages, supportsReasoning } from '$lib/utils/model-capabilities';
+	import { supportsImages, supportsReasoning, supportsVideo } from '$lib/utils/model-capabilities';
 
 	const nanoGPTKeyQuery = useCachedQuery(api.user_keys.get, {
 		provider: Provider.NanoGPT,
@@ -37,6 +38,10 @@
 		value: false,
 	});
 
+	const videoToggle = new Toggle({
+		value: false,
+	});
+
 	let initiallyEnabled = $state<string[]>([]);
 	$effect(() => {
 		if (Object.keys(models.enabled).length && initiallyEnabled.length === 0) {
@@ -56,6 +61,10 @@
 				}
 				// Filter by image output capability if toggle is enabled
 				if (imageToggle.value && !m.architecture?.output_modalities?.includes('image')) {
+					return false;
+				}
+				// Filter by video output capability if toggle is enabled
+				if (videoToggle.value && !supportsVideo(m)) {
 					return false;
 				}
 				return true;
@@ -110,6 +119,16 @@
 		>
 			<ImageIcon class="inline size-3" />
 			Image
+			<XIcon class="inline size-3 group-aria-[pressed=false]:hidden" />
+			<PlusIcon class="inline size-3 group-aria-[pressed=true]:hidden" />
+		</button>
+		<button
+			{...videoToggle.trigger}
+			aria-label="Video Models Only"
+			class="group text-primary-foreground aria-[pressed=false]:border-border aria-[pressed=false]:bg-background aria-[pressed=false]:text-foreground flex place-items-center gap-1 rounded-full border border-blue-500 bg-blue-500 px-2 py-1 text-xs transition-all"
+		>
+			<VideoIcon class="inline size-3" />
+			Video
 			<XIcon class="inline size-3 group-aria-[pressed=false]:hidden" />
 			<PlusIcon class="inline size-3 group-aria-[pressed=true]:hidden" />
 		</button>

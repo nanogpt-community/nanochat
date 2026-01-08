@@ -69,7 +69,11 @@ export class AudioRecorder {
 
                     const data = await res.json();
                     console.log('[STT] API Response:', data);
+                    console.log('[STT] data.transcription:', data.transcription);
+                    console.log('[STT] data.text:', data.text);
                     this.transcript = data.transcription || data.text; // Fallback to 'text' just in case
+                    console.log('[STT] Final transcript:', this.transcript);
+                    console.log('[STT] Resolving with transcript:', this.transcript);
                     resolve(this.transcript);
                 } catch (e: any) {
                     console.error('Transcription failed:', e);

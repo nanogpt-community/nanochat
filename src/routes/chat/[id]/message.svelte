@@ -124,6 +124,13 @@
 		return annotations;
 	});
 
+	// Detect Video URL in content
+	const videoUrl = $derived.by(() => {
+		if (!message.content) return null;
+		const match = message.content.match(/\[Video Result\]\((.*?)\)/);
+		return match ? match[1] : null;
+	});
+
 	let showReasoning = $state(false);
 
 	async function handleRating(data: {
@@ -298,6 +305,13 @@
 			});
 		}}
 	>
+		{#if videoUrl}
+			<div class="mb-4 overflow-hidden rounded-lg bg-black/10">
+				<!-- svelte-ignore a11y_media_has_caption -->
+				<video src={videoUrl} controls class="h-auto w-full max-w-full rounded-lg bg-black"></video>
+			</div>
+		{/if}
+
 		{#if message.images && message.images.length > 0}
 			<div class="mb-2 flex flex-wrap gap-2">
 				{#each message.images as image (image.storage_id)}

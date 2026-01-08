@@ -5,6 +5,7 @@
 	import { extractUrlsByType } from '$lib/backend/url-scraper';
 	import type { Doc, Id } from '$lib/db/types';
 	import type { Assistant, Conversation, UserSettings, Message, UserRule } from '$lib/api';
+	import { apiCall } from '$lib/api';
 	import AppSidebar from '$lib/components/app-sidebar.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { ImageModal } from '$lib/components/ui/image-modal';
@@ -13,6 +14,9 @@
 	import { ShareButton } from '$lib/components/ui/share-button';
 	import { ExportButton } from '$lib/components/ui/export-button';
 	import * as Sidebar from '$lib/components/ui/sidebar';
+	// import SettingsModal from '$lib/components/ui/settings-modal/settings-modal.svelte';
+	import VideoGenerationModal from '$lib/components/video/video-generation-modal.svelte';
+	import { videoGenerator } from '$lib/state/video-generator.svelte';
 	import Tooltip from '$lib/components/ui/tooltip.svelte';
 	import { cmdOrCtrl } from '$lib/hooks/is-mac.svelte.js';
 	import { TextareaAutosize } from '$lib/spells/textarea-autosize.svelte.js';
@@ -26,6 +30,7 @@
 		supportsImages,
 		supportsReasoning,
 		supportsDocuments,
+		supportsVideo,
 	} from '$lib/utils/model-capabilities';
 	import { validateFiles, getFileType } from '$lib/utils/file-validation';
 	import { omit, pick } from '$lib/utils/object.js';
@@ -64,6 +69,7 @@
 	import GhostIcon from '~icons/lucide/ghost';
 	import EllipsisVerticalIcon from '~icons/lucide/ellipsis-vertical';
 	import { isTemporaryConversation } from '$lib/state/temporary-chat.svelte';
+	import VideoIcon from '~icons/lucide/video';
 
 	let { children } = $props();
 
@@ -147,6 +153,10 @@
 
 	// Track when generation completes to refresh sidebar for title updates
 	let wasGeneratingInLayout = $state(false);
+	let settingsModalOpen = $state(false);
+	let videoModalOpen = $state(false);
+	let videoParams = $state<Record<string, any>>({});
+
 	$effect(() => {
 		if (isGenerating) {
 			wasGeneratingInLayout = true;
@@ -229,7 +239,7 @@
 	});
 
 	async function handleSubmit() {
-		if (isGenerating) return;
+		if (isGenerating && !currentModelSupportsVideo) return; // Allow submission if video gen is different mechanism? No, standard guard.
 
 		error = null;
 
@@ -237,6 +247,94 @@
 		if (message.current === '' || !session.current?.user.id || !settings.modelId) return;
 
 		loading = true;
+
+		if (currentModelSupportsVideo) {
+			// Video Generation Flow
+			const prompt = message.current;
+			const currentModelId = settings.modelId;
+			const cidParams = page.params.id;
+			let conversationId = cidParams;
+
+			try {
+				// 1. Ensure conversation exists using create conversation API if needed,
+				// OR use api.messages.create which might imply conversation? NO, need convo ID.
+				if (!conversationId) {
+					// Create new conversation
+					const newConvo = await apiCall<{ id: string }>(api.conversations.create.url, {
+						method: 'POST',
+						body: { action: 'create', title: 'New Chat' }, // Let backend handle title generation later?
+					});
+					conversationId = newConvo.id;
+					// Navigate to new conversation
+					goto(`/chat/${conversationId}`);
+				}
+
+				message.current = ''; // Clear input immediately
+
+				// 2. Create User Message
+				await mutate(api.messages.create.url, {
+					action: 'create',
+					conversationId,
+					role: 'user',
+					content: prompt,
+					modelId: currentModelId,
+					provider: 'nanogpt',
+				});
+
+				// 3. Create Assistant Message (Placeholder)
+				const assistantMsg = await mutate<{ id: string }>(api.messages.create.url, {
+					action: 'create',
+					conversationId,
+					role: 'assistant',
+					content: 'Generating video...',
+					modelId: currentModelId,
+					provider: 'nanogpt',
+				});
+
+				// 4. Trigger Video Generation
+				// We use videoGenerator store but we need to hook into it or capture the runId/promise
+				// The store handles global history, we want this specific generation.
+				// call generation directly?
+				// videoGenerator.generate returns nothing? We need to modify it or call endpoint directly.
+				// Actually videoGenerator.generate calls /api/video/generate and polls.
+				// We want to update OUR message when it changes.
+				// We can start generation and let the store handle it, BUT updating the chat message is key.
+
+				// Let's call the endpoint directly to get control + runId.
+				const genRes = await fetch('/api/video/generate', {
+					method: 'POST',
+					body: JSON.stringify({
+						model: currentModelId,
+						prompt: prompt,
+						...videoParams,
+					}),
+				});
+
+				if (!genRes.ok) {
+					throw new Error('Video generation failed to start');
+				}
+
+				const genData = await genRes.json();
+				const runId = genData.runId;
+
+				// Update assistant message with metadata
+				// We can't easily update metadata via updateMessage (it supports content/tokenCount).
+				// But we can update content to [Generating video... (ID: ...)] or similar?
+				// Better: Start polling here locally.
+
+				pollVideoStatus(runId, assistantMsg.id, currentModelId);
+			} catch (e) {
+				console.error('Video gen flow error', e);
+				error = 'Failed to start video generation';
+				message.current = prompt; // Restore prompt
+			} finally {
+				loading = false;
+				// Invalidate to show messages
+				invalidateQueryPattern(api.messages.getAllFromConversation.url);
+				invalidateQueryPattern(api.conversations.getById.url);
+			}
+			return;
+		}
 
 		const imagesCopy = [...selectedImages];
 		const documentsCopy = [...selectedDocuments];
@@ -282,6 +380,74 @@
 			loading = false;
 			message.current = '';
 		}
+	}
+
+	async function pollVideoStatus(runId: string, messageId: string, modelId: string) {
+		console.log(
+			'[pollVideoStatus] Starting poll for runId:',
+			runId,
+			'model:',
+			modelId,
+			'msgId:',
+			messageId
+		);
+		const pollInterval = setInterval(async () => {
+			try {
+				const url = `/api/video/status?runId=${runId}&model=${modelId}`;
+				console.log('[pollVideoStatus] Fetching:', url);
+				const res = await fetch(url);
+				console.log('[pollVideoStatus] Status:', res.status);
+				if (res.ok) {
+					const data = await res.json();
+					console.log('[pollVideoStatus] Data:', data);
+					// Extract payload from nested data if present (NanoGPT structure)
+					const payload = data.data || data;
+
+					// Normalize status to lowercase
+					const status = (payload.status || '').toLowerCase();
+					if (status === 'completed') {
+						clearInterval(pollInterval);
+						console.log('[pollVideoStatus] Completed');
+
+						// Extract video URL (handle nested format)
+						const videoUrl = payload.videoUrl || payload.output?.video?.url || payload.output?.url;
+
+						if (videoUrl) {
+							// Update message content with video URL
+							await mutate(api.messages.create.url, {
+								action: 'updateContent',
+								messageId,
+								content: `[Video Result](${videoUrl})`,
+							});
+							invalidateQueryPattern(api.messages.getAllFromConversation.url);
+						} else {
+							console.error('[pollVideoStatus] Completed but no video URL found', payload);
+						}
+					} else if (status === 'failed') {
+						clearInterval(pollInterval);
+						await mutate(api.messages.create.url, {
+							error: payload.error || 'Video generation failed',
+						});
+						invalidateQueryPattern(api.messages.getAllFromConversation.url);
+					}
+					// If processing/queued, continue polling
+				} else {
+					// 404 or other error (maybe transient)
+					console.warn('Poll status non-ok', res.status);
+					const txt = await res.text();
+					console.warn('Poll status response:', txt);
+					// Don't clear immediately unless persistent, but for now logic is simple.
+				}
+			} catch (e) {
+				console.error('Polling error', e);
+			}
+		}, 5000);
+
+		// Timeout after 10 mins?
+		setTimeout(() => {
+			console.log('[pollVideoStatus] Timed out');
+			clearInterval(pollInterval);
+		}, 600000);
 	}
 
 	let abortEnhance: AbortController | null = $state(null);
@@ -385,6 +551,14 @@
 		// const currentModel = nanoGPTModels.find((m) => m.id === settings.modelId);
 		// if (!currentModel) return false;
 		// return supportsDocuments(currentModel);
+	});
+
+	const currentModelSupportsVideo = $derived.by(() => {
+		if (!settings.modelId) return false;
+		const nanoGPTModels = models.from(Provider.NanoGPT);
+		const currentModel = nanoGPTModels.find((m) => m.id === settings.modelId);
+		if (!currentModel) return false;
+		return supportsVideo(currentModel);
 	});
 
 	// Helper to check if file is an image (by MIME type or extension)
@@ -752,18 +926,27 @@
 
 	async function toggleRecording() {
 		if (audioRecorder.isRecording) {
+			console.log('[toggleRecording] Stopping recording...');
 			const text = await audioRecorder.stop();
+			console.log('[toggleRecording] Received transcript:', text);
+			console.log('[toggleRecording] Transcript type:', typeof text);
+			console.log('[toggleRecording] Current message before:', message.current);
 			if (text) {
 				message.current += (message.current ? ' ' : '') + text;
-				// Trigger autosize update if possible, or it might happen automatically via bind:value
+				console.log('[toggleRecording] Current message after:', message.current);
+				// Manually update textarea value to ensure UI updates
 				if (textarea) {
-					// Dispatct input event to trigger autosize
+					textarea.value = message.current;
+					// Dispatch input event to trigger autosize and other listeners
 					const event = new Event('input', { bubbles: true });
 					textarea.dispatchEvent(event);
 					textarea.focus();
 				}
+			} else {
+				console.log('[toggleRecording] No transcript received, text is falsy');
 			}
 		} else {
+			console.log('[toggleRecording] Starting recording...');
 			await audioRecorder.start();
 		}
 	}
@@ -1356,6 +1539,29 @@
 											{/snippet}
 											{audioRecorder.isRecording ? 'Stop Recording' : 'Voice Input'}
 										</Tooltip>
+										{#if currentModelSupportsVideo}
+											<Tooltip>
+												{#snippet trigger(tooltip)}
+													<button
+														type="button"
+														class={cn(
+															'bg-secondary/50 hover:bg-secondary text-muted-foreground flex size-8 items-center justify-center rounded-lg transition-colors',
+															videoModalOpen && 'bg-blue-500/20 text-blue-500'
+														)}
+														onclick={() => (videoModalOpen = true)}
+														{...tooltip.trigger}
+													>
+														{#if Object.keys(videoParams).length > 0}
+															<div
+																class="bg-primary absolute top-1 right-1 h-1.5 w-1.5 rounded-full"
+															></div>
+														{/if}
+														<Settings2Icon class="size-4" />
+													</button>
+												{/snippet}
+												Video Settings
+											</Tooltip>
+										{/if}
 									</div>
 									<!-- Mobile: Essential buttons only -->
 									<div class="flex items-center gap-1 md:hidden">
@@ -1522,3 +1728,9 @@
 </Sidebar.Root>
 
 <SearchModal bind:open={searchModalOpen} />
+<!-- <SettingsModal bind:open={settingsModalOpen} /> -->
+<VideoGenerationModal
+	bind:open={videoModalOpen}
+	presetModelId={settings.modelId}
+	bind:videoParams
+/>

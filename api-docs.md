@@ -103,7 +103,53 @@ Proxies audio files to NanoGPT STT API for transcription.
 }
 ```
 
-### API Keys
+### Video Generation
+ 
+ #### POST `/api/video/generate`
+ Proxies requests to NanoGPT Video Generation API.
+ 
+ **Authentication**: Session
+ 
+ **Request Body**:
+ ```json
+ {
+   "model": "string",
+   "prompt": "string",
+   // Additional parameters depending on the model (e.g., duration, aspect_ratio)
+ }
+ ```
+ 
+ **Response**:
+ ```json
+ {
+   "runId": "string"
+ }
+ ```
+ 
+ #### GET `/api/video/status`
+ Check the status of a video generation task.
+ 
+ **Authentication**: Session
+ 
+ **Query Parameters**:
+ - `runId`: (Required) The run ID returned by the generate endpoint.
+ - `model`: (Optional) The model ID used for generation.
+ 
+ **Response**:
+ ```json
+ {
+   "data": {
+     "status": "COMPLETED" | "IN_QUEUE" | "IN_PROGRESS" | "FAILED",
+     "output": {
+        "video": {
+          "url": "string"
+        }
+     }
+   }
+ }
+ ```
+ 
+ ### API Keys
 
 #### GET `/api/api-keys`
 List active API keys for the current user.
