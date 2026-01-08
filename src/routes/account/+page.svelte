@@ -21,6 +21,7 @@
 	import ChevronRight from '~icons/lucide/chevron-right';
 	import Trash2 from '~icons/lucide/trash-2';
 	import { models } from '$lib/state/models.svelte';
+	import { settings as localSettings } from '$lib/state/settings.svelte';
 	import { Provider } from '$lib/types.js';
 
 	let { data } = $props();
@@ -303,6 +304,126 @@
 			deleteAllChatsDeleting = false;
 		}
 	}
+
+	const ttsModels = [
+		{ value: 'gpt-4o-mini-tts', label: 'GPT-4o Mini (OpenAI) - $0.0006/1k' },
+		{ value: 'tts-1', label: 'TTS-1 (Standard) - $0.015/1k' },
+		{ value: 'tts-1-hd', label: 'TTS-1 HD (High Def) - $0.030/1k' },
+		{ value: 'Kokoro-82m', label: 'Kokoro (Multilingual) - $0.001/1k' },
+		{ value: 'Elevenlabs-Turbo-V2.5', label: 'ElevenLabs Turbo - $0.06/1k' },
+	];
+
+	const sttModels = [
+		{ value: 'Whisper-Large-V3', label: 'Whisper Large V3 (OpenAI) - $0.01/min' },
+		{ value: 'Wizper', label: 'Wizper (Fast) - $0.01/min' },
+		{ value: 'Elevenlabs-STT', label: 'ElevenLabs STT - $0.03/min' },
+	];
+
+	const openAiVoices = [
+		{ value: 'alloy', label: 'Alloy' },
+		{ value: 'echo', label: 'Echo' },
+		{ value: 'fable', label: 'Fable' },
+		{ value: 'onyx', label: 'Onyx' },
+		{ value: 'nova', label: 'Nova' },
+		{ value: 'shimmer', label: 'Shimmer' },
+		{ value: 'ash', label: 'Ash' },
+		{ value: 'ballad', label: 'Ballad' },
+		{ value: 'coral', label: 'Coral' },
+		{ value: 'sage', label: 'Sage' },
+		{ value: 'verse', label: 'Verse' },
+	];
+
+	const kokoroVoices = [
+		// American Female
+		{ value: 'af_alloy', label: 'Alloy (US F)' },
+		{ value: 'af_aoede', label: 'Aoede (US F)' },
+		{ value: 'af_bella', label: 'Bella (US F)' },
+		{ value: 'af_jessica', label: 'Jessica (US F)' },
+		{ value: 'af_nova', label: 'Nova (US F)' },
+		// American Male
+		{ value: 'am_adam', label: 'Adam (US M)' },
+		{ value: 'am_echo', label: 'Echo (US M)' },
+		{ value: 'am_eric', label: 'Eric (US M)' },
+		{ value: 'am_liam', label: 'Liam (US M)' },
+		{ value: 'am_onyx', label: 'Onyx (US M)' },
+		// British Female
+		{ value: 'bf_alice', label: 'Alice (UK F)' },
+		{ value: 'bf_emma', label: 'Emma (UK F)' },
+		{ value: 'bf_isabella', label: 'Isabella (UK F)' },
+		{ value: 'bf_lily', label: 'Lily (UK F)' },
+		// British Male
+		{ value: 'bm_daniel', label: 'Daniel (UK M)' },
+		{ value: 'bm_fable', label: 'Fable (UK M)' },
+		{ value: 'bm_george', label: 'George (UK M)' },
+		{ value: 'bm_lewis', label: 'Lewis (UK M)' },
+		// Japanese
+		{ value: 'jf_alpha', label: 'Alpha (Japanese F)' },
+		{ value: 'jf_gongitsune', label: 'Gongitsune (Japanese F)' },
+		{ value: 'jf_nezumi', label: 'Nezumi (Japanese F)' },
+		{ value: 'jf_tebukuro', label: 'Tebukuro (Japanese F)' },
+		// This list is curated from docs
+		{ value: 'zf_xiaoxiao', label: 'Xiaoxiao (Chinese F)' },
+		{ value: 'ff_siwis', label: 'Siwis (French F)' },
+		{ value: 'im_nicola', label: 'Nicola (Italian M)' },
+		{ value: 'hf_alpha', label: 'Alpha (Hindi F)' },
+	];
+
+	const elevenLabsVoices = [
+		'Adam',
+		'Alice',
+		'Antoni',
+		'Aria',
+		'Arnold',
+		'Bella',
+		'Bill',
+		'Brian',
+		'Callum',
+		'Charlie',
+		'Charlotte',
+		'Chris',
+		'Daniel',
+		'Domi',
+		'Dorothy',
+		'Drew',
+		'Elli',
+		'Emily',
+		'Eric',
+		'Ethan',
+		'Fin',
+		'Freya',
+		'George',
+		'Gigi',
+		'Giovanni',
+		'Grace',
+		'James',
+		'Jeremy',
+		'Jessica',
+		'Joseph',
+		'Josh',
+		'Laura',
+		'Liam',
+		'Lily',
+		'Matilda',
+		'Matthew',
+		'Michael',
+		'Nicole',
+		'Rachel',
+		'River',
+		'Roger',
+		'Ryan',
+		'Sam',
+		'Sarah',
+		'Thomas',
+		'Will',
+	].map((name) => ({ value: name, label: name }));
+
+	let availableVoices = $derived(
+		localSettings.ttsModel?.startsWith('Eleven')
+			? elevenLabsVoices
+			: localSettings.ttsModel?.startsWith('Kokoro')
+				? kokoroVoices
+				: openAiVoices
+	);
 </script>
 
 <svelte:head>
@@ -410,6 +531,95 @@
 							Select the model used to generate follow-up questions.
 						</p>
 					</div>
+				</div>
+			</div>
+
+			<div class="mt-2 border-t pt-4">
+				<h3 class="mb-3 font-medium">Text to Speech</h3>
+				<div class="grid gap-4">
+					<div class="flex flex-col gap-2">
+						<label
+							class="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+						>
+							Model
+							<select
+								class="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus:ring-ring mt-2 flex h-10 w-full items-center justify-between rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+								bind:value={localSettings.ttsModel}
+								onchange={() => {
+									if (localSettings.ttsModel?.startsWith('Eleven'))
+										localSettings.ttsVoice = 'Rachel';
+									else if (localSettings.ttsModel?.startsWith('Kokoro'))
+										localSettings.ttsVoice = 'af_bella';
+									else localSettings.ttsVoice = 'alloy';
+								}}
+							>
+								{#each ttsModels as model}
+									<option value={model.value}>{model.label}</option>
+								{/each}
+							</select>
+						</label>
+						<p class="text-muted-foreground text-xs">
+							Choose a TTS model. Pricing varies significantly.
+						</p>
+					</div>
+
+					<div class="flex flex-col gap-2">
+						<label
+							class="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+						>
+							Voice
+							<select
+								class="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus:ring-ring mt-2 flex h-10 w-full items-center justify-between rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+								bind:value={localSettings.ttsVoice}
+							>
+								{#each availableVoices as voice}
+									<option value={voice.value}>{voice.label}</option>
+								{/each}
+							</select>
+						</label>
+						<p class="text-muted-foreground text-xs">
+							Select the voice used for reading messages aloud.
+						</p>
+					</div>
+
+					<div class="flex flex-col gap-2">
+						<div class="flex justify-between">
+							<label class="text-sm leading-none font-medium">Speed</label>
+							<span class="text-muted-foreground text-xs">{localSettings.ttsSpeed}x</span>
+						</div>
+						<input
+							type="range"
+							min="0.25"
+							max="4.0"
+							step="0.05"
+							class="accent-primary h-2 w-full cursor-pointer appearance-none rounded-lg bg-gray-200 dark:bg-gray-700"
+							bind:value={localSettings.ttsSpeed}
+						/>
+					</div>
+				</div>
+			</div>
+		</CardContent>
+	</Card>
+
+	<Card>
+		<CardContent class="p-6">
+			<h3 class="mb-3 font-medium">Speech to Text</h3>
+			<div class="grid gap-4">
+				<div class="flex flex-col gap-2">
+					<label
+						class="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+					>
+						Model
+						<select
+							class="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus:ring-ring mt-2 flex h-10 w-full items-center justify-between rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+							bind:value={localSettings.sttModel}
+						>
+							{#each sttModels as model}
+								<option value={model.value}>{model.label}</option>
+							{/each}
+						</select>
+					</label>
+					<p class="text-muted-foreground text-xs">Choose an STT model for voice transcription.</p>
 				</div>
 			</div>
 		</CardContent>

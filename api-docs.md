@@ -59,6 +59,50 @@ Generates a response from an AI model. This is the core endpoint for chat functi
 ```
 Note: This endpoint triggers a background process for generation. The response returns immediately with the conversation ID. The client typically subscribes to changes or polls for the message content (implementation detail: specific mechanism for real-time updates might need further check, e.g., SSE or polling).
 
+### Text-to-Speech
+
+#### POST `/api/tts`
+Proxies requests to NanoGPT TTS API for speech synthesis.
+
+**Authentication**: Session
+
+**Request Body**:
+```json
+{
+  "text": "string",
+  "model": "string (optional, default: 'tts-1')",
+  "voice": "string (optional, default: 'alloy')",
+  "speed": "number (optional, default: 1.0)"
+}
+```
+
+**Response**:
+- Content-Type: `audio/mpeg`
+- Body: Binary audio data
+
+### Speech-to-Text
+
+#### POST `/api/stt`
+Proxies audio files to NanoGPT STT API for transcription.
+
+**Authentication**: Session
+
+**Request Body** (FormData):
+- `audio`: Binary audio file (webm, mp4, etc).
+- `model`: "string (optional, default: 'Whisper-Large-V3')"
+
+**Response**:
+```json
+{
+  "transcription": "string",
+  "text": "string (fallback)",
+  "metadata": {
+    "cost": 0.01,
+    ...
+  }
+}
+```
+
 ### API Keys
 
 #### GET `/api/api-keys`

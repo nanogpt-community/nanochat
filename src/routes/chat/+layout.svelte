@@ -42,7 +42,10 @@
 	import StopIcon from '~icons/lucide/square';
 	import UploadIcon from '~icons/lucide/upload';
 	import XIcon from '~icons/lucide/x';
+
 	import PaperclipIcon from '~icons/lucide/paperclip';
+	import MicIcon from '~icons/lucide/mic';
+	import { audioRecorder } from '$lib/state/audio-recorder.svelte';
 	import { callCancelGeneration } from '../api/cancel-generation/call.js';
 	import { callGenerateMessage } from '../api/generate-message/call.js';
 	import { ModelPicker } from '$lib/components/model-picker';
@@ -746,6 +749,24 @@
 	}
 
 	let sidebarOpen = $state(false);
+
+	async function toggleRecording() {
+		if (audioRecorder.isRecording) {
+			const text = await audioRecorder.stop();
+			if (text) {
+				message.current += (message.current ? ' ' : '') + text;
+				// Trigger autosize update if possible, or it might happen automatically via bind:value
+				if (textarea) {
+					// Dispatct input event to trigger autosize
+					const event = new Event('input', { bubbles: true });
+					textarea.dispatchEvent(event);
+					textarea.focus();
+				}
+			}
+		} else {
+			await audioRecorder.start();
+		}
+	}
 </script>
 
 <svelte:head>
@@ -1309,6 +1330,32 @@
 												? "Temporary Mode: ON (chats won't be saved)"
 												: 'Temporary Mode: OFF'}
 										</Tooltip>
+
+										<Tooltip>
+											{#snippet trigger(tooltip)}
+												<button
+													type="button"
+													class={cn(
+														'bg-secondary/50 hover:bg-secondary text-muted-foreground flex size-8 items-center justify-center rounded-lg transition-colors',
+														(audioRecorder.isRecording || audioRecorder.isProcessing) &&
+															'animate-pulse bg-red-500/20 text-red-500'
+													)}
+													onclick={toggleRecording}
+													{...tooltip.trigger}
+												>
+													{#if audioRecorder.isProcessing}
+														<div
+															class="size-3 animate-spin rounded-full border-2 border-current border-t-transparent"
+														></div>
+													{:else if audioRecorder.isRecording}
+														<StopIcon class="size-4" />
+													{:else}
+														<MicIcon class="size-4" />
+													{/if}
+												</button>
+											{/snippet}
+											{audioRecorder.isRecording ? 'Stop Recording' : 'Voice Input'}
+										</Tooltip>
 									</div>
 									<!-- Mobile: Essential buttons only -->
 									<div class="flex items-center gap-1 md:hidden">
@@ -1325,9 +1372,29 @@
 													></div>
 												{:else}
 													<PaperclipIcon class="size-4" />
+													<PaperclipIcon class="size-4" />
 												{/if}
 											</button>
 										{/if}
+										<button
+											type="button"
+											class={cn(
+												'bg-secondary/50 hover:bg-secondary text-muted-foreground flex size-9 items-center justify-center rounded-lg transition-colors',
+												(audioRecorder.isRecording || audioRecorder.isProcessing) &&
+													'animate-pulse bg-red-500/20 text-red-500'
+											)}
+											onclick={toggleRecording}
+										>
+											{#if audioRecorder.isProcessing}
+												<div
+													class="size-4 animate-spin rounded-full border-2 border-current border-t-transparent"
+												></div>
+											{:else if audioRecorder.isRecording}
+												<StopIcon class="size-4" />
+											{:else}
+												<MicIcon class="size-4" />
+											{/if}
+										</button>
 										<!-- Mobile More menu -->
 										<DropdownMenu.Root>
 											<DropdownMenu.Trigger

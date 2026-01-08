@@ -22,6 +22,7 @@
 - Nano-GPT Context Memory (Single Chat)
 - Cross-Conversation Memory (All Chats)
 - Nano-GPT Image Generation + img2img support
+- Nano-GPT Speech-to-Text (Whisper/Wizper/ElevenLabs)
 - Passkey support (requires HTTPS)
 - Nano-GPT Video Generation
 - Selectable System Prompts (Assistants)
@@ -116,6 +117,22 @@ Generate images using Nano-GPT's image models with support for:
 
 - Text-to-image
 - Image-to-image (img2img)
+
+### Text-to-Speech
+
+Listen to assistant messages read aloud using a variety of models:
+
+- **Models**: OpenAI (TTS-1, HD), Kokoro (Multilingual), ElevenLabs (Premium)
+- **Controls**: Play/Stop, Speed Control (0.25x - 4.0x)
+- **Cost Efficient**: Supports ultra-low cost models like GPT-4o Mini TTS ($0.0006/1k)
+
+### Speech-to-Text
+
+Transcribe voice messages using:
+
+- **Models**: Whisper Large V3 (OpenAI), Wizper (Fast), ElevenLabs
+- **Usage**: Click the microphone icon in the chat input
+- **Analytics**: Usage and costs are tracked in Model Analytics
 
 ### KaraKeep Integration
 

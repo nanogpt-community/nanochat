@@ -8,5 +8,9 @@ export const settings = createPersistedObj('settings', {
 	reasoningEffort: 'low' as 'low' | 'medium' | 'high',
 	theme: undefined as string | undefined,
 	temporaryMode: false as boolean,
+	ttsVoice: 'alloy' as string,
+	ttsSpeed: 1.0 as number,
+	ttsModel: 'tts-1' as string,
+	sttModel: 'Whisper-Large-V3' as string,
 });
 

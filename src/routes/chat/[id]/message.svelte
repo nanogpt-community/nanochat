@@ -32,6 +32,10 @@
 	import { Avatar } from 'melt/components';
 	import BrainIcon from '~icons/lucide/brain';
 	import * as casing from '$lib/utils/casing';
+	import { audioPlayer } from '$lib/state/audio-player.svelte';
+	import Volume2Icon from '~icons/lucide/volume-2';
+	import SquareIcon from '~icons/lucide/square';
+	import Loader2Icon from '~icons/lucide/loader-2';
 
 	const style = tv({
 		base: 'prose rounded-xl p-2 max-w-full',
@@ -481,6 +485,37 @@
 				{/snippet}
 				{message.role === 'user' ? 'Branch and regenerate message' : 'Branch off this message'}
 			</Tooltip>
+
+			{#if message.role === 'assistant' && message.content.length > 0}
+				<Tooltip>
+					{#snippet trigger(tooltip)}
+						<Button
+							size="icon"
+							variant="ghost"
+							class={cn('group order-0 size-7')}
+							onclick={() => {
+								if (audioPlayer.isPlaying && audioPlayer.currentMessageId === message.id) {
+									audioPlayer.stop();
+								} else {
+									audioPlayer.play(message.content, message.id);
+								}
+							}}
+							{...tooltip.trigger}
+						>
+							{#if audioPlayer.isLoading && audioPlayer.currentMessageId === message.id}
+								<Loader2Icon class="size-4 animate-spin" />
+							{:else if audioPlayer.isPlaying && audioPlayer.currentMessageId === message.id}
+								<SquareIcon class="size-3 fill-current" />
+							{:else}
+								<Volume2Icon class="size-4" />
+							{/if}
+						</Button>
+					{/snippet}
+					{audioPlayer.isPlaying && audioPlayer.currentMessageId === message.id
+						? 'Stop reading'
+						: 'Read aloud'}
+				</Tooltip>
+			{/if}
 
 			{#if message.content.length > 0}
 				<Tooltip>
