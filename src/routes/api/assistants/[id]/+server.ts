@@ -3,6 +3,7 @@ import { db } from '$lib/db';
 import { assistants } from '$lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { z } from 'zod';
+import { getAuthenticatedUserId } from '$lib/backend/auth-utils';
 
 const updateAssistantSchema = z.object({
     name: z.string().min(1).max(100).optional(),
@@ -12,13 +13,8 @@ const updateAssistantSchema = z.object({
     defaultWebSearchProvider: z.enum(['linkup', 'tavily', 'exa', 'kagi']).nullable().optional(),
 });
 
-export async function PATCH({ request, locals, params }: RequestEvent) {
-    const session = await locals.auth();
-    if (!session?.user?.id) {
-        return json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const userId = session.user.id;
+export async function PATCH({ request, params }: RequestEvent) {
+    const userId = await getAuthenticatedUserId(request);
     const id = params.id as string;
 
     let body;
@@ -57,13 +53,8 @@ export async function PATCH({ request, locals, params }: RequestEvent) {
     return json({ success: true });
 }
 
-export async function DELETE({ locals, params }: RequestEvent) {
-    const session = await locals.auth();
-    if (!session?.user?.id) {
-        return json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const userId = session.user.id;
+export async function DELETE({ request, params }: RequestEvent) {
+    const userId = await getAuthenticatedUserId(request);
     const id = params.id as string;
 
     const assistant = await db.query.assistants.findFirst({
@@ -83,13 +74,8 @@ export async function DELETE({ locals, params }: RequestEvent) {
     return json({ success: true });
 }
 
-export async function POST({ request, locals, params }: RequestEvent) {
-    const session = await locals.auth();
-    if (!session?.user?.id) {
-        return json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const userId = session.user.id;
+export async function POST({ request, params }: RequestEvent) {
+    const userId = await getAuthenticatedUserId(request);
     const id = params.id as string;
 
     let body;

@@ -7,6 +7,7 @@ import { extractTextFromPDF } from '$lib/utils/pdf-extraction';
 import { extractTextFromEPUB } from '$lib/utils/epub-extraction';
 import { saveFile } from '$lib/backend/storage';
 import path from 'path';
+import { getAuthenticatedUserId } from '$lib/backend/auth-utils';
 
 // Helper to check if user has access to project
 async function getUserProjectAccess(
@@ -33,18 +34,15 @@ async function getUserProjectAccess(
 }
 
 // GET /api/projects/[id]/files - List project files
-export async function GET({ params, locals }: RequestEvent) {
-    const session = await locals.auth();
-    if (!session?.user?.id) {
-        return json({ error: 'Unauthorized' }, { status: 401 });
-    }
+export async function GET({ params, request }: RequestEvent) {
+    const userId = await getAuthenticatedUserId(request);
 
     const projectId = params.id;
     if (!projectId) {
         return json({ error: 'Project ID required' }, { status: 400 });
     }
 
-    const access = await getUserProjectAccess(projectId, session.user.id);
+    const access = await getUserProjectAccess(projectId, userId);
     if (!access) {
         return json({ error: 'Project not found' }, { status: 404 });
     }
@@ -70,18 +68,15 @@ function getFileType(mimeType: string): 'pdf' | 'markdown' | 'text' | 'epub' | n
 }
 
 // POST /api/projects/[id]/files - Upload file to project
-export async function POST({ params, request, locals }: RequestEvent) {
-    const session = await locals.auth();
-    if (!session?.user?.id) {
-        return json({ error: 'Unauthorized' }, { status: 401 });
-    }
+export async function POST({ params, request }: RequestEvent) {
+    const userId = await getAuthenticatedUserId(request);
 
     const projectId = params.id;
     if (!projectId) {
         return json({ error: 'Project ID required' }, { status: 400 });
     }
 
-    const access = await getUserProjectAccess(projectId, session.user.id);
+    const access = await getUserProjectAccess(projectId, userId);
     if (!access) {
         return json({ error: 'Project not found' }, { status: 404 });
     }
@@ -109,7 +104,7 @@ export async function POST({ params, request, locals }: RequestEvent) {
 
         // Save file to storage
         const buffer = Buffer.from(await file.arrayBuffer());
-        const savedFile = await saveFile(buffer, file.name, file.type, session.user.id);
+        const savedFile = await saveFile(buffer, file.name, file.type, userId);
 
         // Extract text content for context
         let extractedContent: string | null = null;
@@ -156,11 +151,8 @@ export async function POST({ params, request, locals }: RequestEvent) {
 }
 
 // DELETE /api/projects/[id]/files?fileId=xxx - Remove file from project
-export async function DELETE({ params, url, locals }: RequestEvent) {
-    const session = await locals.auth();
-    if (!session?.user?.id) {
-        return json({ error: 'Unauthorized' }, { status: 401 });
-    }
+export async function DELETE({ params, url, request }: RequestEvent) {
+    const userId = await getAuthenticatedUserId(request);
 
     const projectId = params.id;
     const fileId = url.searchParams.get('fileId');
@@ -169,7 +161,7 @@ export async function DELETE({ params, url, locals }: RequestEvent) {
         return json({ error: 'Project ID and file ID required' }, { status: 400 });
     }
 
-    const access = await getUserProjectAccess(projectId, session.user.id);
+    const access = await getUserProjectAccess(projectId, userId);
     if (!access) {
         return json({ error: 'Project not found' }, { status: 404 });
     }

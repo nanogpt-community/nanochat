@@ -1,16 +1,11 @@
 
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { auth } from '$lib/auth';
 import { getUserKey } from '$lib/db/queries';
+import { getAuthenticatedUserId } from '$lib/backend/auth-utils';
 
 export const POST: RequestHandler = async ({ request }) => {
-    const session = await auth.api.getSession({ headers: request.headers });
-    if (!session?.user?.id) {
-        throw error(401, 'Unauthorized');
-    }
-
-    const userId = session.user.id;
+    const userId = await getAuthenticatedUserId(request);
 
     // Get user's key or fallback to global key
     let apiKey = await getUserKey(userId, 'nanogpt');

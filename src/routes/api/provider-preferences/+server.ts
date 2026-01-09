@@ -3,8 +3,8 @@ import { db } from '$lib/db';
 import { userKeys } from '$lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { z } from 'zod/v4';
-import { auth } from '$lib/auth';
 import { decryptApiKey, isEncrypted } from '$lib/encryption';
+import { getAuthenticatedUserId } from '$lib/backend/auth-utils';
 
 // Schema for provider preferences
 const providerPreferencesSchema = z.object({
@@ -40,12 +40,9 @@ async function getNanoGPTKey(userId: string) {
  * Get user's provider preferences from NanoGPT API
  */
 export const GET: RequestHandler = async ({ request }) => {
-    const session = await auth.api.getSession({ headers: request.headers });
-    if (!session?.user?.id) {
-        return json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const userId = await getAuthenticatedUserId(request);
 
-    const apiKey = await getNanoGPTKey(session.user.id);
+    const apiKey = await getNanoGPTKey(userId);
     if (!apiKey) {
         return json({ error: 'NanoGPT API key not configured' }, { status: 400 });
     }
@@ -88,15 +85,13 @@ export const GET: RequestHandler = async ({ request }) => {
  * Update user's provider preferences via NanoGPT API
  */
 export const PATCH: RequestHandler = async ({ request }) => {
-    const session = await auth.api.getSession({ headers: request.headers });
-    if (!session?.user?.id) {
-        return json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const userId = await getAuthenticatedUserId(request);
 
-    const apiKey = await getNanoGPTKey(session.user.id);
+    const apiKey = await getNanoGPTKey(userId);
     if (!apiKey) {
         return json({ error: 'NanoGPT API key not configured' }, { status: 400 });
     }
+
 
     // Parse and validate request body
     let body;
@@ -143,12 +138,9 @@ export const PATCH: RequestHandler = async ({ request }) => {
  * Delete user's provider preferences via NanoGPT API
  */
 export const DELETE: RequestHandler = async ({ request }) => {
-    const session = await auth.api.getSession({ headers: request.headers });
-    if (!session?.user?.id) {
-        return json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const userId = await getAuthenticatedUserId(request);
 
-    const apiKey = await getNanoGPTKey(session.user.id);
+    const apiKey = await getNanoGPTKey(userId);
     if (!apiKey) {
         return json({ error: 'NanoGPT API key not configured' }, { status: 400 });
     }

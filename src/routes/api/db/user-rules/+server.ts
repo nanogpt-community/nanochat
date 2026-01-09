@@ -1,26 +1,18 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { auth } from '$lib/auth';
 import { getAllUserRules, createRule, updateRule, renameRule, deleteRule } from '$lib/db/queries';
-
-async function getSessionUserId(request: Request): Promise<string> {
-    const session = await auth.api.getSession({ headers: request.headers });
-    if (!session?.user?.id) {
-        throw error(401, 'Unauthorized');
-    }
-    return session.user.id;
-}
+import { getAuthenticatedUserId } from '$lib/backend/auth-utils';
 
 // GET - get all user rules
 export const GET: RequestHandler = async ({ request }) => {
-    const userId = await getSessionUserId(request);
+    const userId = await getAuthenticatedUserId(request);
     const rules = await getAllUserRules(userId);
     return json(rules);
 };
 
 // POST - create or update rule
 export const POST: RequestHandler = async ({ request }) => {
-    const userId = await getSessionUserId(request);
+    const userId = await getAuthenticatedUserId(request);
     const body = await request.json();
     const { action } = body;
 
@@ -54,7 +46,7 @@ export const POST: RequestHandler = async ({ request }) => {
 
 // DELETE - delete rule
 export const DELETE: RequestHandler = async ({ request, url }) => {
-    const userId = await getSessionUserId(request);
+    const userId = await getAuthenticatedUserId(request);
     const ruleId = url.searchParams.get('id');
 
     if (!ruleId) {

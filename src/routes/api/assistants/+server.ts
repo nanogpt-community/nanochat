@@ -3,14 +3,10 @@ import { db, generateId } from '$lib/db';
 import { assistants } from '$lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
+import { getAuthenticatedUserId } from '$lib/backend/auth-utils';
 
-export async function GET({ locals }: RequestEvent) {
-    const session = await locals.auth();
-    if (!session?.user?.id) {
-        return json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const userId = session.user.id;
+export async function GET({ request }: RequestEvent) {
+    const userId = await getAuthenticatedUserId(request);
 
     let userAssistants = await db.query.assistants.findMany({
         where: eq(assistants.userId, userId),
@@ -47,13 +43,8 @@ const createAssistantSchema = z.object({
     defaultWebSearchProvider: z.enum(['linkup', 'tavily', 'exa', 'kagi']).optional(),
 });
 
-export async function POST({ request, locals }: RequestEvent) {
-    const session = await locals.auth();
-    if (!session?.user?.id) {
-        return json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const userId = session.user.id;
+export async function POST({ request }: RequestEvent) {
+    const userId = await getAuthenticatedUserId(request);
     let body;
     try {
         body = await request.json();

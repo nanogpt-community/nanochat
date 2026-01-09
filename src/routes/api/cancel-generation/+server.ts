@@ -1,18 +1,17 @@
 import { error, json, type RequestHandler } from '@sveltejs/kit';
 import { ResultAsync } from 'neverthrow';
 import { z } from 'zod/v4';
-import { getSessionCookie } from 'better-auth/cookies';
 import { db } from '$lib/db';
 import { conversations } from '$lib/db/schema';
 import { eq, and } from 'drizzle-orm';
-import { auth } from '$lib/auth';
+import { getAuthenticatedUserId } from '$lib/backend/auth-utils';
 
 // Import the global cache from generate-message
 import { generationAbortControllers } from '../generate-message/cache.js';
 
 const reqBodySchema = z.object({
 	conversation_id: z.string(),
-	session_token: z.string(),
+	session_token: z.string().optional(),
 });
 
 export type CancelGenerationRequestBody = z.infer<typeof reqBodySchema>;
@@ -42,17 +41,14 @@ export const POST: RequestHandler = async ({ request }) => {
 	}
 	const args = parsed.data;
 
-	// Get session from auth
-	const session = await auth.api.getSession({ headers: request.headers });
-	if (!session?.user?.id) {
-		return error(401, 'Unauthorized');
-	}
+	// Get user ID using dual auth
+	const userId = await getAuthenticatedUserId(request);
 
 	// Verify the user owns this conversation
 	const conversation = await db.query.conversations.findFirst({
 		where: and(
 			eq(conversations.id, args.conversation_id),
-			eq(conversations.userId, session.user.id)
+			eq(conversations.userId, userId)
 		),
 	});
 

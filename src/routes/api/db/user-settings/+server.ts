@@ -1,31 +1,23 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { auth } from '$lib/auth';
 import {
 	getUserSettings,
 	updateUserSettings,
 	incrementFreeMessageCount,
 	getOrCreateUserSettings,
 } from '$lib/db/queries';
-
-async function getSessionUserId(request: Request): Promise<string> {
-	const session = await auth.api.getSession({ headers: request.headers });
-	if (!session?.user?.id) {
-		throw error(401, 'Unauthorized');
-	}
-	return session.user.id;
-}
+import { getAuthenticatedUserId } from '$lib/backend/auth-utils';
 
 // GET - get user settings
 export const GET: RequestHandler = async ({ request }) => {
-	const userId = await getSessionUserId(request);
+	const userId = await getAuthenticatedUserId(request);
 	const settings = await getOrCreateUserSettings(userId);
 	return json(settings);
 };
 
 // POST - update user settings
 export const POST: RequestHandler = async ({ request }) => {
-	const userId = await getSessionUserId(request);
+	const userId = await getAuthenticatedUserId(request);
 	const body = await request.json();
 	const { action } = body;
 

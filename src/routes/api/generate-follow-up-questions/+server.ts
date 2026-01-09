@@ -6,10 +6,10 @@ import { OpenAI } from 'openai';
 import { db } from '$lib/db';
 import { messages, userKeys, userSettings } from '$lib/db/schema';
 import { eq, and, desc } from 'drizzle-orm';
-import { auth } from '$lib/auth';
 import { Provider } from '$lib/types';
 import { FOLLOW_UP_QUESTIONS_PROMPT } from '$lib/prompts/follow-up-questions';
 import { decryptApiKey, isEncrypted } from '$lib/encryption';
+import { getAuthenticatedUserId } from '$lib/backend/auth-utils';
 
 const MODEL = 'zai-org/GLM-4.5-Air';
 
@@ -45,14 +45,10 @@ export const POST: RequestHandler = async ({ request }) => {
 	}
 	const args = parsed.data;
 
-	const session = await auth.api.getSession({ headers: request.headers });
-
-	if (!session?.user?.id) {
-		return error(401, 'You must be logged in');
-	}
+	const userId = await getAuthenticatedUserId(request);
 
 	const keyRecord = await db.query.userKeys.findFirst({
-		where: and(eq(userKeys.userId, session.user.id), eq(userKeys.provider, Provider.NanoGPT)),
+		where: and(eq(userKeys.userId, userId), eq(userKeys.provider, Provider.NanoGPT)),
 	});
 
 	let apiKey = keyRecord?.key;
@@ -68,7 +64,7 @@ export const POST: RequestHandler = async ({ request }) => {
 	}
 
 	const userSettingsData = await db.query.userSettings.findFirst({
-		where: eq(userSettings.userId, session.user.id),
+		where: eq(userSettings.userId, userId),
 	});
 
 	const modelId = userSettingsData?.followUpModelId || MODEL;

@@ -1,16 +1,13 @@
 import { json, error, type RequestEvent } from '@sveltejs/kit';
-import { auth } from '$lib/auth';
 import { deleteTemporaryConversations } from '$lib/db/queries';
+import { getAuthenticatedUserId } from '$lib/backend/auth-utils';
 
 // POST - cleanup temporary conversations from previous sessions
 export async function POST({ request }: RequestEvent) {
-    const session = await auth.api.getSession({ headers: request.headers });
-    if (!session?.user?.id) {
-        throw error(401, 'Unauthorized');
-    }
+    const userId = await getAuthenticatedUserId(request);
 
     try {
-        await deleteTemporaryConversations(session.user.id);
+        await deleteTemporaryConversations(userId);
         return json({ ok: true });
     } catch (e) {
         console.error('Failed to cleanup temporary conversations:', e);

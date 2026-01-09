@@ -1,21 +1,13 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { auth } from '$lib/auth';
 import { getUserSettings } from '$lib/db/queries/user-settings';
 import { getConversationById } from '$lib/db/queries/conversations';
 import { getMessagesByConversation } from '$lib/db/queries/messages';
 import { saveToKarakeep } from '$lib/backend/karakeep';
-
-async function getSessionUserId(request: Request): Promise<string> {
-    const session = await auth.api.getSession({ headers: request.headers });
-    if (!session?.user?.id) {
-        throw error(401, 'Unauthorized');
-    }
-    return session.user.id;
-}
+import { getAuthenticatedUserId } from '$lib/backend/auth-utils';
 
 export const POST: RequestHandler = async ({ request }) => {
-    const userId = await getSessionUserId(request);
+    const userId = await getAuthenticatedUserId(request);
     const body = await request.json();
     const { conversationId } = body;
 
@@ -25,14 +17,14 @@ export const POST: RequestHandler = async ({ request }) => {
 
     // Get user settings to retrieve Karakeep configuration
     const settings = await getUserSettings(userId);
-    
+
     if (!settings?.karakeepUrl || !settings?.karakeepApiKey) {
         throw error(400, 'Karakeep is not configured. Please configure it in account settings.');
     }
 
     // Get conversation
     const conversation = await getConversationById(conversationId, userId);
-    
+
     if (!conversation) {
         throw error(404, 'Conversation not found');
     }
@@ -46,7 +38,7 @@ export const POST: RequestHandler = async ({ request }) => {
     const messages = await getMessagesByConversation(conversationId);
 
     // Generate source URL if available
-    const sourceUrl = typeof window !== 'undefined' 
+    const sourceUrl = typeof window !== 'undefined'
         ? `${new URL(request.url).origin}/chat/${conversationId}`
         : undefined;
 

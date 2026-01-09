@@ -3,22 +3,14 @@ import type { RequestHandler } from './$types';
 import { db, generateId } from '$lib/db';
 import { apiKeys } from '$lib/db/schema';
 import { eq, and } from 'drizzle-orm';
-import { auth } from '$lib/auth';
 import { z } from 'zod/v4';
 import { randomUUID } from 'crypto';
 import { encryptApiKey, decryptApiKey, isEncrypted } from '$lib/encryption';
-
-async function getSessionUserId(request: Request): Promise<string> {
-    const session = await auth.api.getSession({ headers: request.headers });
-    if (!session?.user?.id) {
-        throw error(401, 'Unauthorized');
-    }
-    return session.user.id;
-}
+import { getAuthenticatedUserId } from '$lib/backend/auth-utils';
 
 // GET - List API keys (excluding the actual key value for security)
 export const GET: RequestHandler = async ({ request }) => {
-    const userId = await getSessionUserId(request);
+    const userId = await getAuthenticatedUserId(request);
 
     const keys = await db.query.apiKeys.findMany({
         where: eq(apiKeys.userId, userId),
@@ -40,7 +32,7 @@ const createSchema = z.object({
 });
 
 export const POST: RequestHandler = async ({ request }) => {
-    const userId = await getSessionUserId(request);
+    const userId = await getAuthenticatedUserId(request);
 
     const body = await request.json();
     const parsed = createSchema.safeParse(body);
@@ -78,7 +70,7 @@ const deleteSchema = z.object({
 });
 
 export const DELETE: RequestHandler = async ({ request }) => {
-    const userId = await getSessionUserId(request);
+    const userId = await getAuthenticatedUserId(request);
 
     const body = await request.json();
     const parsed = deleteSchema.safeParse(body);

@@ -231,7 +231,7 @@ curl -X GET "http://localhost:3432/api/video/status?runId=abc123&model=runway-ge
 #### GET `/api/api-keys`
 List active API keys for the current user.
 
-**Authentication**: Session
+**Authentication**: Session or API Key
 
 **Response**:
 ```json
@@ -257,7 +257,7 @@ curl -X GET "http://localhost:3432/api/api-keys" \
 #### POST `/api/api-keys`
 Create a new API key.
 
-**Authentication**: Session
+**Authentication**: Session or API Key
 
 **Request Body**:
 ```json
@@ -288,7 +288,7 @@ curl -X POST "http://localhost:3432/api/api-keys" \
 #### DELETE `/api/api-keys`
 Revoke an API key.
 
-**Authentication**: Session
+**Authentication**: Session or API Key
 
 **Request Body**:
 ```json
@@ -319,7 +319,7 @@ curl -X DELETE "http://localhost:3432/api/api-keys" \
 #### GET `/api/assistants`
 List all assistants for the user. If no assistants exist, a default one is created and returned.
 
-**Authentication**: Session
+**Authentication**: Session or API Key
 
 **Response**:
 ```json
@@ -347,7 +347,7 @@ curl -X GET "http://localhost:3432/api/assistants" \
 #### POST `/api/assistants`
 Create a new assistant.
 
-**Authentication**: Session
+**Authentication**: Session or API Key
 
 **Request Body**:
 ```json
@@ -381,7 +381,7 @@ curl -X POST "http://localhost:3432/api/assistants" \
 #### PATCH `/api/assistants/[id]`
 Update an assistant.
 
-**Authentication**: Session
+**Authentication**: Session or API Key
 
 **Request Body**:
 ```json
@@ -404,7 +404,7 @@ curl -X PATCH "http://localhost:3432/api/assistants/asst_abc123" \
 #### DELETE `/api/assistants/[id]`
 Delete an assistant.
 
-**Authentication**: Session
+**Authentication**: Session or API Key
 
 **CURL Example**:
 ```bash
@@ -415,7 +415,7 @@ curl -X DELETE "http://localhost:3432/api/assistants/asst_abc123" \
 #### POST `/api/assistants/[id]`
 Set assistant as default.
 
-**Authentication**: Session
+**Authentication**: Session or API Key
 
 **Request Body**:
 ```json
@@ -439,7 +439,7 @@ curl -X POST "http://localhost:3432/api/assistants/asst_abc123" \
 #### GET `/api/projects`
 List all projects the user owns or is a member of.
 
-**Authentication**: Session
+**Authentication**: Session or API Key
 
 **Response**:
 ```json
@@ -464,7 +464,7 @@ curl -X GET "http://localhost:3432/api/projects" \
 #### POST `/api/projects`
 Create a new project.
 
-**Authentication**: Session
+**Authentication**: Session or API Key
 
 **Request Body**:
 ```json
@@ -496,7 +496,7 @@ curl -X POST "http://localhost:3432/api/projects" \
 #### GET `/api/projects/[id]`
 Get a single project with all details.
 
-**Authentication**: Session
+**Authentication**: Session or API Key
 
 **Response**:
 ```json
@@ -519,7 +519,7 @@ curl -X GET "http://localhost:3432/api/projects/proj_abc123" \
 #### PATCH `/api/projects/[id]`
 Update a project.
 
-**Authentication**: Session (owner or editor)
+**Authentication**: Session or API Key (owner or editor)
 
 **Request Body**:
 ```json
@@ -542,7 +542,7 @@ curl -X PATCH "http://localhost:3432/api/projects/proj_abc123" \
 #### DELETE `/api/projects/[id]`
 Delete a project.
 
-**Authentication**: Session (owner only)
+**Authentication**: Session or API Key (owner only)
 
 **CURL Example**:
 ```bash
@@ -557,7 +557,7 @@ curl -X DELETE "http://localhost:3432/api/projects/proj_abc123" \
 #### GET `/api/projects/[id]/files`
 List all files in a project.
 
-**Authentication**: Session (owner, editor, or viewer)
+**Authentication**: Session or API Key (owner, editor, or viewer)
 
 **Response**:
 ```json
@@ -586,7 +586,7 @@ curl -X GET "http://localhost:3432/api/projects/proj_abc123/files" \
 #### POST `/api/projects/[id]/files`
 Upload a file to a project. Supports PDF, Markdown, Text, and EPUB files.
 
-**Authentication**: Session (owner or editor)
+**Authentication**: Session or API Key (owner or editor)
 
 **Request Body** (FormData):
 - `file`: Binary file (PDF, Markdown, Text, or EPUB)
@@ -614,7 +614,7 @@ curl -X POST "http://localhost:3432/api/projects/proj_abc123/files" \
 #### DELETE `/api/projects/[id]/files`
 Delete a file from a project.
 
-**Authentication**: Session (owner or editor)
+**Authentication**: Session or API Key (owner or editor)
 
 **Query Parameters**:
 - `fileId`: (Required) The file ID to delete.
@@ -639,7 +639,7 @@ curl -X DELETE "http://localhost:3432/api/projects/proj_abc123/files?fileId=file
 #### GET `/api/projects/[id]/members`
 List all members of a project, including the owner.
 
-**Authentication**: Session (owner or member)
+**Authentication**: Session or API Key (owner or member)
 
 **Response**:
 ```json
@@ -667,7 +667,7 @@ curl -X GET "http://localhost:3432/api/projects/proj_abc123/members" \
 #### POST `/api/projects/[id]/members`
 Add a member to a project by email.
 
-**Authentication**: Session (owner only)
+**Authentication**: Session or API Key (owner only)
 
 **Request Body**:
 ```json
@@ -704,7 +704,7 @@ curl -X POST "http://localhost:3432/api/projects/proj_abc123/members" \
 #### DELETE `/api/projects/[id]/members`
 Remove a member from a project.
 
-**Authentication**: Session (owner, or self-removal)
+**Authentication**: Session or API Key (owner, or self-removal)
 
 **Query Parameters**:
 - `userId`: (Required) The user ID to remove.
@@ -729,7 +729,7 @@ curl -X DELETE "http://localhost:3432/api/projects/proj_abc123/members?userId=us
 #### POST `/api/storage`
 Upload a file.
 
-**Authentication**: Session
+**Authentication**: Session or API Key
 
 **Headers**:
 - `Content-Type`: Mime type of the file.
@@ -789,7 +789,7 @@ curl -X GET "http://localhost:3432/api/storage/store_abc123" --output file.png
 #### DELETE `/api/storage`
 Delete a file.
 
-**Authentication**: Session (User must own the file)
+**Authentication**: Session or API Key (User must own the file)
 
 **Query Parameters**:
 - `id`: Storage ID.
@@ -814,7 +814,7 @@ curl -X DELETE "http://localhost:3432/api/storage?id=store_abc123" \
 #### POST `/api/cancel-generation`
 Cancel an active message generation.
 
-**Authentication**: Session (must own conversation)
+**Authentication**: Session or API Key (must own conversation)
 
 **Request Body**:
 ```json
@@ -843,7 +843,7 @@ curl -X POST "http://localhost:3432/api/cancel-generation" \
 #### POST `/api/enhance-prompt`
 Enhance a prompt using an LLM to make it better for generation.
 
-**Authentication**: Session
+**Authentication**: Session or API Key
 
 **Request Body**:
 ```json
@@ -871,7 +871,7 @@ curl -X POST "http://localhost:3432/api/enhance-prompt" \
 #### POST `/api/cleanup-temp-conversations`
 Cleanup temporary conversations from previous sessions.
 
-**Authentication**: Session
+**Authentication**: Session or API Key
 
 **Response**:
 ```json
@@ -893,7 +893,7 @@ curl -X POST "http://localhost:3432/api/cleanup-temp-conversations" \
 #### GET `/api/db/conversations`
 List all conversations for the user, or get a specific conversation by ID.
 
-**Authentication**: Session (or Public for shared conversations)
+**Authentication**: Session or API Key (or Public for shared conversations)
 
 **Query Parameters**:
 - `id`: (Optional) Conversation ID to fetch a specific conversation.
@@ -931,7 +931,7 @@ curl -X GET "http://localhost:3432/api/db/conversations?search=python&mode=fuzzy
 #### POST `/api/db/conversations`
 Create or update conversations.
 
-**Authentication**: Session
+**Authentication**: Session or API Key
 
 **Request Body**:
 ```json
@@ -960,7 +960,7 @@ curl -X POST "http://localhost:3432/api/db/conversations" \
 #### DELETE `/api/db/conversations`
 Delete a conversation or all conversations.
 
-**Authentication**: Session
+**Authentication**: Session or API Key
 
 **Query Parameters**:
 - `id`: Conversation ID to delete.
@@ -979,7 +979,7 @@ curl -X DELETE "http://localhost:3432/api/db/conversations?id=conv_abc123" \
 #### GET `/api/db/messages`
 Get messages for a conversation.
 
-**Authentication**: Session (or Public for public conversations)
+**Authentication**: Session or API Key (or Public for public conversations)
 
 **Query Parameters**:
 - `conversationId`: (Required) Conversation ID.
@@ -1012,7 +1012,7 @@ curl -X GET "http://localhost:3432/api/db/messages?conversationId=conv_abc123" \
 #### POST `/api/db/messages`
 Create or update messages.
 
-**Authentication**: Session
+**Authentication**: Session or API Key
 
 **Request Body**:
 ```json
@@ -1037,7 +1037,7 @@ curl -X POST "http://localhost:3432/api/db/messages" \
 #### POST `/api/db/message-interactions`
 Log a user interaction with a message (regenerate, edit, copy, share).
 
-**Authentication**: Session
+**Authentication**: Session or API Key
 
 **Request Body**:
 ```json
@@ -1078,7 +1078,7 @@ curl -X POST "http://localhost:3432/api/db/message-interactions" \
 #### POST `/api/db/message-ratings`
 Rate a message (thumbs up/down, star rating, feedback).
 
-**Authentication**: Session
+**Authentication**: Session or API Key
 
 **Request Body**:
 ```json
@@ -1123,7 +1123,7 @@ curl -X POST "http://localhost:3432/api/db/message-ratings" \
 #### GET `/api/db/model-performance`
 Get model performance statistics for the user.
 
-**Authentication**: Session
+**Authentication**: Session or API Key
 
 **Query Parameters**:
 - `recalculate`: Set to `"true"` to recalculate stats from scratch.
@@ -1161,7 +1161,7 @@ curl -X GET "http://localhost:3432/api/db/model-performance?recalculate=true" \
 #### GET `/api/db/user-settings`
 Get user settings.
 
-**Authentication**: Session
+**Authentication**: Session or API Key
 
 **Response**:
 ```json
@@ -1184,7 +1184,7 @@ curl -X GET "http://localhost:3432/api/db/user-settings" \
 #### POST `/api/db/user-settings`
 Update user settings.
 
-**Authentication**: Session
+**Authentication**: Session or API Key
 
 **Request Body**:
 ```json
@@ -1211,7 +1211,7 @@ curl -X POST "http://localhost:3432/api/db/user-settings" \
 #### GET `/api/db/user-keys`
 Get API keys configured by the user for different providers.
 
-**Authentication**: Session
+**Authentication**: Session or API Key
 
 **Query Parameters**:
 - `provider`: (Optional) Get key for a specific provider (e.g., "nanogpt", "openai").
@@ -1241,7 +1241,7 @@ curl -X GET "http://localhost:3432/api/db/user-keys?provider=nanogpt" \
 #### POST `/api/db/user-keys`
 Set an API key for a provider.
 
-**Authentication**: Session
+**Authentication**: Session or API Key
 
 **Request Body**:
 ```json
@@ -1271,7 +1271,7 @@ curl -X POST "http://localhost:3432/api/db/user-keys" \
 #### DELETE `/api/db/user-keys`
 Delete an API key for a provider.
 
-**Authentication**: Session
+**Authentication**: Session or API Key
 
 **Query Parameters**:
 - `provider`: (Required) Provider name to delete key for.
@@ -1296,7 +1296,7 @@ curl -X DELETE "http://localhost:3432/api/db/user-keys?provider=nanogpt" \
 #### GET `/api/db/user-rules`
 Get all custom rules for the user.
 
-**Authentication**: Session
+**Authentication**: Session or API Key
 
 **Response**:
 ```json
@@ -1321,7 +1321,7 @@ curl -X GET "http://localhost:3432/api/db/user-rules" \
 #### POST `/api/db/user-rules`
 Create, update, or rename a rule.
 
-**Authentication**: Session
+**Authentication**: Session or API Key
 
 **Request Body**:
 ```json
@@ -1363,7 +1363,7 @@ curl -X POST "http://localhost:3432/api/db/user-rules" \
 #### DELETE `/api/db/user-rules`
 Delete a rule.
 
-**Authentication**: Session
+**Authentication**: Session or API Key
 
 **Query Parameters**:
 - `id`: (Required) Rule ID to delete.
@@ -1388,7 +1388,7 @@ curl -X DELETE "http://localhost:3432/api/db/user-rules?id=rule_abc123" \
 #### GET `/api/db/user-models`
 Get enabled models for the user.
 
-**Authentication**: Session
+**Authentication**: Session or API Key
 
 **Query Parameters**:
 - `provider`: (Optional) Filter by provider.
@@ -1415,7 +1415,7 @@ curl -X GET "http://localhost:3432/api/db/user-models" \
 #### POST `/api/db/user-models`
 Enable/disable models or toggle pinned status.
 
-**Authentication**: Session
+**Authentication**: Session or API Key
 
 **Request Body**:
 ```json
@@ -1442,7 +1442,7 @@ curl -X POST "http://localhost:3432/api/db/user-models" \
 #### GET `/api/model-providers`
 Get available providers for a model.
 
-**Authentication**: Session
+**Authentication**: Session or API Key
 
 **Query Parameters**:
 - `modelId`: (Required) Model ID.
@@ -1470,7 +1470,7 @@ curl -X GET "http://localhost:3432/api/model-providers?modelId=gpt-4" \
 #### POST `/api/nano-gpt/balance`
 Get the NanoGPT account balance.
 
-**Authentication**: Session
+**Authentication**: Session or API Key
 
 **Response**:
 ```json
@@ -1489,7 +1489,7 @@ curl -X POST "http://localhost:3432/api/nano-gpt/balance" \
 #### GET `/api/nano-gpt/subscription-usage`
 Get the NanoGPT subscription usage statistics.
 
-**Authentication**: Session
+**Authentication**: Session or API Key
 
 **Response**:
 ```json
@@ -1560,7 +1560,7 @@ curl -X GET "http://localhost:3432/api/artificial-analysis/benchmarks" \
 #### GET `/api/provider-preferences`
 Get user's provider preferences.
 
-**Authentication**: Session
+**Authentication**: Session or API Key
 
 **Response**:
 ```json
@@ -1581,7 +1581,7 @@ curl -X GET "http://localhost:3432/api/provider-preferences" \
 #### PATCH `/api/provider-preferences`
 Update user's provider preferences.
 
-**Authentication**: Session
+**Authentication**: Session or API Key
 
 **Request Body**:
 ```json
@@ -1609,7 +1609,7 @@ curl -X PATCH "http://localhost:3432/api/provider-preferences" \
 #### DELETE `/api/provider-preferences`
 Reset provider preferences.
 
-**Authentication**: Session
+**Authentication**: Session or API Key
 
 **CURL Example**:
 ```bash
@@ -1624,7 +1624,7 @@ curl -X DELETE "http://localhost:3432/api/provider-preferences" \
 #### POST `/api/generate-follow-up-questions`
 Generate follow-up questions for a message.
 
-**Authentication**: Session
+**Authentication**: Session or API Key
 
 **Request Body**:
 ```json
@@ -1657,7 +1657,7 @@ curl -X POST "http://localhost:3432/api/generate-follow-up-questions" \
 #### POST `/api/user/upload-avatar`
 Upload an avatar image for the current user.
 
-**Authentication**: Session
+**Authentication**: Session or API Key
 
 **Request Body** (FormData):
 - `file`: Image file (JPEG, PNG, GIF, or WebP, max 5MB)
@@ -1684,7 +1684,7 @@ curl -X POST "http://localhost:3432/api/user/upload-avatar" \
 #### POST `/api/karakeep/save-chat`
 Save a conversation to KaraKeep.
 
-**Authentication**: Session
+**Authentication**: Session or API Key
 
 **Request Body**:
 ```json

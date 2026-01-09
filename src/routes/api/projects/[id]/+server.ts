@@ -3,6 +3,7 @@ import { db, generateId } from '$lib/db';
 import { projects, projectMembers, conversations, projectFiles } from '$lib/db/schema';
 import { eq, and, or } from 'drizzle-orm';
 import { z } from 'zod';
+import { getAuthenticatedUserId } from '$lib/backend/auth-utils';
 
 // Helper to check if user has access to project
 async function getUserProjectAccess(
@@ -32,18 +33,15 @@ async function getUserProjectAccess(
 }
 
 // GET /api/projects/[id] - Get single project with all details
-export async function GET({ params, locals }: RequestEvent) {
-    const session = await locals.auth();
-    if (!session?.user?.id) {
-        return json({ error: 'Unauthorized' }, { status: 401 });
-    }
+export async function GET({ params, request }: RequestEvent) {
+    const userId = await getAuthenticatedUserId(request);
 
     const projectId = params.id;
     if (!projectId) {
         return json({ error: 'Project ID required' }, { status: 400 });
     }
 
-    const access = await getUserProjectAccess(projectId, session.user.id);
+    const access = await getUserProjectAccess(projectId, userId);
     if (!access) {
         return json({ error: 'Project not found' }, { status: 404 });
     }
@@ -86,18 +84,15 @@ const updateProjectSchema = z.object({
 });
 
 // PATCH /api/projects/[id] - Update project
-export async function PATCH({ params, request, locals }: RequestEvent) {
-    const session = await locals.auth();
-    if (!session?.user?.id) {
-        return json({ error: 'Unauthorized' }, { status: 401 });
-    }
+export async function PATCH({ params, request }: RequestEvent) {
+    const userId = await getAuthenticatedUserId(request);
 
     const projectId = params.id;
     if (!projectId) {
         return json({ error: 'Project ID required' }, { status: 400 });
     }
 
-    const access = await getUserProjectAccess(projectId, session.user.id);
+    const access = await getUserProjectAccess(projectId, userId);
     if (!access) {
         return json({ error: 'Project not found' }, { status: 404 });
     }
@@ -134,11 +129,8 @@ export async function PATCH({ params, request, locals }: RequestEvent) {
 }
 
 // DELETE /api/projects/[id] - Delete project
-export async function DELETE({ params, locals }: RequestEvent) {
-    const session = await locals.auth();
-    if (!session?.user?.id) {
-        return json({ error: 'Unauthorized' }, { status: 401 });
-    }
+export async function DELETE({ params, request }: RequestEvent) {
+    const userId = await getAuthenticatedUserId(request);
 
     const projectId = params.id;
     if (!projectId) {
@@ -147,7 +139,7 @@ export async function DELETE({ params, locals }: RequestEvent) {
 
     // Only owner can delete
     const project = await db.query.projects.findFirst({
-        where: and(eq(projects.id, projectId), eq(projects.userId, session.user.id)),
+        where: and(eq(projects.id, projectId), eq(projects.userId, userId)),
     });
 
     if (!project) {

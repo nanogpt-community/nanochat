@@ -3,15 +3,11 @@ import { db, generateId } from '$lib/db';
 import { projects, projectMembers } from '$lib/db/schema';
 import { eq, or, and } from 'drizzle-orm';
 import { z } from 'zod';
+import { getAuthenticatedUserId } from '$lib/backend/auth-utils';
 
 // GET /api/projects - List user's projects (owned + shared)
-export async function GET({ locals }: RequestEvent) {
-    const session = await locals.auth();
-    if (!session?.user?.id) {
-        return json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const userId = session.user.id;
+export async function GET({ request }: RequestEvent) {
+    const userId = await getAuthenticatedUserId(request);
 
     // Get projects user owns
     const ownedProjects = await db.query.projects.findMany({
@@ -81,13 +77,8 @@ const createProjectSchema = z.object({
 });
 
 // POST /api/projects - Create new project
-export async function POST({ request, locals }: RequestEvent) {
-    const session = await locals.auth();
-    if (!session?.user?.id) {
-        return json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const userId = session.user.id;
+export async function POST({ request }: RequestEvent) {
+    const userId = await getAuthenticatedUserId(request);
     let body;
     try {
         body = await request.json();

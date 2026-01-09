@@ -1,20 +1,12 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { auth } from '$lib/auth';
 import { getAllUserKeys, getUserKey, setUserKey, deleteUserKey } from '$lib/db/queries';
 import { enableDefaultModelsOnKeyAdd } from '$lib/db/queries/user-enabled-models';
-
-async function getSessionUserId(request: Request): Promise<string> {
-    const session = await auth.api.getSession({ headers: request.headers });
-    if (!session?.user?.id) {
-        throw error(401, 'Unauthorized');
-    }
-    return session.user.id;
-}
+import { getAuthenticatedUserId } from '$lib/backend/auth-utils';
 
 // GET - get user keys
 export const GET: RequestHandler = async ({ request, url }) => {
-    const userId = await getSessionUserId(request);
+    const userId = await getAuthenticatedUserId(request);
     const provider = url.searchParams.get('provider');
 
     if (provider) {
@@ -34,7 +26,7 @@ export const GET: RequestHandler = async ({ request, url }) => {
 
 // POST - set user key
 export const POST: RequestHandler = async ({ request }) => {
-    const userId = await getSessionUserId(request);
+    const userId = await getAuthenticatedUserId(request);
     const body = await request.json();
     const { provider, key } = body;
 
@@ -54,7 +46,7 @@ export const POST: RequestHandler = async ({ request }) => {
 
 // DELETE - delete user key
 export const DELETE: RequestHandler = async ({ request, url }) => {
-    const userId = await getSessionUserId(request);
+    const userId = await getAuthenticatedUserId(request);
     const provider = url.searchParams.get('provider');
 
     if (!provider) {

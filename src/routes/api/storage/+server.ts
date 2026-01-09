@@ -1,31 +1,15 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { auth } from '$lib/auth';
-import { existsSync, mkdirSync, writeFileSync, unlinkSync } from 'fs';
-import { join, resolve } from 'path';
+import { existsSync, unlinkSync } from 'fs';
 import { saveFile, deleteFile } from '$lib/backend/storage';
-import { db, generateId } from '$lib/db';
+import { getAuthenticatedUserId } from '$lib/backend/auth-utils';
+import { db } from '$lib/db';
 import { storage } from '$lib/db/schema';
 import { eq } from 'drizzle-orm';
 
-const UPLOAD_DIR = join(process.cwd(), 'data', 'uploads');
-
-// Ensure upload directory exists
-if (!existsSync(UPLOAD_DIR)) {
-    mkdirSync(UPLOAD_DIR, { recursive: true });
-}
-
-async function getSessionUserId(request: Request): Promise<string> {
-    const session = await auth.api.getSession({ headers: request.headers });
-    if (!session?.user?.id) {
-        throw error(401, 'Unauthorized');
-    }
-    return session.user.id;
-}
-
 // POST - Upload file
 export const POST: RequestHandler = async ({ request }) => {
-    const userId = await getSessionUserId(request);
+    const userId = await getAuthenticatedUserId(request);
 
     const contentType = request.headers.get('content-type') || 'application/octet-stream';
     const body = await request.arrayBuffer();
@@ -69,7 +53,7 @@ export const GET: RequestHandler = async ({ request, url }) => {
 
 // DELETE - Delete file
 export const DELETE: RequestHandler = async ({ request, url }) => {
-    const userId = await getSessionUserId(request);
+    const userId = await getAuthenticatedUserId(request);
     const storageId = url.searchParams.get('id');
 
     if (!storageId) {

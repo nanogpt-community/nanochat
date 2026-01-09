@@ -2,8 +2,8 @@ import { json, error, type RequestHandler } from '@sveltejs/kit';
 import { db } from '$lib/db';
 import { userKeys } from '$lib/db/schema';
 import { eq, and } from 'drizzle-orm';
-import { auth } from '$lib/auth';
 import { decryptApiKey, isEncrypted } from '$lib/encryption';
+import { getAuthenticatedUserId } from '$lib/backend/auth-utils';
 
 /**
  * GET /api/model-providers?modelId=xxx
@@ -17,15 +17,12 @@ export const GET: RequestHandler = async ({ url, request }) => {
     }
 
     // Get session using auth helper
-    const session = await auth.api.getSession({ headers: request.headers });
-    if (!session?.user?.id) {
-        return json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const userId = await getAuthenticatedUserId(request);
 
     // Get user's NanoGPT API key
     const userKey = await db.query.userKeys.findFirst({
         where: and(
-            eq(userKeys.userId, session.user.id),
+            eq(userKeys.userId, userId),
             eq(userKeys.provider, 'nanogpt')
         ),
     });

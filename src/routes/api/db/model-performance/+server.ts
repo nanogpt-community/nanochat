@@ -1,22 +1,14 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { auth } from '$lib/auth';
 import {
     getModelPerformanceStatsByUser,
     calculateAllModelPerformanceStats,
 } from '$lib/db/queries/model-performance';
-
-async function getSessionUserId(request: Request): Promise<string> {
-    const session = await auth.api.getSession({ headers: request.headers });
-    if (!session?.user?.id) {
-        throw error(401, 'Unauthorized');
-    }
-    return session.user.id;
-}
+import { getAuthenticatedUserId } from '$lib/backend/auth-utils';
 
 export const GET: RequestHandler = async ({ request, url }) => {
     try {
-        const userId = await getSessionUserId(request);
+        const userId = await getAuthenticatedUserId(request);
         const recalculate = url.searchParams.get('recalculate') === 'true';
 
         console.log(`[model-performance] Fetching stats for user ${userId} (recalculate: ${recalculate})`);

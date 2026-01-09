@@ -1,20 +1,12 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { auth } from '$lib/auth';
 import { createMessageRating } from '$lib/db/queries/message-ratings';
 import { getMessageById } from '$lib/db/queries/messages';
-
-async function getSessionUserId(request: Request): Promise<string> {
-    const session = await auth.api.getSession({ headers: request.headers });
-    if (!session?.user?.id) {
-        throw error(401, 'Unauthorized');
-    }
-    return session.user.id;
-}
+import { getAuthenticatedUserId } from '$lib/backend/auth-utils';
 
 export const POST: RequestHandler = async ({ request }) => {
     try {
-        const userId = await getSessionUserId(request);
+        const userId = await getAuthenticatedUserId(request);
         const body = await request.json();
         const { messageId, thumbs, rating, categories, feedback } = body;
 

@@ -1,6 +1,5 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { auth } from '$lib/auth';
 import {
     getConversationMessages,
     getPublicConversationMessages,
@@ -11,14 +10,7 @@ import {
     deleteMessage,
 } from '$lib/db/queries';
 import { getConversationById } from '$lib/db/queries/conversations';
-
-async function getSessionUserId(request: Request): Promise<string> {
-    const session = await auth.api.getSession({ headers: request.headers });
-    if (!session?.user?.id) {
-        throw error(401, 'Unauthorized');
-    }
-    return session.user.id;
-}
+import { getAuthenticatedUserId } from '$lib/backend/auth-utils';
 
 // GET - get messages for a conversation
 export const GET: RequestHandler = async ({ request, url }) => {
@@ -37,14 +29,14 @@ export const GET: RequestHandler = async ({ request, url }) => {
         return json(messages);
     }
 
-    const userId = await getSessionUserId(request);
+    const userId = await getAuthenticatedUserId(request);
     const messages = await getConversationMessages(conversationId, userId);
     return json(messages);
 };
 
 // POST - create or update message
 export const POST: RequestHandler = async ({ request }) => {
-    const userId = await getSessionUserId(request);
+    const userId = await getAuthenticatedUserId(request);
     const body = await request.json();
     const { action } = body;
 

@@ -3,6 +3,7 @@ import { db, generateId } from '$lib/db';
 import { projects, projectMembers, user } from '$lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { z } from 'zod';
+import { getAuthenticatedUserId } from '$lib/backend/auth-utils';
 
 // Helper to check if user is project owner
 async function isProjectOwner(projectId: string, userId: string): Promise<boolean> {
@@ -13,11 +14,8 @@ async function isProjectOwner(projectId: string, userId: string): Promise<boolea
 }
 
 // GET /api/projects/[id]/members - List project members
-export async function GET({ params, locals }: RequestEvent) {
-    const session = await locals.auth();
-    if (!session?.user?.id) {
-        return json({ error: 'Unauthorized' }, { status: 401 });
-    }
+export async function GET({ params, request }: RequestEvent) {
+    const userId = await getAuthenticatedUserId(request);
 
     const projectId = params.id;
     if (!projectId) {
@@ -25,9 +23,9 @@ export async function GET({ params, locals }: RequestEvent) {
     }
 
     // Check if user has access (owner or member)
-    const isOwner = await isProjectOwner(projectId, session.user.id);
+    const isOwner = await isProjectOwner(projectId, userId);
     const isMember = await db.query.projectMembers.findFirst({
-        where: and(eq(projectMembers.projectId, projectId), eq(projectMembers.userId, session.user.id)),
+        where: and(eq(projectMembers.projectId, projectId), eq(projectMembers.userId, userId)),
     });
 
     if (!isOwner && !isMember) {
@@ -81,11 +79,8 @@ const addMemberSchema = z.object({
 });
 
 // POST /api/projects/[id]/members - Add member to project
-export async function POST({ params, request, locals }: RequestEvent) {
-    const session = await locals.auth();
-    if (!session?.user?.id) {
-        return json({ error: 'Unauthorized' }, { status: 401 });
-    }
+export async function POST({ params, request }: RequestEvent) {
+    const userId = await getAuthenticatedUserId(request);
 
     const projectId = params.id;
     if (!projectId) {
@@ -93,7 +88,7 @@ export async function POST({ params, request, locals }: RequestEvent) {
     }
 
     // Only owner can add members
-    const isOwner = await isProjectOwner(projectId, session.user.id);
+    const isOwner = await isProjectOwner(projectId, userId);
     if (!isOwner) {
         return json({ error: 'Permission denied' }, { status: 403 });
     }
@@ -167,11 +162,8 @@ export async function POST({ params, request, locals }: RequestEvent) {
 }
 
 // DELETE /api/projects/[id]/members?userId=xxx - Remove member from project
-export async function DELETE({ params, url, locals }: RequestEvent) {
-    const session = await locals.auth();
-    if (!session?.user?.id) {
-        return json({ error: 'Unauthorized' }, { status: 401 });
-    }
+export async function DELETE({ params, url, request }: RequestEvent) {
+    const authUserId = await getAuthenticatedUserId(request);
 
     const projectId = params.id;
     const targetUserId = url.searchParams.get('userId');
@@ -181,8 +173,8 @@ export async function DELETE({ params, url, locals }: RequestEvent) {
     }
 
     // Only owner can remove members (or user can remove themselves)
-    const isOwner = await isProjectOwner(projectId, session.user.id);
-    const isSelf = targetUserId === session.user.id;
+    const isOwner = await isProjectOwner(projectId, authUserId);
+    const isSelf = targetUserId === authUserId;
 
     if (!isOwner && !isSelf) {
         return json({ error: 'Permission denied' }, { status: 403 });
