@@ -908,7 +908,42 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 				if (!tc.id || !tc.function.name) continue;
 
 				try {
-					const args = JSON.parse(tc.function.arguments || '{}');
+					let args = JSON.parse(tc.function.arguments || '{}');
+
+					// Special handling for vision tool: inject image from context if missing
+					if (tc.function.name === 'nanogpt_vision') {
+						const imgUrl = args.image_url as string | undefined;
+						// If no URL provided, or it's not a valid URL/data-uri, try to find one in context
+						if (!imgUrl || (!imgUrl.startsWith('http') && !imgUrl.startsWith('data:'))) {
+							log('Background: Vision tool called without valid URL, searching context for images', startTime);
+
+							// Search backwards for the most recent image
+							let foundImage: string | null = null;
+							// Iterate formattedMessages in reverse
+							for (let i = formattedMessages.length - 1; i >= 0; i--) {
+								const msg = formattedMessages[i];
+								if (!msg) continue;
+								if (typeof msg.content !== 'string' && Array.isArray(msg.content)) {
+									for (const part of msg.content) {
+										if (part && typeof part === 'object' && 'type' in part && part.type === 'image_url' && 'image_url' in part) {
+											// @ts-ignore - TS might not infer the type perfectly here
+											foundImage = part.image_url.url;
+											break;
+										}
+									}
+								}
+								if (foundImage) break;
+							}
+
+							if (foundImage) {
+								log('Background: Injected image from context into vision tool', startTime);
+								args.image_url = foundImage;
+							} else {
+								log('Background: No image found in context for vision tool', startTime);
+							}
+						}
+					}
+
 					log(`Background: Executing tool ${tc.function.name}`, startTime);
 
 					const result = await executeMcpTool(tc.function.name, args, apiKey);

@@ -654,10 +654,11 @@
 
 					<div class="flex flex-col gap-2">
 						<div class="flex justify-between">
-							<label class="text-sm leading-none font-medium">Speed</label>
+							<label for="tts-speed" class="text-sm leading-none font-medium">Speed</label>
 							<span class="text-muted-foreground text-xs">{localSettings.ttsSpeed}x</span>
 						</div>
 						<input
+							id="tts-speed"
 							type="range"
 							min="0.25"
 							max="4.0"

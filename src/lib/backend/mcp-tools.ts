@@ -206,14 +206,14 @@ export const mcpToolDefinitions: ChatCompletionTool[] = [
                     },
                     image_url: {
                         type: 'string',
-                        description: 'URL of the image to analyze'
+                        description: 'URL of the image to analyze. If omitted, the most recent image in the chat will be used.'
                     },
                     model: {
                         type: 'string',
                         description: 'Optional vision model to use (default: glm-4.6v)'
                     }
                 },
-                required: ['prompt', 'image_url']
+                required: ['prompt']
             }
         }
     }
@@ -387,7 +387,7 @@ async function executeYoutubeTranscribe(
             'Authorization': `Bearer ${apiKey}`,
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ url })
+        body: JSON.stringify({ urls: [url] })
     });
 
     if (!response.ok) {
@@ -399,7 +399,21 @@ async function executeYoutubeTranscribe(
 
     let resultText = `YouTube transcript for: ${url}\n\n`;
 
-    if (data.transcript) {
+    // Handle new API response format (array of transcripts)
+    if (data.transcripts && Array.isArray(data.transcripts) && data.transcripts.length > 0) {
+        const result = data.transcripts[0];
+        if (result.success && result.transcript) {
+            const transcript = result.transcript.slice(0, 8000);
+            resultText += transcript;
+            if (result.transcript.length > 8000) {
+                resultText += `\n... (transcript truncated, ${result.transcript.length} chars total)`;
+            }
+        } else {
+            return { success: false, result: '', error: result.error || 'Failed to retrieve transcript' };
+        }
+    }
+    // Fallback for potential legacy/singular response format
+    else if (data.transcript) {
         const transcript = data.transcript.slice(0, 8000);
         resultText += transcript;
         if (data.transcript.length > 8000) {
@@ -411,6 +425,8 @@ async function executeYoutubeTranscribe(
         if (data.text.length > 8000) {
             resultText += `\n... (transcript truncated, ${data.text.length} chars total)`;
         }
+    } else {
+        return { success: false, result: '', error: 'No transcript found in response' };
     }
 
     return { success: true, result: resultText };
