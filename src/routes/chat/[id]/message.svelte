@@ -36,6 +36,7 @@
 	import Volume2Icon from '~icons/lucide/volume-2';
 	import SquareIcon from '~icons/lucide/square';
 	import Loader2Icon from '~icons/lucide/loader-2';
+	import StarIcon from '~icons/lucide/star';
 
 	const style = tv({
 		base: 'prose rounded-xl p-2 max-w-full',
@@ -197,6 +198,11 @@
 
 	let isEditing = $state(false);
 	let editedContent = $state('');
+	let isStarred = $state<boolean>(false);
+
+	$effect(() => {
+		isStarred = message.starred ?? false;
+	});
 
 	function startEditing() {
 		editedContent = message.content;
@@ -206,6 +212,37 @@
 	function cancelEditing() {
 		isEditing = false;
 		editedContent = '';
+	}
+
+	async function toggleStarred() {
+		if (!session.current?.session.token) return;
+		if (message.role !== 'assistant') return;
+
+		const previous = isStarred;
+		isStarred = !isStarred;
+
+		try {
+			const res = await fetch(api.messages.setStarred.url, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					action: 'setStarred',
+					messageId: message.id,
+					starred: isStarred,
+				}),
+			});
+
+			if (!res.ok) {
+				console.error('Failed to update starred state');
+				isStarred = previous;
+				return;
+			}
+
+			invalidateQueryPattern(api.messages.getAllFromConversation.url);
+		} catch (e) {
+			console.error('Error updating starred state:', e);
+			isStarred = previous;
+		}
 	}
 
 	async function saveMessage() {
@@ -528,6 +565,27 @@
 					{audioPlayer.isPlaying && audioPlayer.currentMessageId === message.id
 						? 'Stop reading'
 						: 'Read aloud'}
+				</Tooltip>
+			{/if}
+			{#if message.role === 'assistant' && message.content.length > 0 && !message.error}
+				<Tooltip>
+					{#snippet trigger(tooltip)}
+						<Button
+							size="icon"
+							variant="ghost"
+							class="order-1 size-7"
+							onclick={toggleStarred}
+							{...tooltip.trigger}
+						>
+							<StarIcon
+								class={cn('size-4', {
+									'fill-yellow-400 text-yellow-400': isStarred,
+									'text-muted-foreground/60': !isStarred,
+								})}
+							/>
+						</Button>
+					{/snippet}
+					{isStarred ? 'Unstar message' : 'Star message'}
 				</Tooltip>
 			{/if}
 

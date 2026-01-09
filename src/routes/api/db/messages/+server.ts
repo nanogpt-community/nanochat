@@ -9,6 +9,7 @@ import {
     updateMessage,
     updateMessageError,
     deleteMessage,
+    setMessageStarred,
 } from '$lib/db/queries';
 import { getConversationById } from '$lib/db/queries/conversations';
 
@@ -99,6 +100,11 @@ export const POST: RequestHandler = async ({ request }) => {
 
         case 'delete': {
             await deleteMessage(body.messageId);
+            return json({ ok: true });
+        }
+
+        case 'setStarred': {
+            await setMessageStarred(body.messageId, body.starred);
             return json({ ok: true });
         }
 

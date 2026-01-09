@@ -114,3 +114,24 @@ export async function getMessagesByConversation(conversationId: string): Promise
 export async function deleteMessage(messageId: string): Promise<void> {
     await db.delete(messages).where(eq(messages.id, messageId));
 }
+
+export async function setMessageStarred(messageId: string, starred: boolean): Promise<void> {
+    await db.update(messages).set({ starred }).where(eq(messages.id, messageId));
+}
+
+export async function getStarredMessages(userId: string): Promise<Message[]> {
+    // Get all starred messages for conversations owned by the user
+    const result = await db
+        .select({
+            message: messages,
+        })
+        .from(messages)
+        .innerJoin(conversations, eq(messages.conversationId, conversations.id))
+        .where(eq(conversations.userId, userId))
+        .orderBy(asc(messages.createdAt));
+
+    // Filter to only starred messages and return the message objects
+    return result
+        .filter((r) => r.message.starred === true)
+        .map((r) => r.message);
+}

@@ -57,6 +57,11 @@ export const api = {
         getByConversationPublic: (conversationId: string) =>
             `${API_BASE}/messages?conversationId=${conversationId}&public=true`,
         create: `${API_BASE}/messages`,
+        delete: { url: `${API_BASE}/messages` },
+        setStarred: { url: `${API_BASE}/messages` },
+    },
+    starred_messages: {
+        get: '/api/starred-messages',
     },
     user_settings: {
         get: `${API_BASE}/user-settings`,

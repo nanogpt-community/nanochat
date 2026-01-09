@@ -54,6 +54,10 @@
 			href: '/account/analytics',
 		},
 		{
+			title: 'Starred',
+			href: '/account/starred',
+		},
+		{
 			title: 'Developer',
 			href: '/account/developer',
 		},

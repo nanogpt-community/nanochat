@@ -273,6 +273,7 @@ export const messages = sqliteTable(
 		reasoningEffort: text('reasoning_effort'), // 'low' | 'medium' | 'high'
 		annotations: text('annotations', { mode: 'json' }).$type<Array<Record<string, unknown>>>(),
 		followUpSuggestions: text('follow_up_suggestions', { mode: 'json' }).$type<string[] | null>(),
+		starred: integer('starred', { mode: 'boolean' }).default(false),
 		createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
 	},
 	(table) => [index('messages_conversation_id_idx').on(table.conversationId)]

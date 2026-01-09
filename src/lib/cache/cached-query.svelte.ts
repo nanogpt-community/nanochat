@@ -187,6 +187,7 @@ export const api = {
 		updateMessage: { url: '/api/db/messages', method: 'POST' } as QueryConfig,
 		updateError: { url: '/api/db/messages', method: 'POST' } as QueryConfig,
 		delete: { url: '/api/db/messages', method: 'POST' } as QueryConfig,
+		setStarred: { url: '/api/db/messages', method: 'POST' } as QueryConfig,
 	},
 	user_settings: {
 		get: { url: '/api/db/user-settings', method: 'GET' } as QueryConfig,
@@ -247,6 +248,9 @@ export const api = {
 	},
 	artificial_analysis: {
 		benchmarks: { url: '/api/artificial-analysis/benchmarks', method: 'GET' } as QueryConfig,
+	},
+	starred_messages: {
+		get: { url: '/api/starred-messages', method: 'GET' } as QueryConfig,
 	},
 } as const;
 
