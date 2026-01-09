@@ -32,6 +32,7 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 	const restrictions = {
 		subscriptionOnly,
 		webDisabled: usingServerKey && isWebDisabledForServerKey(),
+		mcpDisabled: usingServerKey && isSubscriptionOnlyMode(),
 		dailyLimit: usingServerKey ? getDailyMessageLimit() : 0,
 		usingServerKey,
 	};

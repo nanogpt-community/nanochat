@@ -32,6 +32,7 @@
 	let persistentMemoryEnabled = $derived(settings.data?.persistentMemoryEnabled ?? false);
 	let youtubeTranscriptsEnabled = $derived(settings.data?.youtubeTranscriptsEnabled ?? false);
 	let webScrapingEnabled = $derived(settings.data?.webScrapingEnabled ?? false);
+	let mcpEnabled = $derived(settings.data?.mcpEnabled ?? false);
 	let followUpQuestionsEnabled = $derived(settings.data?.followUpQuestionsEnabled ?? true);
 	let titleModelId = $state(settings.data?.titleModelId ?? '');
 	let followUpModelId = $state(settings.data?.followUpModelId ?? '');
@@ -197,6 +198,27 @@
 		);
 
 		if (res.isErr()) webScrapingEnabled = !v;
+	}
+
+	async function toggleMcp(v: boolean) {
+		mcpEnabled = v;
+		if (!session.current?.user.id) return;
+
+		const res = await ResultAsync.fromPromise(
+			mutate(
+				api.user_settings.set.url,
+				{
+					action: 'update',
+					mcpEnabled: v,
+				},
+				{
+					invalidatePatterns: [api.user_settings.get.url],
+				}
+			),
+			(e) => e
+		);
+
+		if (res.isErr()) mcpEnabled = !v;
 	}
 
 	async function toggleFollowUpQuestions(v: boolean) {
@@ -507,6 +529,23 @@
 					>
 				</div>
 				<Switch bind:value={() => webScrapingEnabled, toggleWebScraping} />
+			</div>
+			<div class="flex place-items-center justify-between">
+				<div class="flex flex-col gap-1">
+					<span class="font-medium">MCP Tools</span>
+					<span class="text-muted-foreground text-sm"
+						>Enable Model Context Protocol tools for enhanced capabilities.</span
+					>
+					{#if data.restrictions?.mcpDisabled}
+						<span class="text-xs text-amber-600 dark:text-amber-400"
+							>Not available when using server API key with subscription-only mode.</span
+						>
+					{/if}
+				</div>
+				<Switch
+					bind:value={() => mcpEnabled, toggleMcp}
+					disabled={data.restrictions?.mcpDisabled}
+				/>
 			</div>
 			<div class="flex place-items-center justify-between">
 				<div class="flex flex-col gap-1">

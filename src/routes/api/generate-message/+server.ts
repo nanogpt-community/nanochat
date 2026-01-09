@@ -44,6 +44,7 @@ import {
 	isSubscriptionOnlyMode,
 } from '$lib/backend/message-limits';
 import { substituteSystemPromptVariables } from '$lib/utils/system-prompt-variables';
+import { mcpToolDefinitions, executeMcpTool, isMcpAvailable } from '$lib/backend/mcp-tools';
 
 // Set to true to enable debug logging
 const ENABLE_LOGGING = true;
@@ -285,6 +286,8 @@ async function generateAIResponse({
 	userName,
 	isTemporary,
 	providerId,
+	mcpEnabled,
+	usingServerKey,
 }: {
 	conversationId: string;
 	userId: string;
@@ -301,6 +304,8 @@ async function generateAIResponse({
 	userName?: string;
 	isTemporary?: boolean;
 	providerId?: string; // X-Provider header for provider selection
+	mcpEnabled?: boolean;
+	usingServerKey?: boolean;
 }) {
 	log('Starting AI response generation in background', startTime);
 
@@ -733,6 +738,17 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 	// Measure end-to-end generation time (API call + streaming)
 	const generationStart = Date.now();
 
+	// Determine if MCP tools should be available
+	const mcpAvailable = isMcpAvailable(
+		mcpEnabled ?? false,
+		usingServerKey ?? false,
+		isSubscriptionOnlyMode()
+	);
+
+	if (mcpAvailable) {
+		log('Background: MCP tools enabled for this request', startTime);
+	}
+
 	const streamResult = await ResultAsync.fromPromise(
 		openai.chat.completions.create(
 			{
@@ -742,6 +758,8 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 				stream: true,
 				reasoning_effort: reasoningEffort,
 				stream_options: { include_usage: true },
+				// Add MCP tools when enabled
+				tools: mcpAvailable ? mcpToolDefinitions : undefined,
 				// @ts-ignore - Custom NanoGPT parameters
 				linkup: (!webFeaturesDisabled && (lastUserMessage?.webSearchEnabled ?? false)) ? {
 					enabled: true,
@@ -785,6 +803,13 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 		null;
 	// Track time when first content token arrives for accurate tok/sec calculation
 	let firstTokenTime: number | null = null;
+	// Collect tool calls during streaming (they come incrementally)
+	const toolCalls: Array<{
+		id: string;
+		type: 'function';
+		function: { name: string; arguments: string };
+	}> = [];
+	let finishReason: string | null = null;
 
 	try {
 		for await (const chunk of stream) {
@@ -799,10 +824,41 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 			content += chunk.choices[0]?.delta?.content || '';
 			annotations.push(...(chunk.choices[0]?.delta?.annotations ?? []));
 
-			if (!content && !reasoning) continue;
+			// Collect tool calls (they come incrementally in streaming)
+			const deltaToolCalls = chunk.choices[0]?.delta?.tool_calls as Array<{
+				index: number;
+				id?: string;
+				type?: 'function';
+				function?: { name?: string; arguments?: string };
+			}> | undefined;
+
+			if (deltaToolCalls) {
+				for (const dtc of deltaToolCalls) {
+					const idx = dtc.index;
+					// Initialize tool call entry if needed
+					if (!toolCalls[idx]) {
+						toolCalls[idx] = {
+							id: dtc.id || '',
+							type: 'function',
+							function: { name: '', arguments: '' }
+						};
+					}
+					// Accumulate the data
+					if (dtc.id) toolCalls[idx].id = dtc.id;
+					if (dtc.function?.name) toolCalls[idx].function.name += dtc.function.name;
+					if (dtc.function?.arguments) toolCalls[idx].function.arguments += dtc.function.arguments;
+				}
+			}
+
+			// Track finish reason
+			if (chunk.choices[0]?.finish_reason) {
+				finishReason = chunk.choices[0].finish_reason;
+			}
+
+			if (!content && !reasoning && toolCalls.length === 0) continue;
 
 			// Record time of first content token for accurate tok/sec
-			if (firstTokenTime === null) {
+			if (firstTokenTime === null && (content || reasoning)) {
 				firstTokenTime = Date.now();
 			}
 
@@ -813,17 +869,130 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 				usage = chunk.usage;
 			}
 
-			// Update message content in database
+			// Update message content in database (only if there's content to show)
+			if (content || reasoning) {
+				await db
+					.update(messages)
+					.set({
+						content,
+						reasoning: reasoning.length > 0 ? reasoning : null,
+						generationId,
+						annotations: annotations.length > 0 ? annotations : null,
+						reasoningEffort,
+					})
+					.where(eq(messages.id, assistantMessageId));
+			}
+		}
+
+		// Handle tool calls if the model requested them
+		if (finishReason === 'tool_calls' && toolCalls.length > 0 && mcpAvailable) {
+			log(`Background: Model requested ${toolCalls.length} tool call(s)`, startTime);
+
+			// Update message to show tool execution is happening
 			await db
 				.update(messages)
 				.set({
-					content,
-					reasoning: reasoning.length > 0 ? reasoning : null,
+					content: content + '\n\n*Executing tools...*',
 					generationId,
-					annotations: annotations.length > 0 ? annotations : null,
-					reasoningEffort,
 				})
 				.where(eq(messages.id, assistantMessageId));
+
+			// Execute each tool call
+			const toolResults: Array<{
+				role: 'tool';
+				tool_call_id: string;
+				content: string;
+			}> = [];
+
+			for (const tc of toolCalls) {
+				if (!tc.id || !tc.function.name) continue;
+
+				try {
+					const args = JSON.parse(tc.function.arguments || '{}');
+					log(`Background: Executing tool ${tc.function.name}`, startTime);
+
+					const result = await executeMcpTool(tc.function.name, args, apiKey);
+
+					toolResults.push({
+						role: 'tool',
+						tool_call_id: tc.id,
+						content: result.success ? result.result : `Error: ${result.error}`,
+					});
+
+					log(`Background: Tool ${tc.function.name} completed`, startTime);
+				} catch (e) {
+					log(`Background: Tool ${tc.function.name} failed: ${e}`, startTime);
+					toolResults.push({
+						role: 'tool',
+						tool_call_id: tc.id,
+						content: `Error executing tool: ${e instanceof Error ? e.message : 'Unknown error'}`,
+					});
+				}
+			}
+
+			// Make a follow-up API call with tool results
+			log('Background: Making follow-up call with tool results', startTime);
+
+			const followUpMessages = [
+				...messagesToSend,
+				{
+					role: 'assistant' as const,
+					content: content || null,
+					tool_calls: toolCalls.map(tc => ({
+						id: tc.id,
+						type: 'function' as const,
+						function: tc.function,
+					})),
+				},
+				...toolResults,
+			];
+
+			const followUpResult = await ResultAsync.fromPromise(
+				openai.chat.completions.create(
+					{
+						model: modelId,
+						messages: followUpMessages as any,
+						temperature: 0.7,
+						stream: true,
+						stream_options: { include_usage: true },
+					},
+					{ signal: abortSignal }
+				),
+				(e) => `Follow-up API call failed: ${e}`
+			);
+
+			if (followUpResult.isOk()) {
+				const followUpStream = followUpResult.value as unknown as AsyncIterable<any>;
+
+				// Reset content for follow-up response
+				content = '';
+				reasoning = '';
+
+				for await (const chunk of followUpStream) {
+					if (abortSignal?.aborted) break;
+
+					reasoning += chunk.choices[0]?.delta?.reasoning || '';
+					content += chunk.choices[0]?.delta?.content || '';
+
+					if (chunk.usage) usage = chunk.usage;
+					if (chunk.id) generationId = chunk.id;
+
+					if (content || reasoning) {
+						await db
+							.update(messages)
+							.set({
+								content,
+								reasoning: reasoning.length > 0 ? reasoning : null,
+								generationId,
+							})
+							.where(eq(messages.id, assistantMessageId));
+					}
+				}
+
+				log('Background: Follow-up response completed', startTime);
+			} else {
+				log(`Background: Follow-up call failed: ${followUpResult.error}`, startTime);
+			}
 		}
 
 
@@ -1708,6 +1877,8 @@ export const POST: RequestHandler = async ({ request }) => {
 			userName: userRecord?.name ?? undefined,
 			isTemporary: isTemporaryChat,
 			providerId: args.provider_id,
+			mcpEnabled: userSettingsRecord?.mcpEnabled ?? false,
+			usingServerKey,
 		})
 			.catch(async (error) => {
 				log(`Background AI response generation error: ${error}`, startTime);

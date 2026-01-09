@@ -225,6 +225,65 @@ curl -X GET "http://localhost:3432/api/video/status?runId=abc123&model=runway-ge
 ```
 
 ---
+
+### MCP (Model Context Protocol)
+
+#### GET `/api/mcp`
+Check MCP status for the current user.
+
+**Authentication**: Session or API Key
+
+**Response**:
+```json
+{
+  "enabled": "boolean",
+  "available": "boolean",
+  "reason": "string (only if not available)"
+}
+```
+
+**Note**: MCP is not available when using the server API key with `SUBSCRIPTION_MODELS_ONLY=true`.
+
+**CURL Example**:
+```bash
+curl -X GET "http://localhost:3432/api/mcp" \
+  -H "Authorization: Bearer your_api_key"
+```
+
+#### POST `/api/mcp`
+Execute an MCP tool call.
+
+**Authentication**: Session or API Key
+
+**Request Body**:
+```json
+{
+  "tool": "string (required)",
+  "args": "object (optional)"
+}
+```
+
+**Response**:
+```json
+{
+  "ok": true,
+  "message": "string",
+  "tool": "string",
+  "args": "object"
+}
+```
+
+**Note**: MCP must be enabled in Account Settings and is not available when using the server API key with `SUBSCRIPTION_MODELS_ONLY=true`.
+
+**CURL Example**:
+```bash
+curl -X POST "http://localhost:3432/api/mcp" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your_api_key" \
+  -d '{"tool": "web_search", "args": {"query": "latest news"}}'
+```
+
+---
  
 ### API Keys
 

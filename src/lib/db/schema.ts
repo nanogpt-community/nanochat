@@ -96,6 +96,9 @@ export const userSettings = sqliteTable(
 		webScrapingEnabled: integer('web_scraping_enabled', { mode: 'boolean' })
 			.notNull()
 			.default(false),
+		mcpEnabled: integer('mcp_enabled', { mode: 'boolean' })
+			.notNull()
+			.default(false),
 		followUpQuestionsEnabled: integer('follow_up_questions_enabled', { mode: 'boolean' })
 			.notNull()
 			.default(true),

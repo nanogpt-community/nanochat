@@ -24,6 +24,7 @@ export async function createUserSettings(
 			persistentMemoryEnabled: data?.persistentMemoryEnabled ?? false,
 			youtubeTranscriptsEnabled: data?.youtubeTranscriptsEnabled ?? false,
 			webScrapingEnabled: data?.webScrapingEnabled ?? false,
+			mcpEnabled: data?.mcpEnabled ?? false,
 			followUpQuestionsEnabled: data?.followUpQuestionsEnabled ?? true,
 			freeMessagesUsed: data?.freeMessagesUsed ?? 0,
 			karakeepUrl: data?.karakeepUrl ?? null,
