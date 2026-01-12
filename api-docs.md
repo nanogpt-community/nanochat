@@ -1519,6 +1519,35 @@ Get all available models with capabilities and user's enabled/pinned status.
       "completion": "string",
       "image": "string",
       "request": "string"
+    },
+    "subscription": {
+      "included": "boolean",
+      "note": "string"
+    },
+    "resolutions": [
+        {
+            "value": "string",
+            "comment": "string"
+        }
+    ],
+    "additionalParams": {
+        "key": {
+            "type": "string",
+            "label": "string",
+            "description": "string",
+            "default": "any",
+            "options": [
+                {
+                    "label": "string",
+                    "value": "any"
+                }
+            ]
+        }
+    },
+    "maxImages": "number (optional)",
+    "defaultSettings": {
+        "resolution": "string (optional)",
+        "nImages": "number (optional)"
     }
   }
 ]
