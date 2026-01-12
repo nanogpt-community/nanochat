@@ -26,6 +26,9 @@ RUN bun run build
 # Production image
 FROM oven/bun:1
 
+# Install poppler-utils for PDF text extraction
+RUN apt-get update && apt-get install -y poppler-utils && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
 # Copy only necessary files from builder

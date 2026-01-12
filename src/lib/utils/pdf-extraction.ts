@@ -27,7 +27,7 @@ export async function extractTextFromPDF(input: string | Buffer): Promise<string
 		try {
 			const { stdout } = await execAsync(`pdftotext "${filePath}" -`, {
 				encoding: 'utf8',
-				maxBuffer: 10 * 1024 * 1024 // 10MB buffer
+				maxBuffer: 10 * 1024 * 1024, // 10MB buffer
 			});
 			return stdout.trim();
 		} catch (error) {
@@ -36,21 +36,17 @@ export async function extractTextFromPDF(input: string | Buffer): Promise<string
 
 		// Fallback: try using pdf-parse if available
 		try {
-			// @ts-ignore
-			const pdfParseModule: any = await import('pdf-parse');
-			const parse = pdfParseModule.default || pdfParseModule;
-
+			const { PDFParse } = await import('pdf-parse');
 			const dataBuffer = Buffer.isBuffer(input) ? input : readFileSync(filePath);
-			// @ts-ignore - PDFParse types might differ or be missing
-			const data = await parse(dataBuffer);
-			return data.text;
+			const parser = new PDFParse({ data: dataBuffer });
+			const result = await parser.getText();
+			return result.text;
 		} catch (error) {
 			console.warn('pdf-parse extraction failed', error);
 		}
 
 		// If no extraction method works, return a placeholder
 		return '[PDF content could not be extracted. The PDF has been stored and is available for download.]';
-
 	} catch (error) {
 		console.error('Failed to extract text from PDF:', error);
 		return '[Error: Failed to extract PDF content]';
