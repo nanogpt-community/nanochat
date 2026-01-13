@@ -169,6 +169,13 @@
       "when": 1767966618363,
       "tag": "0023_nice_harrier",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "6",
+      "when": 1768326302821,
+      "tag": "0024_high_angel",
+      "breakpoints": true
     }
   ]
 }

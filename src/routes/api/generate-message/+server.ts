@@ -214,6 +214,9 @@ async function generateConversationTitle({
 	const openai = new OpenAI({
 		baseURL: 'https://nano-gpt.com/api/v1',
 		apiKey,
+		defaultHeaders: userSettingsData?.titleProviderId
+			? { 'X-Provider': userSettingsData.titleProviderId }
+			: undefined,
 	});
 
 	// Create a prompt for title generation using user message and assistant response
@@ -1187,7 +1190,7 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 						const newAvgResponseTime =
 							responseTimeMs !== undefined && existing.avgResponseTime
 								? (existing.avgResponseTime * existing.totalMessages + responseTimeMs) /
-									newTotalMessages
+								newTotalMessages
 								: existing.avgResponseTime;
 
 						await db

@@ -36,22 +36,142 @@
 	let mcpEnabled = $derived(settings.data?.mcpEnabled ?? false);
 	let followUpQuestionsEnabled = $derived(settings.data?.followUpQuestionsEnabled ?? true);
 	let titleModelId = $state(settings.data?.titleModelId ?? '');
+	let titleProviderId = $state(settings.data?.titleProviderId ?? '');
 	let followUpModelId = $state(settings.data?.followUpModelId ?? '');
+	let followUpProviderId = $state(settings.data?.followUpProviderId ?? '');
 
 	$effect(() => {
 		if (settings.data?.titleModelId) titleModelId = settings.data.titleModelId;
+		if (settings.data?.titleProviderId) titleProviderId = settings.data.titleProviderId;
 		if (settings.data?.followUpModelId) followUpModelId = settings.data.followUpModelId;
+		if (settings.data?.followUpProviderId) followUpProviderId = settings.data.followUpProviderId;
 	});
+
+	type ProviderInfo = {
+		provider: string;
+		pricing: {
+			inputPer1kTokens: number;
+			outputPer1kTokens: number;
+		};
+		available: boolean;
+	};
+
+	type ModelProvidersResponse = {
+		canonicalId: string;
+		displayName: string;
+		supportsProviderSelection: boolean;
+		providers: ProviderInfo[];
+		error?: string;
+	};
+
+	let titleModelProviders = $state<ProviderInfo[]>([]);
+	let followUpModelProviders = $state<ProviderInfo[]>([]);
+	let titleSupportsProviderSelection = $state(false);
+	let followUpSupportsProviderSelection = $state(false);
 
 	const enabledModels = $derived(
 		Object.values(Provider)
-			.flatMap((provider) => models.from(provider))
-			.filter((m) => m.enabled)
-			.map((m) => ({ value: m.id, label: m.name }))
+			.flatMap((provider) =>
+				models.from(provider).map((m) => ({
+					value: m.id,
+					label: m.name,
+					provider: provider,
+				}))
+			)
+			.filter((m) => {
+				const key = `${m.provider}:${m.value}`;
+				return models.enabled[key] !== undefined;
+			})
 	);
+
+	function formatProviderName(id: string): string {
+		return id
+			.split(/[-_]/)
+			.map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+			.join(' ');
+	}
+
+	function formatPrice(pricing: { inputPer1kTokens: number; outputPer1kTokens: number }): string {
+		return `$${pricing.inputPer1kTokens.toFixed(4)}/$${pricing.outputPer1kTokens.toFixed(4)}`;
+	}
+
+	async function fetchModelProviders(modelId: string): Promise<ModelProvidersResponse | null> {
+		if (!modelId) return null;
+		try {
+			const response = await fetch(`/api/model-providers?modelId=${encodeURIComponent(modelId)}`);
+			if (!response.ok) return null;
+			return await response.json();
+		} catch (e) {
+			console.error('Error fetching providers:', e);
+			return null;
+		}
+	}
+
+	$effect(() => {
+		if (titleModelId) {
+			fetchModelProviders(titleModelId).then((data) => {
+				if (data) {
+					titleSupportsProviderSelection = data.supportsProviderSelection;
+					titleModelProviders = data.providers?.filter((p) => p.available) || [];
+					// Reset provider if current selection is invalid for new model
+					if (titleProviderId && !titleModelProviders.some((p) => p.provider === titleProviderId)) {
+						updateTitleProvider('');
+					}
+				} else {
+					titleSupportsProviderSelection = false;
+					titleModelProviders = [];
+				}
+			});
+		} else {
+			titleSupportsProviderSelection = false;
+			titleModelProviders = [];
+		}
+	});
+
+	$effect(() => {
+		if (followUpModelId) {
+			fetchModelProviders(followUpModelId).then((data) => {
+				if (data) {
+					followUpSupportsProviderSelection = data.supportsProviderSelection;
+					followUpModelProviders = data.providers?.filter((p) => p.available) || [];
+					// Reset provider if current selection is invalid for new model
+					if (
+						followUpProviderId &&
+						!followUpModelProviders.some((p) => p.provider === followUpProviderId)
+					) {
+						updateFollowUpProvider('');
+					}
+				} else {
+					followUpSupportsProviderSelection = false;
+					followUpModelProviders = [];
+				}
+			});
+		} else {
+			followUpSupportsProviderSelection = false;
+			followUpModelProviders = [];
+		}
+	});
+
+	async function updateTitleProvider(id: string) {
+		titleProviderId = id;
+		if (!session.current?.user.id) return;
+
+		await mutate(
+			api.user_settings.set.url,
+			{
+				action: 'update',
+				titleProviderId: id,
+				// Do NOT reset model ID
+			},
+			{
+				invalidatePatterns: [api.user_settings.get.url],
+			}
+		);
+	}
 
 	async function updateTitleModel(id: string) {
 		titleModelId = id;
+		// Provider will be reset in the effect if needed
 		if (!session.current?.user.id) return;
 
 		await mutate(
@@ -66,8 +186,26 @@
 		);
 	}
 
+	async function updateFollowUpProvider(id: string) {
+		followUpProviderId = id;
+		if (!session.current?.user.id) return;
+
+		await mutate(
+			api.user_settings.set.url,
+			{
+				action: 'update',
+				followUpProviderId: id,
+				// Do NOT reset model ID
+			},
+			{
+				invalidatePatterns: [api.user_settings.get.url],
+			}
+		);
+	}
+
 	async function updateFollowUpModel(id: string) {
 		followUpModelId = id;
+		// Provider will be reset in the effect if needed
 		if (!session.current?.user.id) return;
 
 		await mutate(
@@ -631,6 +769,31 @@
 						</p>
 					</div>
 
+					{#if titleSupportsProviderSelection && titleModelProviders.length > 0}
+						<div class="flex flex-col gap-2">
+							<label
+								class="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+							>
+								Chat Title Generation Provider
+								<select
+									class="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus:ring-ring mt-2 flex h-10 w-full items-center justify-between rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+									value={titleProviderId}
+									onchange={(e) => updateTitleProvider(e.currentTarget.value)}
+								>
+									<option value="">Auto (Platform Default)</option>
+									{#each titleModelProviders as provider}
+										<option value={provider.provider}>
+											{formatProviderName(provider.provider)} ({formatPrice(provider.pricing)})
+										</option>
+									{/each}
+								</select>
+							</label>
+							<p class="text-muted-foreground text-xs">
+								Select the specific backend provider for the title model.
+							</p>
+						</div>
+					{/if}
+
 					<div class="flex flex-col gap-2">
 						<label
 							class="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
@@ -651,6 +814,31 @@
 							Select the model used to generate follow-up questions.
 						</p>
 					</div>
+
+					{#if followUpSupportsProviderSelection && followUpModelProviders.length > 0}
+						<div class="flex flex-col gap-2">
+							<label
+								class="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+							>
+								Follow-up Questions Provider
+								<select
+									class="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus:ring-ring mt-2 flex h-10 w-full items-center justify-between rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+									value={followUpProviderId}
+									onchange={(e) => updateFollowUpProvider(e.currentTarget.value)}
+								>
+									<option value="">Auto (Platform Default)</option>
+									{#each followUpModelProviders as provider}
+										<option value={provider.provider}>
+											{formatProviderName(provider.provider)} ({formatPrice(provider.pricing)})
+										</option>
+									{/each}
+								</select>
+							</label>
+							<p class="text-muted-foreground text-xs">
+								Select the specific backend provider for the follow-up model.
+							</p>
+						</div>
+					{/if}
 				</div>
 			</div>
 

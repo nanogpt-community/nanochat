@@ -95,6 +95,9 @@ export const POST: RequestHandler = async ({ request }) => {
 	const openai = new OpenAI({
 		baseURL: 'https://nano-gpt.com/api/v1',
 		apiKey: apiKey,
+		defaultHeaders: userSettingsData?.followUpProviderId
+			? { 'X-Provider': userSettingsData.followUpProviderId }
+			: undefined,
 	});
 
 	const suggestionsResult = await ResultAsync.fromPromise(
