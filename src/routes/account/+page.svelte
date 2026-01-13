@@ -20,6 +20,7 @@
 	import ChevronDown from '~icons/lucide/chevron-down';
 	import ChevronRight from '~icons/lucide/chevron-right';
 	import Trash2 from '~icons/lucide/trash-2';
+	import FolderX from '~icons/lucide/folder-x';
 	import { models } from '$lib/state/models.svelte';
 	import { settings as localSettings } from '$lib/state/settings.svelte';
 	import { Provider } from '$lib/types.js';
@@ -89,6 +90,8 @@
 	let karakeepExpanded = $state(false);
 	let deleteAllChatsExpanded = $state(false);
 	let deleteAllChatsDeleting = $state(false);
+	let clearUploadsExpanded = $state(false);
+	let clearUploadsClearing = $state(false);
 
 	$effect(() => {
 		if (settings.data?.karakeepUrl) karakeepUrl = settings.data.karakeepUrl;
@@ -346,6 +349,52 @@
 			});
 		} finally {
 			deleteAllChatsDeleting = false;
+		}
+	}
+
+	async function clearAllUploads() {
+		const res = await callModal({
+			title: 'Clear All Uploads',
+			description:
+				'Are you sure you want to delete all uploaded files? This action cannot be undone and will permanently delete all images and documents you have uploaded.',
+			actions: { cancel: 'outline', delete: 'destructive' },
+		});
+
+		if (res !== 'delete') return;
+
+		if (!session.current?.session.token) return;
+
+		clearUploadsClearing = true;
+
+		try {
+			const response = await fetch('/api/storage/clear', {
+				method: 'DELETE',
+				credentials: 'include',
+			});
+
+			if (!response.ok) {
+				throw new Error(`Failed to clear uploads: ${response.status} ${response.statusText}`);
+			}
+
+			const result = await response.json();
+
+			// Show success feedback
+			await callModal({
+				title: 'Success',
+				description: `${result.deletedCount} uploaded file${result.deletedCount !== 1 ? 's' : ''} ${result.deletedCount !== 1 ? 'have' : 'has'} been deleted successfully.`,
+				actions: { ok: 'default' },
+			});
+		} catch (error) {
+			console.error('Failed to clear uploads:', error);
+			// Show error feedback
+			await callModal({
+				title: 'Error',
+				description:
+					error instanceof Error ? error.message : 'Failed to clear uploads. Please try again.',
+				actions: { ok: 'default' },
+			});
+		} finally {
+			clearUploadsClearing = false;
 		}
 	}
 
@@ -769,6 +818,71 @@
 						{karakeepTestMessage}
 					</div>
 				{/if}
+			</CardContent>
+		{/if}
+	</Card>
+
+	<!-- Clear Uploads Section (Collapsible) -->
+	<Card>
+		<button
+			type="button"
+			class="w-full text-left"
+			onclick={() => (clearUploadsExpanded = !clearUploadsExpanded)}
+		>
+			<CardHeader class="hover:bg-muted/50 cursor-pointer rounded-t-lg transition-colors">
+				<div class="flex items-center justify-between">
+					<div>
+						<CardTitle>Clear Uploads</CardTitle>
+						<CardDescription>
+							Remove uploaded files from old chats to free up storage.
+						</CardDescription>
+					</div>
+					<div class="text-muted-foreground">
+						{#if clearUploadsExpanded}
+							<ChevronDown class="h-5 w-5" />
+						{:else}
+							<ChevronRight class="h-5 w-5" />
+						{/if}
+					</div>
+				</div>
+			</CardHeader>
+		</button>
+
+		{#if clearUploadsExpanded}
+			<CardContent class="pt-0">
+				<div class="flex flex-col gap-4">
+					<div class="rounded-md border border-amber-500/50 bg-amber-500/10 p-4">
+						<div class="flex items-start gap-3">
+							<FolderX class="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
+							<div class="flex flex-col gap-2">
+								<p class="font-medium text-amber-700 dark:text-amber-300">
+									This will delete all uploaded files
+								</p>
+								<p class="text-muted-foreground text-sm">
+									Useful for clearing uploads from old or deleted chats. This includes:
+								</p>
+								<ul class="text-muted-foreground ml-1 list-inside list-disc space-y-1 text-sm">
+									<li>Images uploaded to conversations</li>
+									<li>Documents (PDFs, text files, etc.)</li>
+									<li>Any other uploaded attachments</li>
+								</ul>
+							</div>
+						</div>
+					</div>
+
+					<Button
+						variant="outline"
+						onclick={clearAllUploads}
+						disabled={clearUploadsClearing}
+						class="w-full sm:w-auto"
+					>
+						{#if clearUploadsClearing}
+							Clearing...
+						{:else}
+							Clear All Uploads
+						{/if}
+					</Button>
+				</div>
 			</CardContent>
 		{/if}
 	</Card>
