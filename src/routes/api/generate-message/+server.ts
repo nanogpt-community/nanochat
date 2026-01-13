@@ -13,6 +13,7 @@ import {
 	projectFiles,
 	apiKeys,
 	user,
+	modelPerformanceStats,
 } from '$lib/db/schema';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { extractTextFromPDF } from '$lib/utils/pdf-extraction';
@@ -1158,6 +1159,76 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 				responseTimeMs,
 			})
 			.where(eq(messages.id, assistantMessageId));
+
+		// Track analytics asynchronously
+		(async () => {
+			try {
+				// Only track if we have the necessary data
+				if (tokenCount !== undefined && costUsd !== undefined) {
+					const existing = await db
+						.select()
+						.from(modelPerformanceStats)
+						.where(
+							and(
+								eq(modelPerformanceStats.userId, userId),
+								eq(modelPerformanceStats.modelId, model.modelId),
+								eq(modelPerformanceStats.provider, Provider.NanoGPT)
+							)
+						)
+						.get();
+
+					if (existing) {
+						// Incremental update - recalculate averages
+						const newTotalMessages = existing.totalMessages + 1;
+						const newTotalCost = existing.totalCost + costUsd;
+						const newAvgTokens = existing.avgTokens
+							? (existing.avgTokens * existing.totalMessages + tokenCount) / newTotalMessages
+							: tokenCount;
+						const newAvgResponseTime =
+							responseTimeMs !== undefined && existing.avgResponseTime
+								? (existing.avgResponseTime * existing.totalMessages + responseTimeMs) /
+									newTotalMessages
+								: existing.avgResponseTime;
+
+						await db
+							.update(modelPerformanceStats)
+							.set({
+								totalMessages: newTotalMessages,
+								totalCost: newTotalCost,
+								avgTokens: newAvgTokens,
+								avgResponseTime: responseTimeMs !== undefined ? newAvgResponseTime : undefined,
+								lastUpdated: new Date(),
+							})
+							.where(eq(modelPerformanceStats.id, existing.id));
+					} else {
+						// Create new stats entry
+						await db.insert(modelPerformanceStats).values({
+							id: generateId(),
+							userId,
+							modelId: model.modelId,
+							provider: Provider.NanoGPT,
+							totalMessages: 1,
+							totalCost: costUsd,
+							avgTokens: tokenCount,
+							avgResponseTime: responseTimeMs,
+							errorCount: 0,
+							thumbsUpCount: 0,
+							thumbsDownCount: 0,
+							regenerateCount: 0,
+							accurateCount: 0,
+							helpfulCount: 0,
+							creativeCount: 0,
+							fastCount: 0,
+							costEffectiveCount: 0,
+							lastUpdated: new Date(),
+						});
+					}
+					log(`[analytics] Updated stats for ${model.modelId}`, startTime);
+				}
+			} catch (e) {
+				log(`[analytics] Error updating stats: ${e}`, startTime);
+			}
+		})();
 
 		// Generate title if needed (after response is complete)
 		// We do this before setting generating=false so the UI continues polling
