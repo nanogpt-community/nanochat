@@ -1263,6 +1263,65 @@ curl -X GET "http://localhost:3432/api/db/model-performance?recalculate=true" \
 
 ---
 
+### Analytics
+
+#### GET `/api/analytics`
+Get model analytics for the user (stats + insights).
+
+**Authentication**: Session or API Key
+
+**Query Parameters**:
+- `recalculate`: Set to `"false"` to use cached stats. Defaults to `"true"`.
+
+**Response**:
+```json
+{
+  "success": true,
+  "stats": [
+    {
+      "id": "string",
+      "modelId": "string",
+      "provider": "string",
+      "totalMessages": "number",
+      "avgRating": "number | null",
+      "thumbsUpCount": "number",
+      "thumbsDownCount": "number",
+      "regenerateCount": "number",
+      "avgResponseTime": "number | null",
+      "avgTokens": "number | null",
+      "totalCost": "number",
+      "errorCount": "number",
+      "accurateCount": "number",
+      "helpfulCount": "number",
+      "creativeCount": "number",
+      "fastCount": "number",
+      "costEffectiveCount": "number"
+    }
+  ],
+  "insights": {
+    "totalMessages": "number",
+    "totalCost": "number",
+    "avgRating": "number | null",
+    "mostUsedModel": "ModelPerformanceStat | null",
+    "bestRatedModel": "ModelPerformanceStat | null",
+    "mostCostEffective": "ModelPerformanceStat | null",
+    "fastestModel": "ModelPerformanceStat | null"
+  }
+}
+```
+
+**CURL Example**:
+```bash
+curl -X GET "http://localhost:3432/api/analytics" \
+  -b "session_cookie=your_session"
+
+# Use cached stats
+curl -X GET "http://localhost:3432/api/analytics?recalculate=false" \
+  -b "session_cookie=your_session"
+```
+
+---
+
 ### User Settings
 
 #### GET `/api/db/user-settings`
