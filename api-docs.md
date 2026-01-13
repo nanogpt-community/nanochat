@@ -1055,6 +1055,7 @@ Get messages for a conversation.
     "contentHtml": "string | null",
     "modelId": "string | null",
     "reasoning": "string | null",
+    "starred": "boolean",
     "images": "array | null",
     "documents": "array | null",
     "createdAt": "date"
@@ -1076,8 +1077,17 @@ Create or update messages.
 **Request Body**:
 ```json
 {
-  "action": "create" | "updateContent" | "update" | "updateError" | "delete",
+  "action": "create" | "updateContent" | "update" | "updateError" | "delete" | "setStarred",
   // Additional fields depend on action
+}
+```
+
+**Action: `setStarred`**
+```json
+{
+  "action": "setStarred",
+  "messageId": "string",
+  "starred": true
 }
 ```
 
@@ -1087,6 +1097,44 @@ curl -X POST "http://localhost:3432/api/db/messages" \
   -H "Content-Type: application/json" \
   -b "session_cookie=your_session" \
   -d '{"action": "create", "conversationId": "conv_abc123", "role": "user", "content": "Hello!"}'
+```
+
+**CURL Example (`setStarred`)**:
+```bash
+curl -X POST "http://localhost:3432/api/db/messages" \
+  -H "Content-Type: application/json" \
+  -b "session_cookie=your_session" \
+  -d '{"action": "setStarred", "messageId": "msg_abc123", "starred": true}'
+```
+
+#### GET `/api/starred-messages`
+Get all starred messages for the current user.
+
+**Authentication**: Session or API Key
+
+**Response**:
+```json
+[
+  {
+    "id": "string",
+    "conversationId": "string",
+    "role": "user" | "assistant" | "system",
+    "content": "string",
+    "contentHtml": "string | null",
+    "modelId": "string | null",
+    "reasoning": "string | null",
+    "starred": "boolean",
+    "images": "array | null",
+    "documents": "array | null",
+    "createdAt": "date"
+  }
+]
+```
+
+**CURL Example**:
+```bash
+curl -X GET "http://localhost:3432/api/starred-messages" \
+  -b "session_cookie=your_session"
 ```
 
 ---
