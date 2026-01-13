@@ -1561,6 +1561,79 @@ curl -X GET "http://localhost:3432/api/models" \
 
 ---
 
+#### GET `/api/models/[modelId]/info`
+Get detailed model info (including benchmarks) for a single model. Intended to be called on-demand when the user requests more details.
+
+**Authentication**: Session or API Key
+
+**Path Parameters**:
+- `modelId`: (Required) Model ID.
+
+**Response**:
+```json
+{
+  "model": {
+    "id": "string",
+    "name": "string",
+    "description": "string",
+    "icon_url": "string",
+    "owned_by": "string",
+    "context_length": "number",
+    "max_output_tokens": "number",
+    "created": "number",
+    "pricing": {
+      "prompt": "string",
+      "completion": "string",
+      "image": "string",
+      "request": "string"
+    },
+    "cost_estimate": "number",
+    "subscription": {
+      "included": "boolean",
+      "note": "string"
+    },
+    "capabilities": {
+      "vision": "boolean",
+      "reasoning": "boolean",
+      "images": "boolean",
+      "video": "boolean"
+    }
+  },
+  "benchmarks": {
+    "available": "boolean",
+    "stale": "boolean",
+    "source": "string",
+    "source_url": "string",
+    "llm": {
+      "name": "string",
+      "slug": "string",
+      "intelligence": "number",
+      "coding": "number",
+      "math": "number",
+      "speed_tokens_per_second": "number"
+    },
+    "image": {
+      "name": "string",
+      "slug": "string",
+      "elo": "number",
+      "rank": "number"
+    }
+  }
+}
+```
+
+**Notes**:
+- Uses cached Artificial Analysis data (1 hour TTL). `available` will be `false` if `ARTIFICIAL_ANALYSIS_API_KEY` is not configured.
+- `llm`/`image` benchmark blocks are omitted when no match is found.
+
+**CURL Example**:
+```bash
+curl -X GET "http://localhost:3432/api/models/gpt-4/info" \
+  -b "session_cookie=your_session"
+```
+
+---
+
 ### Model Providers
 
 #### GET `/api/model-providers`
