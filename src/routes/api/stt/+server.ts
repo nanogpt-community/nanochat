@@ -70,7 +70,8 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 		const response = await fetch('https://nano-gpt.com/api/transcribe', {
 			method: 'POST',
 			headers: {
-				'x-api-key': apiKey,
+                'x-api-key': apiKey,
+				Authorization: `Bearer ${apiKey}`,
 				// Do NOT set Content-Type, allow fetch to set boundary automatically with FormData
 			},
 			body: formData,
