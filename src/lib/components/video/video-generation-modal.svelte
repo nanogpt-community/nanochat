@@ -92,8 +92,11 @@
 		return normalized;
 	});
 
+	let paramsReady = $state(false);
+
 	// Initialize default params when model changes
 	$effect(() => {
+		paramsReady = false;
 		if (currentModel) {
 			const defaults: Record<string, any> = {};
 
@@ -145,7 +148,10 @@
 				}
 				// Update parent bindable
 				Object.assign(videoParams, newParams);
+				paramsReady = true;
 			});
+		} else {
+			paramsReady = true;
 		}
 	});
 </script>
@@ -168,6 +174,8 @@
 			<div class="text-muted-foreground p-4 text-center text-sm">
 				Please select a video capable model in the chat to configure settings.
 			</div>
+		{:else if !paramsReady}
+			<div class="text-muted-foreground p-4 text-center text-sm">Loading settings...</div>
 		{:else if normalizedParams.length > 0}
 			{#each normalizedParams as param}
 				<div class="flex flex-col gap-2">

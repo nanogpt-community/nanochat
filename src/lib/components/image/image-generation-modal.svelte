@@ -92,8 +92,11 @@
 		return normalized;
 	});
 
+	let paramsReady = $state(false);
+
 	// Initialize default params when model changes
 	$effect(() => {
+		paramsReady = false;
 		if (currentModel) {
 			const defaults: Record<string, any> = {};
 
@@ -180,7 +183,10 @@
 
 				// Update parent bindable
 				Object.assign(imageParams, newParams);
+				paramsReady = true;
 			});
+		} else {
+			paramsReady = true;
 		}
 	});
 </script>
@@ -204,6 +210,9 @@
 				Please select an image model in the chat to configure settings.
 			</div>
 		{:else}
+			{#if !paramsReady}
+				<div class="text-muted-foreground p-4 text-center text-sm">Loading settings...</div>
+			{:else}
 			<!-- Resolution selector -->
 			{#if currentModel.resolutions && currentModel.resolutions.length > 0}
 				<div class="flex flex-col gap-2">
@@ -299,6 +308,7 @@
 				<div class="text-muted-foreground p-4 text-center text-sm">
 					No configurable settings for this model.
 				</div>
+			{/if}
 			{/if}
 		{/if}
 
