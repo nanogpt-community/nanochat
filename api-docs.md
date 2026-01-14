@@ -1041,7 +1041,7 @@ Create or update conversations.
 **Request Body**:
 ```json
 {
-  "action": "create" | "createWithMessage" | "branch" | "updateTitle" | "updateGenerating" | "updateCost" | "setPublic" | "togglePin",
+  "action": "create" | "createWithMessage" | "branch" | "updateTitle" | "setProject" | "updateGenerating" | "updateCost" | "setPublic" | "togglePin",
   // Additional fields depend on action
 }
 ```
@@ -1051,6 +1051,7 @@ Create or update conversations.
 - `createWithMessage`: Create conversation with first message. Fields: `content`, `contentHtml`, `role`, `images`, `webSearchEnabled`, `projectId`.
 - `branch`: Branch from existing message. Fields: `conversationId`, `fromMessageId`.
 - `updateTitle`: Update title. Fields: `conversationId`, `title`.
+- `setProject`: Move conversation to a project (or remove it). Fields: `conversationId`, `projectId` (string or `null`).
 - `setPublic`: Make conversation public. Fields: `conversationId`, `public`.
 - `togglePin`: Toggle pin status. Fields: `conversationId`.
 
