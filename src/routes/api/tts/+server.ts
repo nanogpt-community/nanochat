@@ -4,7 +4,7 @@ import type { RequestHandler } from './$types';
 import { db } from '$lib/db';
 import { modelPerformanceStats } from '$lib/db/schema';
 import { eq, and, sql } from 'drizzle-orm';
-import { auth } from '$lib/auth';
+import { tryGetAuthenticatedUserId } from '$lib/backend/auth-utils';
 
 const COST_PER_1K_CHARS: Record<string, number> = {
 	'gpt-4o-mini-tts': 0.0125,
@@ -16,6 +16,18 @@ const COST_PER_1K_CHARS: Record<string, number> = {
 
 // Default to standard price if unknown
 const DEFAULT_COST = 0.015;
+
+const getApiKey = (request: Request): string | null => {
+	const authHeader = request.headers.get('Authorization');
+	if (authHeader?.startsWith('Bearer ')) {
+		const token = authHeader.slice(7).trim();
+		if (token.length > 0) {
+			return token;
+		}
+	}
+
+	return request.headers.get('x-api-key') || env.NANOGPT_API_KEY || null;
+};
 
 export const POST: RequestHandler = async ({ request, fetch }) => {
 	let textStr = '';
@@ -31,7 +43,7 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 			return json({ error: 'Text is required' }, { status: 400 });
 		}
 
-		const apiKey = request.headers.get('x-api-key') || env.NANOGPT_API_KEY;
+		const apiKey = getApiKey(request);
 
 		if (!apiKey) {
 			return json({ error: 'API key is required' }, { status: 401 });
@@ -61,6 +73,12 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 			);
 		}
 
+		const contentType = response.headers.get('Content-Type') || '';
+		if (response.status === 202 || contentType.includes('application/json')) {
+			const data = await response.json();
+			return json(data, { status: response.status });
+		}
+
 		// Return the audio blob directly
 		console.log(
 			`[TTS] API response status: ${response.status}, headers:`,
@@ -71,9 +89,8 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 		// Track analytics asynchronously
 		(async () => {
 			try {
-				const session = await auth.api.getSession({ headers: request.headers });
-				if (session?.user?.id) {
-					const userId = session.user.id;
+				const userId = await tryGetAuthenticatedUserId(request);
+				if (userId) {
 					console.log(`[TTS] Tracking analytics for user: ${userId}, model: ${model}`);
 					const duration = Date.now() - start;
 

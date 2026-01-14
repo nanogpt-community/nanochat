@@ -4,12 +4,24 @@ import type { RequestHandler } from './$types';
 import { db } from '$lib/db';
 import { modelPerformanceStats } from '$lib/db/schema';
 import { eq, and, sql } from 'drizzle-orm';
-import { auth } from '$lib/auth';
+import { tryGetAuthenticatedUserId } from '$lib/backend/auth-utils';
 
 const COST_PER_MINUTE: Record<string, number> = {
 	'Whisper-Large-V3': 0.01,
 	Wizper: 0.01,
 	'Elevenlabs-STT': 0.03,
+};
+
+const getApiKey = (request: Request): string | null => {
+	const authHeader = request.headers.get('Authorization');
+	if (authHeader?.startsWith('Bearer ')) {
+		const token = authHeader.slice(7).trim();
+		if (token.length > 0) {
+			return token;
+		}
+	}
+
+	return request.headers.get('x-api-key') || env.NANOGPT_API_KEY || null;
 };
 
 export const POST: RequestHandler = async ({ request, fetch }) => {
@@ -31,7 +43,7 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 			formData.set('language', language);
 		}
 
-		const apiKey = request.headers.get('x-api-key') || env.NANOGPT_API_KEY;
+		const apiKey = getApiKey(request);
 
 		if (!apiKey) {
 			return json({ error: 'API key is required' }, { status: 401 });
@@ -70,9 +82,8 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 		// Track analytics asynchronously
 		(async () => {
 			try {
-				const session = await auth.api.getSession({ headers: request.headers });
-				if (session?.user?.id) {
-					const userId = session.user.id;
+				const userId = await tryGetAuthenticatedUserId(request);
+				if (userId) {
 					const durationMs = Date.now() - start;
 
 					// Try to get cost from various response headers

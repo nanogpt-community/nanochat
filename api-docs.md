@@ -104,7 +104,7 @@ curl -X POST "http://localhost:3432/api/generate-message" \
 #### POST `/api/tts`
 Proxies requests to NanoGPT TTS API for speech synthesis.
 
-**Authentication**: Session
+**Authentication**: Session or API Key
 
 **Request Body**:
 ```json
@@ -129,6 +129,35 @@ curl -X POST "http://localhost:3432/api/tts" \
   --output speech.mp3
 ```
 
+#### GET `/api/tts/status`
+Polls the status of an asynchronous TTS request.
+
+**Authentication**: Session or API Key
+
+**Query Parameters**:
+- `runId`: (Required) The run ID returned by `/api/tts`.
+- `model`: (Required) The TTS model ID.
+- `cost`: (Optional) Estimated cost from the submit response.
+- `paymentSource`: (Optional) Payment source from the submit response.
+- `isApiRequest`: (Optional) Whether the request was an API request.
+
+**Response**:
+```json
+{
+  "status": "pending" | "completed" | "error",
+  "audioUrl": "string (when completed)",
+  "contentType": "string (optional)",
+  "model": "string",
+  "error": "string (optional)"
+}
+```
+
+**CURL Example**:
+```bash
+curl "http://localhost:3432/api/tts/status?runId=RUN_ID&model=Elevenlabs-Turbo-V2.5" \
+  -H "Authorization: Bearer your_api_key"
+```
+
 ---
 
 ### Speech-to-Text
@@ -136,11 +165,12 @@ curl -X POST "http://localhost:3432/api/tts" \
 #### POST `/api/stt`
 Proxies audio files to NanoGPT STT API for transcription.
 
-**Authentication**: Session
+**Authentication**: Session or API Key
 
 **Request Body** (FormData):
 - `audio`: Binary audio file (webm, mp4, etc).
 - `model`: "string (optional, default: 'Whisper-Large-V3')"
+- `language`: "string (optional, default: 'auto')"
 
 **Response**:
 ```json
