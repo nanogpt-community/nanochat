@@ -5,6 +5,7 @@ import { db } from '$lib/db';
 import { modelPerformanceStats } from '$lib/db/schema';
 import { eq, and, sql } from 'drizzle-orm';
 import { tryGetAuthenticatedUserId } from '$lib/backend/auth-utils';
+import { getUserKey } from '$lib/db/queries';
 
 const COST_PER_MINUTE: Record<string, number> = {
 	'Whisper-Large-V3': 0.01,
@@ -12,16 +13,31 @@ const COST_PER_MINUTE: Record<string, number> = {
 	'Elevenlabs-STT': 0.03,
 };
 
-const getApiKey = (request: Request): string | null => {
+const getExplicitNanoGPTKey = (request: Request): string | null => {
+	const headerKey = request.headers.get('x-api-key');
+	if (headerKey && !headerKey.startsWith('nc_')) {
+		return headerKey;
+	}
+
 	const authHeader = request.headers.get('Authorization');
 	if (authHeader?.startsWith('Bearer ')) {
 		const token = authHeader.slice(7).trim();
-		if (token.length > 0) {
+		if (token.length > 0 && !token.startsWith('nc_')) {
 			return token;
 		}
 	}
 
-	return request.headers.get('x-api-key') || env.NANOGPT_API_KEY || null;
+	return null;
+};
+
+const resolveNanoGPTKey = async (request: Request, userId?: string): Promise<string | null> => {
+	const explicitKey = getExplicitNanoGPTKey(request);
+	if (explicitKey) return explicitKey;
+
+	if (!userId) return null;
+
+	const userKey = await getUserKey(userId, 'nanogpt');
+	return userKey || env.NANOGPT_API_KEY || null;
 };
 
 export const POST: RequestHandler = async ({ request, fetch }) => {
@@ -43,10 +59,11 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 			formData.set('language', language);
 		}
 
-		const apiKey = getApiKey(request);
+		const userId = await tryGetAuthenticatedUserId(request);
+		const apiKey = await resolveNanoGPTKey(request, userId);
 
 		if (!apiKey) {
-			return json({ error: 'API key is required' }, { status: 401 });
+			return json({ error: 'Authentication required or NanoGPT API key missing' }, { status: 401 });
 		}
 
 		const start = Date.now();
@@ -82,7 +99,6 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 		// Track analytics asynchronously
 		(async () => {
 			try {
-				const userId = await tryGetAuthenticatedUserId(request);
 				if (userId) {
 					const durationMs = Date.now() - start;
 

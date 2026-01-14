@@ -44,6 +44,10 @@ Generates a response from an AI model. This is the core endpoint for chat functi
 
 **Authentication**: Session or API Key
 
+Notes:
+- If you authenticate with a NanoChat API key (`Authorization: Bearer nc_...`) or a session cookie, the server will use your stored NanoGPT key or the server `NANOGPT_API_KEY`.
+- To pass a NanoGPT key directly, send it via `x-api-key` or `Authorization: Bearer <nanogpt_key>` (non-`nc_`).
+
 **Request Body**:
 ```json
 {
@@ -106,6 +110,10 @@ Proxies requests to NanoGPT TTS API for speech synthesis.
 
 **Authentication**: Session or API Key
 
+Notes:
+- If you authenticate with a NanoChat API key (`Authorization: Bearer nc_...`) or a session cookie, the server will use your stored NanoGPT key or the server `NANOGPT_API_KEY`.
+- To pass a NanoGPT key directly, send it via `x-api-key` or `Authorization: Bearer <nanogpt_key>` (non-`nc_`).
+
 **Request Body**:
 ```json
 {
@@ -133,6 +141,10 @@ curl -X POST "http://localhost:3432/api/tts" \
 Polls the status of an asynchronous TTS request.
 
 **Authentication**: Session or API Key
+
+Notes:
+- If you authenticate with a NanoChat API key (`Authorization: Bearer nc_...`) or a session cookie, the server will use your stored NanoGPT key or the server `NANOGPT_API_KEY`.
+- To pass a NanoGPT key directly, send it via `x-api-key` or `Authorization: Bearer <nanogpt_key>` (non-`nc_`).
 
 **Query Parameters**:
 - `runId`: (Required) The run ID returned by `/api/tts`.
@@ -166,6 +178,10 @@ curl "http://localhost:3432/api/tts/status?runId=RUN_ID&model=Elevenlabs-Turbo-V
 Proxies audio files to NanoGPT STT API for transcription.
 
 **Authentication**: Session or API Key
+
+Notes:
+- If you authenticate with a NanoChat API key (`Authorization: Bearer nc_...`) or a session cookie, the server will use your stored NanoGPT key or the server `NANOGPT_API_KEY`.
+- To pass a NanoGPT key directly, send it via `x-api-key` or `Authorization: Bearer <nanogpt_key>` (non-`nc_`).
 
 **Request Body** (FormData):
 - `audio`: Binary audio file (webm, mp4, etc).
