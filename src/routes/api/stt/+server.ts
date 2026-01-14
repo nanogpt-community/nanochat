@@ -13,31 +13,40 @@ const COST_PER_MINUTE: Record<string, number> = {
 	'Elevenlabs-STT': 0.03,
 };
 
-const getExplicitNanoGPTKey = (request: Request): string | null => {
+type ResolvedNanoGPTKey = {
+	value: string;
+	source: 'authorization' | 'x-api-key' | 'derived';
+};
+
+const getExplicitNanoGPTKey = (request: Request): ResolvedNanoGPTKey | null => {
 	const headerKey = request.headers.get('x-api-key');
 	if (headerKey && !headerKey.startsWith('nc_')) {
-		return headerKey;
+		return { value: headerKey, source: 'x-api-key' };
 	}
 
 	const authHeader = request.headers.get('Authorization');
 	if (authHeader?.startsWith('Bearer ')) {
 		const token = authHeader.slice(7).trim();
 		if (token.length > 0 && !token.startsWith('nc_')) {
-			return token;
+			return { value: token, source: 'authorization' };
 		}
 	}
 
 	return null;
 };
 
-const resolveNanoGPTKey = async (request: Request, userId?: string): Promise<string | null> => {
+const resolveNanoGPTKey = async (
+	request: Request,
+	userId?: string
+): Promise<ResolvedNanoGPTKey | null> => {
 	const explicitKey = getExplicitNanoGPTKey(request);
 	if (explicitKey) return explicitKey;
 
 	if (!userId) return null;
 
 	const userKey = await getUserKey(userId, 'nanogpt');
-	return userKey || env.NANOGPT_API_KEY || null;
+	const derivedKey = userKey || env.NANOGPT_API_KEY;
+	return derivedKey ? { value: derivedKey, source: 'derived' } : null;
 };
 
 export const POST: RequestHandler = async ({ request, fetch }) => {
@@ -60,20 +69,24 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 		}
 
 		const userId = await tryGetAuthenticatedUserId(request);
-		const apiKey = await resolveNanoGPTKey(request, userId);
+		const resolvedKey = await resolveNanoGPTKey(request, userId);
 
-		if (!apiKey) {
+		if (!resolvedKey) {
 			return json({ error: 'Authentication required or NanoGPT API key missing' }, { status: 401 });
+		}
+
+		const upstreamHeaders: Record<string, string> = {};
+		// NanoGPT STT expects x-api-key; only use Authorization when explicitly provided.
+		if (resolvedKey.source === 'authorization') {
+			upstreamHeaders.Authorization = `Bearer ${resolvedKey.value}`;
+		} else {
+			upstreamHeaders['x-api-key'] = resolvedKey.value;
 		}
 
 		const start = Date.now();
 		const response = await fetch('https://nano-gpt.com/api/transcribe', {
 			method: 'POST',
-			headers: {
-                'x-api-key': apiKey,
-				Authorization: `Bearer ${apiKey}`,
-				// Do NOT set Content-Type, allow fetch to set boundary automatically with FormData
-			},
+			headers: upstreamHeaders,
 			body: formData,
 		});
 
