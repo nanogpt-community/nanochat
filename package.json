@@ -45,7 +45,7 @@
 		"mode-watcher": "^1.1.0",
 		"neverthrow": "^8.2.0",
 		"openai": "^6.16.0",
-		"prettier": "^3.7.4",
+		"prettier": "^3.8.0",
 		"prettier-plugin-svelte": "^3.4.1",
 		"prettier-plugin-tailwindcss": "^0.7.2",
 		"runed": "^0.37.1",
@@ -75,7 +75,7 @@
 		"cookie": "^0.7.0"
 	},
 	"dependencies": {
-		"@better-auth/passkey": "1.4.12",
+		"@better-auth/passkey": "1.4.13",
 		"@floating-ui/dom": "^1.7.4",
 		"@fontsource-variable/fraunces": "^5.2.9",
 		"@fontsource-variable/geist-mono": "^5.2.7",
@@ -88,7 +88,7 @@
 		"@libsql/client": "^0.17.0",
 		"@nanogpt/mcp": "^1.1.4",
 		"@types/node": "^25.0.8",
-		"better-auth": "1.4.12",
+		"better-auth": "1.4.13",
 		"drizzle-kit": "^0.31.8",
 		"drizzle-orm": "^0.45.1",
 		"epub2": "^3.0.2",
