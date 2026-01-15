@@ -12,7 +12,7 @@ Get the native NanoChat experience on your devices:
 
 - **Android**: [nanochat-android](https://github.com/jcrabapple/nanochat-android)
 - **iOS**: [nanochat-ios](https://github.com/nanogpt-community/nanochat-ios) ([TestFlight Beta](https://testflight.apple.com/join/afmPp2xW))
-- **Desktop**: [nanochat-desktop](https://github.com/thejudge22/nanochat-desktop)
+- **Desktop**: coming soon
 
 **IMPORTANT** - Rename your thom-chat.db.* files to nanochat.db.*
 
