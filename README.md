@@ -12,9 +12,7 @@ Get the native NanoChat experience on your devices:
 
 - **Android**: [nanochat-android](https://github.com/jcrabapple/nanochat-android)
 - **iOS**: [nanochat-ios](https://github.com/nanogpt-community/nanochat-ios) ([TestFlight Beta](https://testflight.apple.com/join/afmPp2xW))
-- **Desktop**: coming soon
-
-**IMPORTANT** - Rename your thom-chat.db._ files to nanochat.db._
+- **Desktop**: [nanochat-desktop](https://github.com/nanogpt-community/nanochat-desktop) - Linux Only for now
 
 ---
 
@@ -180,14 +178,14 @@ You can use URL parameters to pre-configure your chat session. This is useful fo
 | Parameter         | Description                                              | Example                      |
 | ----------------- | -------------------------------------------------------- | ---------------------------- |
 | `q`               | Pre-fills the chat input                                 | `?q=Explain quantum physics` |
-| `model`           | Selects the AI model                                     | `?model=openai/gpt-4o`       |
+| `model`           | Selects the AI model                                     | `?model=zai-org/glm-4.7`       |
 | `model_provider`  | Selects the provider for the model (NanoGPT)             | `?model_provider=cerebras`   |
 | `search`          | Sets web search mode (`off`, `standard`, `deep`)         | `?search=deep`               |
-| `search_provider` | Sets search provider (`linkup`, `tavily`, `exa`, `kagi`) | `?search_provider=tavily`    |
+| `search_provider` | Sets search provider (`linkup`, `tavily`, `exa`, `kagi`) | `?search_provider=linkup`    |
 | `projectId`       | Contextualizes chat with a specific Project              | `?projectId=123`             |
 
 **Example "Bang" URL:**
-`https://your-nanochat.com/chat?model=anthropic/claude-3-5-sonnet&search=deep&q=%s`
+`https://t3.0xgingi.xyz/chat?model=zai-org/glm-4.7&search=deep&q=%s`
 
 **In-Chat Shortcuts:**
 
