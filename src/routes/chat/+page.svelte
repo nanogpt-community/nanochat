@@ -9,7 +9,9 @@
 	import { scale } from 'svelte/transition';
 	import { useCachedQuery, api } from '$lib/cache/cached-query.svelte';
 	import { Provider } from '$lib/types';
+	import { untrack } from 'svelte';
 	import { page } from '$app/state';
+	import { settings } from '$lib/state/settings.svelte.js';
 
 	const defaultSuggestions = [
 		'How does AI work?',
@@ -18,7 +20,7 @@
 		'What is the meaning of life?',
 	];
 
-	const settings = useCachedQuery(api.user_settings.get, {
+	const userSettingsQuery = useCachedQuery(api.user_settings.get, {
 		session_token: session.current?.session.token ?? '',
 	});
 
@@ -73,9 +75,40 @@
 	// Handle URL parameter for initial query
 	$effect(() => {
 		const urlQuery = page.url.searchParams.get('q');
-		if (urlQuery && prompt.current === '') {
-			prompt.current = decodeURIComponent(urlQuery);
-		}
+		const modelParam = page.url.searchParams.get('model');
+		const providerParam = page.url.searchParams.get('model_provider');
+		const searchParam = page.url.searchParams.get('search');
+		const searchProviderParam = page.url.searchParams.get('search_provider');
+
+		untrack(() => {
+			if (urlQuery && prompt.current === '') {
+				prompt.current = decodeURIComponent(urlQuery);
+			}
+
+			if (modelParam && settings.modelId !== modelParam) {
+				settings.modelId = modelParam;
+			}
+
+			if (providerParam && settings.providerId !== providerParam) {
+				settings.providerId = providerParam;
+			}
+
+			if (
+				searchParam &&
+				['off', 'standard', 'deep'].includes(searchParam) &&
+				settings.webSearchMode !== searchParam
+			) {
+				settings.webSearchMode = searchParam as 'off' | 'standard' | 'deep';
+			}
+
+			if (
+				searchProviderParam &&
+				['linkup', 'tavily', 'exa', 'kagi'].includes(searchProviderParam) &&
+				settings.webSearchProvider !== searchProviderParam
+			) {
+				settings.webSearchProvider = searchProviderParam as 'linkup' | 'tavily' | 'exa' | 'kagi';
+			}
+		});
 	});
 </script>
 

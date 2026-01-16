@@ -14,7 +14,7 @@ Get the native NanoChat experience on your devices:
 - **iOS**: [nanochat-ios](https://github.com/nanogpt-community/nanochat-ios) ([TestFlight Beta](https://testflight.apple.com/join/afmPp2xW))
 - **Desktop**: coming soon
 
-**IMPORTANT** - Rename your thom-chat.db.* files to nanochat.db.*
+**IMPORTANT** - Rename your thom-chat.db._ files to nanochat.db._
 
 ---
 
@@ -160,6 +160,7 @@ View performance benchmarks from [Artificial Analysis](https://artificialanalysi
 ### Provider Selection
 
 For models supported by multiple providers on NanoGPT, you can:
+
 - Select a specific provider (e.g., 'openai', 'anthropic', 'google') for a model.
 - Configure preferred and excluded providers in Account Settings.
 - Enable automatic fallback to other providers if the preferred one fails.
@@ -167,23 +168,43 @@ For models supported by multiple providers on NanoGPT, you can:
 ### Video Generation
 
 Generate videos using NanoGPT's video models:
+
 - Text-to-video generation
 - View generation status and history
 - Download generated videos
 
+### URL Parameters & Shortcuts
+
+You can use URL parameters to pre-configure your chat session. This is useful for creating bookmarks or "bang" style shortcuts (e.g. in your browser).
+
+| Parameter         | Description                                              | Example                      |
+| ----------------- | -------------------------------------------------------- | ---------------------------- |
+| `q`               | Pre-fills the chat input                                 | `?q=Explain quantum physics` |
+| `model`           | Selects the AI model                                     | `?model=openai/gpt-4o`       |
+| `model_provider`  | Selects the provider for the model (NanoGPT)             | `?model_provider=cerebras`   |
+| `search`          | Sets web search mode (`off`, `standard`, `deep`)         | `?search=deep`               |
+| `search_provider` | Sets search provider (`linkup`, `tavily`, `exa`, `kagi`) | `?search_provider=tavily`    |
+| `projectId`       | Contextualizes chat with a specific Project              | `?projectId=123`             |
+
+**Example "Bang" URL:**
+`https://your-nanochat.com/chat?model=anthropic/claude-3-5-sonnet&search=deep&q=%s`
+
+**In-Chat Shortcuts:**
+
+- `@<rule_name>`: Apply a specific user rule to the current message (e.g., `@concise`)
 
 ---
 
 ## Environment Variables
 
-| Variable                     | Description                                             |
-| ---------------------------- | ------------------------------------------------------- |
-| `DATABASE_URL`               | SQLite database path (default: ./data/nanochat.db)      |
-| `NANOGPT_API_KEY`            | Nano-GPT API key for generation                         |
-| `BETTER_AUTH_SECRET`         | Authentication secret                                   |
-| `BETTER_AUTH_URL`            | Base URL for authentication                             |
-| `ARTIFICIAL_ANALYSIS_API_KEY`| (Optional) API key for model benchmarks from artificialanalysis.ai |
-| `ENCRYPTION_KEY`             | (Optional) Encryption key for API keys at rest. Generate with `openssl rand -base64 32` |
+| Variable                      | Description                                                                             |
+| ----------------------------- | --------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                | SQLite database path (default: ./data/nanochat.db)                                      |
+| `NANOGPT_API_KEY`             | Nano-GPT API key for generation                                                         |
+| `BETTER_AUTH_SECRET`          | Authentication secret                                                                   |
+| `BETTER_AUTH_URL`             | Base URL for authentication                                                             |
+| `ARTIFICIAL_ANALYSIS_API_KEY` | (Optional) API key for model benchmarks from artificialanalysis.ai                      |
+| `ENCRYPTION_KEY`              | (Optional) Encryption key for API keys at rest. Generate with `openssl rand -base64 32` |
 
 ### API Key Encryption
 

@@ -748,6 +748,19 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 		log('Background: MCP tools enabled for this request', startTime);
 	}
 
+	// Filter out web search tool if native web search is enabled
+	// This prevents the model from using the tool instead of the native integration
+	// which supports multiple providers (Tavily, Exa, etc.)
+	const webSearchActive = !webFeaturesDisabled && (lastUserMessage?.webSearchEnabled ?? false);
+	const tools = mcpAvailable
+		? mcpToolDefinitions.filter((t) => {
+				if (webSearchActive && t.type === 'function' && t.function.name === 'nanogpt_web_search') {
+					return false;
+				}
+				return true;
+			})
+		: undefined;
+
 	const streamResult = await ResultAsync.fromPromise(
 		openai.chat.completions.create(
 			{
@@ -758,7 +771,7 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 				reasoning_effort: reasoningEffort,
 				stream_options: { include_usage: true },
 				// Add MCP tools when enabled
-				tools: mcpAvailable ? mcpToolDefinitions : undefined,
+				tools,
 				// @ts-ignore - Custom NanoGPT parameters
 				linkup:
 					!webFeaturesDisabled && (lastUserMessage?.webSearchEnabled ?? false)
