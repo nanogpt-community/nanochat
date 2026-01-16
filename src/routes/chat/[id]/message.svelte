@@ -10,6 +10,7 @@
 	import { on } from 'svelte/events';
 	import { isHtmlElement } from '$lib/utils/is';
 	import { Button } from '$lib/components/ui/button';
+	import { fly } from 'svelte/transition';
 	import Tooltip from '$lib/components/ui/tooltip.svelte';
 	import { mutate } from '$lib/client/mutation.svelte';
 	import { api, invalidateQueryPattern } from '$lib/cache/cached-query.svelte';
@@ -55,7 +56,9 @@
 
 	let { message, childMessageId }: Props = $props();
 
-	const safeContent = $derived.by(() => (typeof message.content === 'string' ? message.content : ''));
+	const safeContent = $derived.by(() =>
+		typeof message.content === 'string' ? message.content : ''
+	);
 	const safeImages = $derived.by(() =>
 		Array.isArray(message.images)
 			? message.images.filter(
@@ -340,6 +343,7 @@
 
 {#if message.role !== 'system' && !(message.role === 'assistant' && safeContent.length === 0 && message.reasoning?.length === 0 && !message.error)}
 	<div
+		in:fly={{ y: 20, duration: 300, delay: message.role === 'assistant' ? 100 : 0 }}
 		class={cn('group flex flex-col gap-1', { 'max-w-[80%] self-end ': message.role === 'user' })}
 		{@attach (node) => {
 			return on(node, 'click', (e) => {
@@ -458,7 +462,7 @@
 				{@html sanitizeHtml(message.contentHtml)}
 			{:else}
 				<svelte:boundary>
-			<MarkdownRenderer content={displayContent} />
+					<MarkdownRenderer content={displayContent} />
 
 					{#snippet failed(error)}
 						<div class="text-destructive">
@@ -525,7 +529,7 @@
 		{/if}
 		<div
 			class={cn(
-				'flex flex-wrap place-items-center gap-1 transition-opacity group-hover:opacity-100 md:gap-2 md:opacity-0',
+				'flex flex-wrap place-items-center gap-1 transition-all duration-300 ease-out group-hover:opacity-100 md:gap-2 md:opacity-0',
 				{
 					'justify-end': message.role === 'user',
 				}
@@ -562,7 +566,7 @@
 								if (audioPlayer.isPlaying && audioPlayer.currentMessageId === message.id) {
 									audioPlayer.stop();
 								} else {
-							audioPlayer.play(displayContent, message.id);
+									audioPlayer.play(displayContent, message.id);
 								}
 							}}
 							{...tooltip.trigger}
@@ -603,15 +607,15 @@
 				</Tooltip>
 			{/if}
 
-		{#if safeContent.length > 0}
-			<Tooltip>
-				{#snippet trigger(tooltip)}
-					<CopyButton
-						class={cn('order-1 size-7', { 'order-2': message.role === 'user' })}
-						text={safeContent}
-						onclick={() => logInteraction('copy')}
-						{...tooltip.trigger}
-					/>
+			{#if safeContent.length > 0}
+				<Tooltip>
+					{#snippet trigger(tooltip)}
+						<CopyButton
+							class={cn('order-1 size-7', { 'order-2': message.role === 'user' })}
+							text={safeContent}
+							onclick={() => logInteraction('copy')}
+							{...tooltip.trigger}
+						/>
 					{/snippet}
 					Copy
 				</Tooltip>

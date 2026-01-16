@@ -15,6 +15,7 @@
 	import LoaderCircleIcon from '~icons/lucide/loader-circle';
 	import { callGenerateFollowUpQuestions } from '../../../routes/api/generate-follow-up-questions/call';
 	import FollowUpQuestions from '$lib/components/ui/follow-up-questions.svelte';
+	import { fly, fade } from 'svelte/transition';
 
 	const messages = useCachedQuery<Message[]>(api.messages.getAllFromConversation, () => ({
 		conversationId: page.params.id ?? '',
@@ -212,15 +213,17 @@
 		{#if conversation.data?.generating}
 			{#if lastMessage?.webSearchEnabled}
 				{#if lastMessage?.annotations === undefined || lastMessage?.annotations?.length === 0}
-					<div class="flex place-items-center gap-2">
+					<div class="flex place-items-center gap-2" in:fly={{ y: 5, duration: 300 }}>
 						<GlobeIcon class="inline size-4 shrink-0" />
 						<ShinyText class="text-muted-foreground text-sm">Searching the web...</ShinyText>
 					</div>
 				{/if}
 			{:else if !lastMessageHasReasoning && !lastMessageHasContent}
-				<LoadingDots />
+				<div in:fly={{ y: 5, duration: 300 }}>
+					<LoadingDots />
+				</div>
 			{:else}
-				<div class="flex place-items-center gap-2">
+				<div class="flex place-items-center gap-2" in:fade={{ duration: 200 }}>
 					<div class="flex animate-[spin_0.65s_linear_infinite] place-items-center justify-center">
 						<LoaderCircleIcon class="size-4" />
 					</div>
@@ -230,7 +233,7 @@
 
 		<!-- NEW: Show suggestions ONLY for the current session's last message after delay -->
 		{#if lastMessageWithSuggestions && lastMessageWithSuggestions.followUpSuggestions}
-			<div class="animate-fade-in mt-4">
+			<div in:fly={{ y: 10, duration: 400 }} class="mt-4">
 				<FollowUpQuestions suggestions={lastMessageWithSuggestions.followUpSuggestions} />
 			</div>
 		{/if}
@@ -238,18 +241,4 @@
 </div>
 
 <style>
-	.animate-fade-in {
-		animation: fadeIn 0.3s ease-out;
-	}
-
-	@keyframes fadeIn {
-		from {
-			opacity: 0;
-			transform: translateY(10px);
-		}
-		to {
-			opacity: 1;
-			transform: translateY(0);
-		}
-	}
 </style>

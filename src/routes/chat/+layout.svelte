@@ -1014,13 +1014,13 @@
 	<AppSidebar bind:searchModalOpen />
 
 	<Sidebar.Inset
-		class="bg-background md:border-border relative flex min-h-svh flex-1 flex-col overflow-clip md:m-2 md:rounded-2xl md:border"
+		class="bg-background md:border-border relative flex min-h-svh flex-1 flex-col overflow-clip transition-all duration-300 ease-in-out md:m-2 md:rounded-2xl md:border"
 	>
 		{#if !sidebarOpen}
 			<!-- header - top left -->
 			<div
 				class={cn(
-					'bg-sidebar/50 fixed top-4 left-4 z-50 flex w-fit rounded-lg p-1 backdrop-blur-lg ',
+					'bg-sidebar/50 fixed top-4 left-4 z-50 flex w-fit rounded-lg p-1 backdrop-blur-lg transition-all duration-300 ease-in-out',
 					{
 						'md:left-(--sidebar-width)': sidebarOpen,
 						'hidden md:flex': sidebarOpen,
@@ -1132,8 +1132,10 @@
 							variant="secondary"
 							size="sm"
 							class={[
-								'text-muted-foreground !border-border absolute bottom-0 left-1/2 z-10 -translate-x-1/2 rounded-full !border text-xs transition md:!pl-3',
-								notAtBottom.current ? 'opacity-100' : 'pointer-events-none scale-95 opacity-0',
+								'text-muted-foreground !border-border absolute bottom-0 left-1/2 z-10 -translate-x-1/2 rounded-full !border text-xs transition-all duration-300 ease-out md:!pl-3',
+								notAtBottom.current
+									? 'translate-y-0 opacity-100'
+									: 'pointer-events-none translate-y-2 scale-95 opacity-0',
 							]}
 							{...mergeAttrs(tooltip.trigger, {
 								style: `bottom: ${wrapperSize.height + 10}px;`,
@@ -1168,7 +1170,7 @@
 					class="bg-secondary/40 border-border rounded-2xl border p-2.5 shadow-2xl backdrop-blur-xl"
 				>
 					<form
-						class="relative flex w-full flex-col items-stretch gap-2 transition duration-200"
+						class="relative flex w-full flex-col items-stretch gap-2 transition-all duration-300 ease-in-out"
 						onsubmit={(e) => {
 							e.preventDefault();
 							handleSubmit();
