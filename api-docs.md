@@ -108,6 +108,97 @@ curl -X POST "http://localhost:3432/api/generate-message" \
   }'
 ```
 
+#### POST `/api/generate-message/stream`
+Generates a response from an AI model with real-time Server-Sent Events (SSE) streaming. Ideal for native apps that want to display tokens as they arrive instead of polling.
+
+**Authentication**: Session or API Key
+
+**Request Body**: Same as `/api/generate-message` (excluding `image_params` since image/video models are not supported for streaming).
+
+**Response**: `text/event-stream` with the following SSE events:
+
+**Event Types**:
+
+1. **`message_start`** - Sent immediately when generation begins
+```
+event: message_start
+data: {"conversation_id":"conv_abc123","message_id":"msg_xyz789"}
+```
+
+2. **`delta`** - Sent for each token/chunk received (may be many of these)
+```
+event: delta
+data: {"content":"Hello","reasoning":""}
+```
+
+3. **`message_complete`** - Sent when generation finishes successfully
+```
+event: message_complete
+data: {"token_count":123,"cost_usd":0.001,"response_time_ms":1500}
+```
+
+4. **`error`** - Sent if an error occurs during generation
+```
+event: error
+data: {"error":"Something went wrong"}
+```
+
+**Notes**:
+- Image and video generation models are **not supported** for streaming. Use `/api/generate-message` instead.
+- The connection remains open until generation completes or an error occurs.
+- Messages are still saved to the database, preserving conversation history.
+- Client disconnection is handled gracefully (generation is cancelled).
+- Supports all features of the non-streaming endpoint (web search, MCP tools, reasoning models, etc.).
+
+**CURL Example**:
+```bash
+curl -N -X POST "http://localhost:3432/api/generate-message/stream" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your_api_key" \
+  -d '{
+    "message": "What is the capital of France?",
+    "model_id": "gpt-4"
+  }'
+```
+
+**iOS/Swift Example**:
+```swift
+let url = URL(string: "https://your-app.com/api/generate-message/stream")!
+var request = URLRequest(url: url)
+request.httpMethod = "POST"
+request.setValue("Bearer nc_xxx", forHTTPHeaderField: "Authorization")
+request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+request.httpBody = try JSONEncoder().encode(["message": "Hello", "model_id": "gpt-4o"])
+
+let task = URLSession.shared.dataTask(with: request) { data, response, error in
+    // Process SSE events line by line
+}
+task.resume()
+```
+
+**Android/Kotlin Example**:
+```kotlin
+val client = OkHttpClient()
+val jsonBody = """{"message":"Hello","model_id":"gpt-4o"}""".toRequestBody("application/json".toMediaType())
+val request = Request.Builder()
+    .url("https://your-app.com/api/generate-message/stream")
+    .post(jsonBody)
+    .addHeader("Authorization", "Bearer nc_xxx")
+    .build()
+
+client.newCall(request).enqueue(object : Callback {
+    override fun onResponse(call: Call, response: Response) {
+        response.body?.source()?.let { source ->
+            while (!source.exhausted()) {
+                val line = source.readUtf8Line() ?: break
+                // Parse SSE event lines
+            }
+        }
+    }
+    override fun onFailure(call: Call, e: IOException) { /* handle error */ }
+})
+```
+
 ---
 
 ### Text-to-Speech
