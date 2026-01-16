@@ -522,6 +522,20 @@
 			},
 		},
 	});
+
+	let hasAutoSubmitted = $state(false);
+
+	// Auto-submit when URL query parameter is present (only once)
+	$effect(() => {
+		const urlQuery = page.url.searchParams.get('q');
+		if (urlQuery && message.current && !isGenerating && mounted.current && !hasAutoSubmitted) {
+			hasAutoSubmitted = true;
+			// Small delay to ensure everything is ready
+			setTimeout(() => {
+				handleSubmit();
+			}, 100);
+		}
+	});
 	let selectedImages = $state<{ url: string; storage_id: string; fileName?: string }[]>([]);
 	let selectedDocuments = $state<
 		{

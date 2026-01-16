@@ -9,6 +9,7 @@
 	import { scale } from 'svelte/transition';
 	import { useCachedQuery, api } from '$lib/cache/cached-query.svelte';
 	import { Provider } from '$lib/types';
+	import { page } from '$app/state';
 
 	const defaultSuggestions = [
 		'How does AI work?',
@@ -68,6 +69,14 @@
 	});
 
 	const prompt = usePrompt();
+
+	// Handle URL parameter for initial query
+	$effect(() => {
+		const urlQuery = page.url.searchParams.get('q');
+		if (urlQuery && prompt.current === '') {
+			prompt.current = decodeURIComponent(urlQuery);
+		}
+	});
 </script>
 
 <svelte:head>
