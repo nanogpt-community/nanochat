@@ -1337,6 +1337,7 @@ async function generateVideoResponse({
 	model,
 	apiKey,
 	abortSignal,
+	userSettingsData,
 }: {
 	conversationId: string;
 	userId: string;
@@ -1344,6 +1345,7 @@ async function generateVideoResponse({
 	apiKey: string;
 	model: Doc<'user_enabled_models'>;
 	abortSignal?: AbortSignal;
+	userSettingsData: Doc<'user_settings'> | null;
 }) {
 	log('Starting Video response generation in background', startTime);
 
@@ -1496,6 +1498,17 @@ async function generateVideoResponse({
 						.where(eq(conversations.id, conversationId));
 
 					log(`Video generation completed. Cost: $${videoCost}`, startTime);
+
+					// Generate conversation title
+					await generateConversationTitle({
+						conversationId,
+						userId,
+						startTime,
+						apiKey,
+						userMessage: prompt,
+						assistantMessage: 'Generated a video based on the prompt.',
+						userSettingsData,
+					});
 				}
 				break;
 			} else if (status === 'FAILED') {
@@ -2088,6 +2101,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			apiKey: actualKey,
 			model: finalModelRecord,
 			abortSignal: abortController.signal,
+			userSettingsData: userSettingsRecord ?? null,
 		})
 			.catch(async (error) => {
 				log(`Background Video response generation error: ${error}`, startTime);

@@ -328,7 +328,7 @@
 				// But we can update content to [Generating video... (ID: ...)] or similar?
 				// Better: Start polling here locally.
 
-				pollVideoStatus(runId, assistantMsg.id, currentModelId);
+				pollVideoStatus(runId, assistantMsg.id, currentModelId, conversationId);
 			} catch (e) {
 				console.error('Video gen flow error', e);
 				error = 'Failed to start video generation';
@@ -395,14 +395,21 @@
 		}
 	}
 
-	async function pollVideoStatus(runId: string, messageId: string, modelId: string) {
+	async function pollVideoStatus(
+		runId: string,
+		messageId: string,
+		modelId: string,
+		conversationId: string
+	) {
 		console.log(
 			'[pollVideoStatus] Starting poll for runId:',
 			runId,
 			'model:',
 			modelId,
 			'msgId:',
-			messageId
+			messageId,
+			'convId:',
+			conversationId
 		);
 		const pollInterval = setInterval(async () => {
 			try {
@@ -433,6 +440,19 @@
 								content: `[Video Result](${videoUrl})`,
 							});
 							invalidateQueryPattern(api.messages.getAllFromConversation.url);
+
+							// Generate conversation title
+							try {
+								await fetch('/api/generate-title', {
+									method: 'POST',
+									headers: { 'Content-Type': 'application/json' },
+									body: JSON.stringify({ conversation_id: conversationId }),
+								});
+								invalidateQueryPattern(api.conversations.get.url);
+								invalidateQueryPattern(api.conversations.getById.url);
+							} catch (e) {
+								console.error('[pollVideoStatus] Title generation failed:', e);
+							}
 						} else {
 							console.error('[pollVideoStatus] Completed but no video URL found', payload);
 						}
