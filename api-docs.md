@@ -60,6 +60,9 @@ Notes:
   "web_search_enabled": "boolean (optional)",
   "web_search_mode": "enum: 'off' | 'standard' | 'deep' (optional)",
   "web_search_provider": "enum: 'linkup' | 'tavily' | 'exa' | 'kagi' (optional)",
+  "web_search_exa_depth": "enum: 'fast' | 'auto' | 'neural' | 'deep' (optional) - Exa provider depth mode",
+  "web_search_context_size": "enum: 'low' | 'medium' | 'high' (optional) - Search result context amount",
+  "web_search_kagi_source": "enum: 'web' | 'news' | 'search' (optional) - Kagi provider source type",
   "images": [
     {
       "url": "string",
@@ -535,6 +538,10 @@ List all assistants for the user. If no assistants exist, a default one is creat
     "isDefault": "boolean",
     "defaultModelId": "string | null",
     "defaultWebSearchMode": "string | null",
+    "defaultWebSearchProvider": "string | null",
+    "defaultWebSearchExaDepth": "string | null",
+    "defaultWebSearchContextSize": "string | null",
+    "defaultWebSearchKagiSource": "string | null",
     "createdAt": "date",
     "updatedAt": "date"
   }
@@ -559,7 +566,10 @@ Create a new assistant.
   "systemPrompt": "string (max 10000 chars)",
   "defaultModelId": "string (optional)",
   "defaultWebSearchMode": "enum: 'off' | 'standard' | 'deep' (optional)",
-  "defaultWebSearchProvider": "enum: 'linkup' | 'tavily' | 'exa' | 'kagi' (optional)"
+  "defaultWebSearchProvider": "enum: 'linkup' | 'tavily' | 'exa' | 'kagi' (optional)",
+  "defaultWebSearchExaDepth": "enum: 'fast' | 'auto' | 'neural' | 'deep' (optional)",
+  "defaultWebSearchContextSize": "enum: 'low' | 'medium' | 'high' (optional)",
+  "defaultWebSearchKagiSource": "enum: 'web' | 'news' | 'search' (optional)"
 }
 ```
 
@@ -592,7 +602,11 @@ Update an assistant.
   "name": "string (optional)",
   "systemPrompt": "string (optional)",
   "defaultModelId": "string | null (optional)",
-  "defaultWebSearchMode": "enum (optional)"
+  "defaultWebSearchMode": "enum: 'off' | 'standard' | 'deep' | null (optional)",
+  "defaultWebSearchProvider": "enum: 'linkup' | 'tavily' | 'exa' | 'kagi' | null (optional)",
+  "defaultWebSearchExaDepth": "enum: 'fast' | 'auto' | 'neural' | 'deep' | null (optional)",
+  "defaultWebSearchContextSize": "enum: 'low' | 'medium' | 'high' | null (optional)",
+  "defaultWebSearchKagiSource": "enum: 'web' | 'news' | 'search' | null (optional)"
 }
 ```
 

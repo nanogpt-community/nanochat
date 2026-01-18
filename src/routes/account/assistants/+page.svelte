@@ -44,6 +44,9 @@
 	let formDefaultModelId = $state<string>('');
 	let formDefaultWebSearchMode = $state<string>('');
 	let formDefaultWebSearchProvider = $state<string>('');
+	let formDefaultWebSearchExaDepth = $state<string>('');
+	let formDefaultWebSearchContextSize = $state<string>('');
+	let formDefaultWebSearchKagiSource = $state<string>('');
 	let isSubmitting = $state(false);
 
 	function startEdit(assistant: any) {
@@ -53,6 +56,9 @@
 		formDefaultModelId = assistant.defaultModelId ?? '';
 		formDefaultWebSearchMode = assistant.defaultWebSearchMode ?? '';
 		formDefaultWebSearchProvider = assistant.defaultWebSearchProvider ?? '';
+		formDefaultWebSearchExaDepth = assistant.defaultWebSearchExaDepth ?? '';
+		formDefaultWebSearchContextSize = assistant.defaultWebSearchContextSize ?? '';
+		formDefaultWebSearchKagiSource = assistant.defaultWebSearchKagiSource ?? '';
 		isCreating = false;
 	}
 
@@ -63,6 +69,9 @@
 		formDefaultModelId = '';
 		formDefaultWebSearchMode = '';
 		formDefaultWebSearchProvider = '';
+		formDefaultWebSearchExaDepth = '';
+		formDefaultWebSearchContextSize = '';
+		formDefaultWebSearchKagiSource = '';
 		isCreating = true;
 	}
 
@@ -74,6 +83,9 @@
 		formDefaultModelId = '';
 		formDefaultWebSearchMode = '';
 		formDefaultWebSearchProvider = '';
+		formDefaultWebSearchExaDepth = '';
+		formDefaultWebSearchContextSize = '';
+		formDefaultWebSearchKagiSource = '';
 		// Clear the create query param if present
 		if (page.url.searchParams.has('create')) {
 			goto('/account/assistants', { replaceState: true });
@@ -102,6 +114,9 @@
 						defaultModelId: formDefaultModelId || undefined,
 						defaultWebSearchMode: formDefaultWebSearchMode || undefined,
 						defaultWebSearchProvider: formDefaultWebSearchProvider || undefined,
+						defaultWebSearchExaDepth: formDefaultWebSearchExaDepth || undefined,
+						defaultWebSearchContextSize: formDefaultWebSearchContextSize || undefined,
+						defaultWebSearchKagiSource: formDefaultWebSearchKagiSource || undefined,
 					}),
 				});
 				if (!res.ok) throw new Error('Failed to create');
@@ -115,6 +130,9 @@
 						defaultModelId: formDefaultModelId || null,
 						defaultWebSearchMode: formDefaultWebSearchMode || null,
 						defaultWebSearchProvider: formDefaultWebSearchProvider || null,
+						defaultWebSearchExaDepth: formDefaultWebSearchExaDepth || null,
+						defaultWebSearchContextSize: formDefaultWebSearchContextSize || null,
+						defaultWebSearchKagiSource: formDefaultWebSearchKagiSource || null,
 					}),
 				});
 				if (!res.ok) throw new Error('Failed to update');
@@ -279,6 +297,54 @@
 								<option value="exa">Exa</option>
 								<option value="kagi">Kagi</option>
 							</select>
+						</div>
+					</div>
+
+					<div class="mt-4 grid gap-4 sm:grid-cols-3">
+						<div class="space-y-2">
+							<Label for="defaultExaDepth" class="text-sm font-medium">Exa Depth</Label>
+							<select
+								id="defaultExaDepth"
+								bind:value={formDefaultWebSearchExaDepth}
+								class="bg-background/50 border-border/50 focus:border-primary/50 h-10 w-full rounded-md border px-3 text-sm transition-colors focus:outline-none"
+							>
+								<option value="">None</option>
+								<option value="fast">Fast</option>
+								<option value="auto">Auto</option>
+								<option value="neural">Neural</option>
+								<option value="deep">Deep</option>
+							</select>
+							<p class="text-muted-foreground text-xs">For Exa provider only</p>
+						</div>
+
+						<div class="space-y-2">
+							<Label for="defaultContextSize" class="text-sm font-medium">Context Size</Label>
+							<select
+								id="defaultContextSize"
+								bind:value={formDefaultWebSearchContextSize}
+								class="bg-background/50 border-border/50 focus:border-primary/50 h-10 w-full rounded-md border px-3 text-sm transition-colors focus:outline-none"
+							>
+								<option value="">None</option>
+								<option value="low">Low</option>
+								<option value="medium">Medium</option>
+								<option value="high">High</option>
+							</select>
+							<p class="text-muted-foreground text-xs">Search result context amount</p>
+						</div>
+
+						<div class="space-y-2">
+							<Label for="defaultKagiSource" class="text-sm font-medium">Kagi Source</Label>
+							<select
+								id="defaultKagiSource"
+								bind:value={formDefaultWebSearchKagiSource}
+								class="bg-background/50 border-border/50 focus:border-primary/50 h-10 w-full rounded-md border px-3 text-sm transition-colors focus:outline-none"
+							>
+								<option value="">None</option>
+								<option value="web">Web</option>
+								<option value="news">News</option>
+								<option value="search">Search</option>
+							</select>
+							<p class="text-muted-foreground text-xs">For Kagi provider only</p>
 						</div>
 					</div>
 				</div>

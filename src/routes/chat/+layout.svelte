@@ -143,6 +143,12 @@
 				(assistant.defaultWebSearchMode as 'off' | 'standard' | 'deep') || 'off';
 			settings.webSearchProvider =
 				(assistant.defaultWebSearchProvider as 'linkup' | 'tavily' | 'exa' | 'kagi') || 'linkup';
+			settings.webSearchExaDepth =
+				(assistant.defaultWebSearchExaDepth as 'fast' | 'auto' | 'neural' | 'deep') || 'auto';
+			settings.webSearchContextSize =
+				(assistant.defaultWebSearchContextSize as 'low' | 'medium' | 'high') || 'medium';
+			settings.webSearchKagiSource =
+				(assistant.defaultWebSearchKagiSource as 'web' | 'news' | 'search') || 'web';
 		}
 	});
 
@@ -358,6 +364,9 @@
 				documents: documentsCopy.length > 0 ? documentsCopy : undefined,
 				web_search_mode: settings.webSearchMode,
 				web_search_provider: settings.webSearchProvider,
+				web_search_exa_depth: settings.webSearchProvider === 'exa' ? settings.webSearchExaDepth : undefined,
+				web_search_context_size: settings.webSearchMode !== 'off' ? settings.webSearchContextSize : undefined,
+				web_search_kagi_source: settings.webSearchProvider === 'kagi' ? settings.webSearchKagiSource : undefined,
 				assistant_id: selectedAssistantId.current || undefined,
 				project_id: page.url.searchParams.get('projectId') || undefined,
 				reasoning_effort:
@@ -1499,6 +1508,99 @@
 															: settings.webSearchProvider === 'exa'
 																? 'Using Exa. Click to switch.'
 																: 'Using Kagi. Click to switch.'}
+												</Tooltip>
+												{#if settings.webSearchProvider === 'exa'}
+													<Tooltip>
+														{#snippet trigger(tooltip)}
+															<button
+																type="button"
+																class={cn(
+																	'bg-secondary/50 hover:bg-secondary text-muted-foreground flex h-8 items-center justify-center rounded-lg px-2 text-xs font-medium transition-colors',
+																	settings.webSearchExaDepth === 'neural' &&
+																		'bg-blue-500/20 text-blue-400',
+																	settings.webSearchExaDepth === 'deep' &&
+																		'bg-amber-500/20 text-amber-500'
+																)}
+																onclick={() => {
+																	if (settings.webSearchExaDepth === 'fast')
+																		settings.webSearchExaDepth = 'auto';
+																	else if (settings.webSearchExaDepth === 'auto')
+																		settings.webSearchExaDepth = 'neural';
+																	else if (settings.webSearchExaDepth === 'neural')
+																		settings.webSearchExaDepth = 'deep';
+																	else settings.webSearchExaDepth = 'fast';
+																}}
+																{...tooltip.trigger}
+															>
+																{settings.webSearchExaDepth === 'fast'
+																	? 'Fast'
+																	: settings.webSearchExaDepth === 'auto'
+																		? 'Auto'
+																		: settings.webSearchExaDepth === 'neural'
+																			? 'Neural'
+																			: 'Deep'}
+															</button>
+														{/snippet}
+														Exa depth: {settings.webSearchExaDepth}. Click to cycle.
+													</Tooltip>
+												{/if}
+												{#if settings.webSearchProvider === 'kagi'}
+													<Tooltip>
+														{#snippet trigger(tooltip)}
+															<button
+																type="button"
+																class={cn(
+																	'bg-secondary/50 hover:bg-secondary text-muted-foreground flex h-8 items-center justify-center rounded-lg px-2 text-xs font-medium transition-colors',
+																	settings.webSearchKagiSource === 'news' &&
+																		'bg-purple-500/20 text-purple-400'
+																)}
+																onclick={() => {
+																	if (settings.webSearchKagiSource === 'web')
+																		settings.webSearchKagiSource = 'news';
+																	else if (settings.webSearchKagiSource === 'news')
+																		settings.webSearchKagiSource = 'search';
+																	else settings.webSearchKagiSource = 'web';
+																}}
+																{...tooltip.trigger}
+															>
+																{settings.webSearchKagiSource === 'web'
+																	? 'Web'
+																	: settings.webSearchKagiSource === 'news'
+																		? 'News'
+																		: 'Search'}
+															</button>
+														{/snippet}
+														Kagi source: {settings.webSearchKagiSource}. Click to cycle.
+													</Tooltip>
+												{/if}
+												<Tooltip>
+													{#snippet trigger(tooltip)}
+														<button
+															type="button"
+															class={cn(
+																'bg-secondary/50 hover:bg-secondary text-muted-foreground flex h-8 items-center justify-center rounded-lg px-2 text-xs font-medium transition-colors',
+																settings.webSearchContextSize === 'high' &&
+																	'bg-green-500/20 text-green-400',
+																settings.webSearchContextSize === 'low' &&
+																	'bg-gray-500/20 text-gray-400'
+															)}
+															onclick={() => {
+																if (settings.webSearchContextSize === 'low')
+																	settings.webSearchContextSize = 'medium';
+																else if (settings.webSearchContextSize === 'medium')
+																	settings.webSearchContextSize = 'high';
+																else settings.webSearchContextSize = 'low';
+															}}
+															{...tooltip.trigger}
+														>
+															{settings.webSearchContextSize === 'low'
+																? 'Ctx: Low'
+																: settings.webSearchContextSize === 'medium'
+																	? 'Ctx: Med'
+																	: 'Ctx: High'}
+														</button>
+													{/snippet}
+													Search context size: {settings.webSearchContextSize}. Click to cycle.
 												</Tooltip>
 											{/if}
 										{/if}

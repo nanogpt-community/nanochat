@@ -57,6 +57,9 @@ const reqBodySchema = z
 		web_search_enabled: z.boolean().optional(),
 		web_search_mode: z.enum(['off', 'standard', 'deep']).optional(),
 		web_search_provider: z.enum(['linkup', 'tavily', 'exa', 'kagi']).optional(),
+		web_search_exa_depth: z.enum(['fast', 'auto', 'neural', 'deep']).optional(),
+		web_search_context_size: z.enum(['low', 'medium', 'high']).optional(),
+		web_search_kagi_source: z.enum(['web', 'news', 'search']).optional(),
 		images: z
 			.array(
 				z.object({
@@ -533,6 +536,9 @@ export const POST: RequestHandler = async ({ request }) => {
 	const capturedWebSearchDepth =
 		effectiveWebSearchMode && effectiveWebSearchMode !== 'off' ? effectiveWebSearchMode : undefined;
 	const capturedWebSearchProvider = args.web_search_provider;
+	const capturedWebSearchExaDepth = args.web_search_exa_depth;
+	const capturedWebSearchContextSize = args.web_search_context_size;
+	const capturedWebSearchKagiSource = args.web_search_kagi_source;
 	const capturedWebFeaturesDisabled = usingServerKey && isWebDisabledForServerKey();
 	const capturedProviderId = args.provider_id;
 	const capturedMcpEnabled = userSettingsRecord?.mcpEnabled ?? false;
@@ -558,6 +564,9 @@ export const POST: RequestHandler = async ({ request }) => {
 					reasoningEffort: capturedReasoningEffort,
 					webSearchDepth: capturedWebSearchDepth,
 					webSearchProvider: capturedWebSearchProvider,
+					webSearchExaDepth: capturedWebSearchExaDepth,
+					webSearchContextSize: capturedWebSearchContextSize,
+					webSearchKagiSource: capturedWebSearchKagiSource,
 					webFeaturesDisabled: capturedWebFeaturesDisabled,
 					userName: capturedUserName,
 					isTemporary: isTemporaryChat,
@@ -603,6 +612,9 @@ async function streamAIResponse({
 	reasoningEffort,
 	webSearchDepth,
 	webSearchProvider,
+	webSearchExaDepth,
+	webSearchContextSize,
+	webSearchKagiSource,
 	webFeaturesDisabled,
 	userName,
 	isTemporary,
@@ -623,6 +635,9 @@ async function streamAIResponse({
 	reasoningEffort?: 'low' | 'medium' | 'high';
 	webSearchDepth?: 'standard' | 'deep';
 	webSearchProvider?: 'linkup' | 'tavily' | 'exa' | 'kagi';
+	webSearchExaDepth?: 'fast' | 'auto' | 'neural' | 'deep';
+	webSearchContextSize?: 'low' | 'medium' | 'high';
+	webSearchKagiSource?: 'web' | 'news' | 'search';
 	webFeaturesDisabled?: boolean;
 	userName?: string;
 	isTemporary?: boolean;
@@ -1081,7 +1096,16 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 						? {
 								enabled: true,
 								provider: webSearchProvider || 'linkup',
-								depth: webSearchDepth === 'deep' ? 'deep' : 'standard',
+								depth:
+									webSearchProvider === 'exa'
+										? webSearchExaDepth || 'auto'
+										: webSearchDepth === 'deep'
+											? 'deep'
+											: 'standard',
+								...(webSearchContextSize ? { search_context_size: webSearchContextSize } : {}),
+								...(webSearchProvider === 'kagi' && webSearchKagiSource
+									? { kagiSource: webSearchKagiSource }
+									: {}),
 							}
 						: undefined,
 				// @ts-ignore

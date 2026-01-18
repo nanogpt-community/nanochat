@@ -58,6 +58,9 @@ const reqBodySchema = z
 		web_search_enabled: z.boolean().optional(),
 		web_search_mode: z.enum(['off', 'standard', 'deep']).optional(),
 		web_search_provider: z.enum(['linkup', 'tavily', 'exa', 'kagi']).optional(),
+		web_search_exa_depth: z.enum(['fast', 'auto', 'neural', 'deep']).optional(),
+		web_search_context_size: z.enum(['low', 'medium', 'high']).optional(),
+		web_search_kagi_source: z.enum(['web', 'news', 'search']).optional(),
 		images: z
 			.array(
 				z.object({
@@ -280,6 +283,9 @@ async function generateAIResponse({
 	reasoningEffort,
 	webSearchDepth,
 	webSearchProvider,
+	webSearchExaDepth,
+	webSearchContextSize,
+	webSearchKagiSource,
 	webFeaturesDisabled,
 	userName,
 	isTemporary,
@@ -298,6 +304,9 @@ async function generateAIResponse({
 	reasoningEffort?: 'low' | 'medium' | 'high';
 	webSearchDepth?: 'standard' | 'deep';
 	webSearchProvider?: 'linkup' | 'tavily' | 'exa' | 'kagi';
+	webSearchExaDepth?: 'fast' | 'auto' | 'neural' | 'deep';
+	webSearchContextSize?: 'low' | 'medium' | 'high';
+	webSearchKagiSource?: 'web' | 'news' | 'search';
 	webFeaturesDisabled?: boolean;
 	userName?: string;
 	isTemporary?: boolean;
@@ -778,7 +787,16 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 						? {
 								enabled: true,
 								provider: webSearchProvider || 'linkup',
-								depth: webSearchDepth === 'deep' ? 'deep' : 'standard',
+								depth:
+									webSearchProvider === 'exa'
+										? webSearchExaDepth || 'auto'
+										: webSearchDepth === 'deep'
+											? 'deep'
+											: 'standard',
+								...(webSearchContextSize ? { search_context_size: webSearchContextSize } : {}),
+								...(webSearchProvider === 'kagi' && webSearchKagiSource
+									? { kagiSource: webSearchKagiSource }
+									: {}),
 							}
 						: undefined,
 				// @ts-ignore - Custom NanoGPT parameters
@@ -2135,6 +2153,9 @@ export const POST: RequestHandler = async ({ request }) => {
 					? effectiveWebSearchMode
 					: undefined,
 			webSearchProvider: args.web_search_provider,
+			webSearchExaDepth: args.web_search_exa_depth,
+			webSearchContextSize: args.web_search_context_size,
+			webSearchKagiSource: args.web_search_kagi_source,
 			webFeaturesDisabled: usingServerKey && isWebDisabledForServerKey(),
 			userName: userRecord?.name ?? undefined,
 			isTemporary: isTemporaryChat,

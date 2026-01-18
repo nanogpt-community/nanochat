@@ -24,6 +24,9 @@ export async function GET({ request }: RequestEvent) {
             defaultModelId: null,
             defaultWebSearchMode: null,
             defaultWebSearchProvider: null,
+            defaultWebSearchExaDepth: null,
+            defaultWebSearchContextSize: null,
+            defaultWebSearchKagiSource: null,
             createdAt: new Date(),
             updatedAt: new Date(),
         };
@@ -41,6 +44,9 @@ const createAssistantSchema = z.object({
     defaultModelId: z.string().optional(),
     defaultWebSearchMode: z.enum(['off', 'standard', 'deep']).optional(),
     defaultWebSearchProvider: z.enum(['linkup', 'tavily', 'exa', 'kagi']).optional(),
+    defaultWebSearchExaDepth: z.enum(['fast', 'auto', 'neural', 'deep']).optional(),
+    defaultWebSearchContextSize: z.enum(['low', 'medium', 'high']).optional(),
+    defaultWebSearchKagiSource: z.enum(['web', 'news', 'search']).optional(),
 });
 
 export async function POST({ request }: RequestEvent) {
@@ -57,7 +63,7 @@ export async function POST({ request }: RequestEvent) {
         return json({ error: result.error.flatten() }, { status: 400 });
     }
 
-    const { name, systemPrompt, defaultModelId, defaultWebSearchMode, defaultWebSearchProvider } = result.data;
+    const { name, systemPrompt, defaultModelId, defaultWebSearchMode, defaultWebSearchProvider, defaultWebSearchExaDepth, defaultWebSearchContextSize, defaultWebSearchKagiSource } = result.data;
 
     const newAssistant = {
         id: generateId(),
@@ -68,6 +74,9 @@ export async function POST({ request }: RequestEvent) {
         defaultModelId: defaultModelId ?? null,
         defaultWebSearchMode: defaultWebSearchMode ?? null,
         defaultWebSearchProvider: defaultWebSearchProvider ?? null,
+        defaultWebSearchExaDepth: defaultWebSearchExaDepth ?? null,
+        defaultWebSearchContextSize: defaultWebSearchContextSize ?? null,
+        defaultWebSearchKagiSource: defaultWebSearchKagiSource ?? null,
         createdAt: new Date(),
         updatedAt: new Date(),
     };

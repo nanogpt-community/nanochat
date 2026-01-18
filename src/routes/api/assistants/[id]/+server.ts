@@ -11,6 +11,9 @@ const updateAssistantSchema = z.object({
     defaultModelId: z.string().nullable().optional(),
     defaultWebSearchMode: z.enum(['off', 'standard', 'deep']).nullable().optional(),
     defaultWebSearchProvider: z.enum(['linkup', 'tavily', 'exa', 'kagi']).nullable().optional(),
+    defaultWebSearchExaDepth: z.enum(['fast', 'auto', 'neural', 'deep']).nullable().optional(),
+    defaultWebSearchContextSize: z.enum(['low', 'medium', 'high']).nullable().optional(),
+    defaultWebSearchKagiSource: z.enum(['web', 'news', 'search']).nullable().optional(),
 });
 
 export async function PATCH({ request, params }: RequestEvent) {
@@ -37,7 +40,7 @@ export async function PATCH({ request, params }: RequestEvent) {
         return json({ error: 'Assistant not found' }, { status: 404 });
     }
 
-    const { name, systemPrompt, defaultModelId, defaultWebSearchMode, defaultWebSearchProvider } = result.data;
+    const { name, systemPrompt, defaultModelId, defaultWebSearchMode, defaultWebSearchProvider, defaultWebSearchExaDepth, defaultWebSearchContextSize, defaultWebSearchKagiSource } = result.data;
 
     await db.update(assistants)
         .set({
@@ -46,6 +49,9 @@ export async function PATCH({ request, params }: RequestEvent) {
             ...(defaultModelId !== undefined ? { defaultModelId } : {}),
             ...(defaultWebSearchMode !== undefined ? { defaultWebSearchMode } : {}),
             ...(defaultWebSearchProvider !== undefined ? { defaultWebSearchProvider } : {}),
+            ...(defaultWebSearchExaDepth !== undefined ? { defaultWebSearchExaDepth } : {}),
+            ...(defaultWebSearchContextSize !== undefined ? { defaultWebSearchContextSize } : {}),
+            ...(defaultWebSearchKagiSource !== undefined ? { defaultWebSearchKagiSource } : {}),
             updatedAt: new Date()
         })
         .where(eq(assistants.id, id));

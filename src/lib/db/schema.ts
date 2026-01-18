@@ -327,6 +327,9 @@ export const assistants = sqliteTable(
 		defaultModelId: text('default_model_id'),
 		defaultWebSearchMode: text('default_web_search_mode'), // 'off' | 'standard' | 'deep'
 		defaultWebSearchProvider: text('default_web_search_provider'), // 'linkup' | 'tavily' | 'exa' | 'kagi'
+		defaultWebSearchExaDepth: text('default_web_search_exa_depth'), // 'fast' | 'auto' | 'neural' | 'deep'
+		defaultWebSearchContextSize: text('default_web_search_context_size'), // 'low' | 'medium' | 'high'
+		defaultWebSearchKagiSource: text('default_web_search_kagi_source'), // 'web' | 'news' | 'search'
 		createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
 		updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 	},
