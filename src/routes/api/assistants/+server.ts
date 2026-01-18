@@ -27,6 +27,7 @@ export async function GET({ request }: RequestEvent) {
             defaultWebSearchExaDepth: null,
             defaultWebSearchContextSize: null,
             defaultWebSearchKagiSource: null,
+            defaultWebSearchValyuSearchType: null,
             createdAt: new Date(),
             updatedAt: new Date(),
         };
@@ -43,10 +44,11 @@ const createAssistantSchema = z.object({
     systemPrompt: z.string().max(10000),
     defaultModelId: z.string().optional(),
     defaultWebSearchMode: z.enum(['off', 'standard', 'deep']).optional(),
-    defaultWebSearchProvider: z.enum(['linkup', 'tavily', 'exa', 'kagi']).optional(),
+    defaultWebSearchProvider: z.enum(['linkup', 'tavily', 'exa', 'kagi', 'perplexity', 'valyu']).optional(),
     defaultWebSearchExaDepth: z.enum(['fast', 'auto', 'neural', 'deep']).optional(),
     defaultWebSearchContextSize: z.enum(['low', 'medium', 'high']).optional(),
     defaultWebSearchKagiSource: z.enum(['web', 'news', 'search']).optional(),
+    defaultWebSearchValyuSearchType: z.enum(['all', 'web']).optional(),
 });
 
 export async function POST({ request }: RequestEvent) {
@@ -63,7 +65,7 @@ export async function POST({ request }: RequestEvent) {
         return json({ error: result.error.flatten() }, { status: 400 });
     }
 
-    const { name, systemPrompt, defaultModelId, defaultWebSearchMode, defaultWebSearchProvider, defaultWebSearchExaDepth, defaultWebSearchContextSize, defaultWebSearchKagiSource } = result.data;
+    const { name, systemPrompt, defaultModelId, defaultWebSearchMode, defaultWebSearchProvider, defaultWebSearchExaDepth, defaultWebSearchContextSize, defaultWebSearchKagiSource, defaultWebSearchValyuSearchType } = result.data;
 
     const newAssistant = {
         id: generateId(),
@@ -77,6 +79,7 @@ export async function POST({ request }: RequestEvent) {
         defaultWebSearchExaDepth: defaultWebSearchExaDepth ?? null,
         defaultWebSearchContextSize: defaultWebSearchContextSize ?? null,
         defaultWebSearchKagiSource: defaultWebSearchKagiSource ?? null,
+        defaultWebSearchValyuSearchType: defaultWebSearchValyuSearchType ?? null,
         createdAt: new Date(),
         updatedAt: new Date(),
     };

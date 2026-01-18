@@ -57,10 +57,11 @@ const reqBodySchema = z
 		conversation_id: z.string().optional(),
 		web_search_enabled: z.boolean().optional(),
 		web_search_mode: z.enum(['off', 'standard', 'deep']).optional(),
-		web_search_provider: z.enum(['linkup', 'tavily', 'exa', 'kagi']).optional(),
+		web_search_provider: z.enum(['linkup', 'tavily', 'exa', 'kagi', 'perplexity', 'valyu']).optional(),
 		web_search_exa_depth: z.enum(['fast', 'auto', 'neural', 'deep']).optional(),
 		web_search_context_size: z.enum(['low', 'medium', 'high']).optional(),
 		web_search_kagi_source: z.enum(['web', 'news', 'search']).optional(),
+		web_search_valyu_search_type: z.enum(['all', 'web']).optional(),
 		images: z
 			.array(
 				z.object({
@@ -286,6 +287,7 @@ async function generateAIResponse({
 	webSearchExaDepth,
 	webSearchContextSize,
 	webSearchKagiSource,
+	webSearchValyuSearchType,
 	webFeaturesDisabled,
 	userName,
 	isTemporary,
@@ -303,10 +305,11 @@ async function generateAIResponse({
 	abortSignal?: AbortSignal;
 	reasoningEffort?: 'low' | 'medium' | 'high';
 	webSearchDepth?: 'standard' | 'deep';
-	webSearchProvider?: 'linkup' | 'tavily' | 'exa' | 'kagi';
+	webSearchProvider?: 'linkup' | 'tavily' | 'exa' | 'kagi' | 'perplexity' | 'valyu';
 	webSearchExaDepth?: 'fast' | 'auto' | 'neural' | 'deep';
 	webSearchContextSize?: 'low' | 'medium' | 'high';
 	webSearchKagiSource?: 'web' | 'news' | 'search';
+	webSearchValyuSearchType?: 'all' | 'web';
 	webFeaturesDisabled?: boolean;
 	userName?: string;
 	isTemporary?: boolean;
@@ -796,6 +799,9 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 								...(webSearchContextSize ? { search_context_size: webSearchContextSize } : {}),
 								...(webSearchProvider === 'kagi' && webSearchKagiSource
 									? { kagiSource: webSearchKagiSource }
+									: {}),
+								...(webSearchProvider === 'valyu' && webSearchValyuSearchType
+									? { searchType: webSearchValyuSearchType }
 									: {}),
 							}
 						: undefined,
@@ -2156,6 +2162,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			webSearchExaDepth: args.web_search_exa_depth,
 			webSearchContextSize: args.web_search_context_size,
 			webSearchKagiSource: args.web_search_kagi_source,
+			webSearchValyuSearchType: args.web_search_valyu_search_type,
 			webFeaturesDisabled: usingServerKey && isWebDisabledForServerKey(),
 			userName: userRecord?.name ?? undefined,
 			isTemporary: isTemporaryChat,

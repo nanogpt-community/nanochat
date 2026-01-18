@@ -56,10 +56,11 @@ const reqBodySchema = z
 		conversation_id: z.string().optional(),
 		web_search_enabled: z.boolean().optional(),
 		web_search_mode: z.enum(['off', 'standard', 'deep']).optional(),
-		web_search_provider: z.enum(['linkup', 'tavily', 'exa', 'kagi']).optional(),
+		web_search_provider: z.enum(['linkup', 'tavily', 'exa', 'kagi', 'perplexity', 'valyu']).optional(),
 		web_search_exa_depth: z.enum(['fast', 'auto', 'neural', 'deep']).optional(),
 		web_search_context_size: z.enum(['low', 'medium', 'high']).optional(),
 		web_search_kagi_source: z.enum(['web', 'news', 'search']).optional(),
+		web_search_valyu_search_type: z.enum(['all', 'web']).optional(),
 		images: z
 			.array(
 				z.object({
@@ -539,6 +540,7 @@ export const POST: RequestHandler = async ({ request }) => {
 	const capturedWebSearchExaDepth = args.web_search_exa_depth;
 	const capturedWebSearchContextSize = args.web_search_context_size;
 	const capturedWebSearchKagiSource = args.web_search_kagi_source;
+	const capturedWebSearchValyuSearchType = args.web_search_valyu_search_type;
 	const capturedWebFeaturesDisabled = usingServerKey && isWebDisabledForServerKey();
 	const capturedProviderId = args.provider_id;
 	const capturedMcpEnabled = userSettingsRecord?.mcpEnabled ?? false;
@@ -567,6 +569,7 @@ export const POST: RequestHandler = async ({ request }) => {
 					webSearchExaDepth: capturedWebSearchExaDepth,
 					webSearchContextSize: capturedWebSearchContextSize,
 					webSearchKagiSource: capturedWebSearchKagiSource,
+					webSearchValyuSearchType: capturedWebSearchValyuSearchType,
 					webFeaturesDisabled: capturedWebFeaturesDisabled,
 					userName: capturedUserName,
 					isTemporary: isTemporaryChat,
@@ -615,6 +618,7 @@ async function streamAIResponse({
 	webSearchExaDepth,
 	webSearchContextSize,
 	webSearchKagiSource,
+	webSearchValyuSearchType,
 	webFeaturesDisabled,
 	userName,
 	isTemporary,
@@ -634,10 +638,11 @@ async function streamAIResponse({
 	abortSignal?: AbortSignal;
 	reasoningEffort?: 'low' | 'medium' | 'high';
 	webSearchDepth?: 'standard' | 'deep';
-	webSearchProvider?: 'linkup' | 'tavily' | 'exa' | 'kagi';
+	webSearchProvider?: 'linkup' | 'tavily' | 'exa' | 'kagi' | 'perplexity' | 'valyu';
 	webSearchExaDepth?: 'fast' | 'auto' | 'neural' | 'deep';
 	webSearchContextSize?: 'low' | 'medium' | 'high';
 	webSearchKagiSource?: 'web' | 'news' | 'search';
+	webSearchValyuSearchType?: 'all' | 'web';
 	webFeaturesDisabled?: boolean;
 	userName?: string;
 	isTemporary?: boolean;
@@ -1105,6 +1110,9 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 								...(webSearchContextSize ? { search_context_size: webSearchContextSize } : {}),
 								...(webSearchProvider === 'kagi' && webSearchKagiSource
 									? { kagiSource: webSearchKagiSource }
+									: {}),
+								...(webSearchProvider === 'valyu' && webSearchValyuSearchType
+									? { searchType: webSearchValyuSearchType }
 									: {}),
 							}
 						: undefined,

@@ -4,10 +4,11 @@ export const settings = createPersistedObj('settings', {
 	modelId: undefined as string | undefined,
 	providerId: undefined as string | undefined, // X-Provider header value for provider selection
 	webSearchMode: 'off' as 'off' | 'standard' | 'deep',
-	webSearchProvider: 'linkup' as 'linkup' | 'tavily' | 'exa' | 'kagi',
+	webSearchProvider: 'linkup' as 'linkup' | 'tavily' | 'exa' | 'kagi' | 'perplexity' | 'valyu',
 	webSearchExaDepth: 'auto' as 'fast' | 'auto' | 'neural' | 'deep',
 	webSearchContextSize: 'medium' as 'low' | 'medium' | 'high',
 	webSearchKagiSource: 'web' as 'web' | 'news' | 'search',
+	webSearchValyuSearchType: 'all' as 'all' | 'web',
 	reasoningEffort: 'low' as 'low' | 'medium' | 'high',
 	theme: undefined as string | undefined,
 	temporaryMode: false as boolean,

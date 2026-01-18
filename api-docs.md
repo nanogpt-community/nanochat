@@ -59,10 +59,11 @@ Notes:
   "conversation_id": "string (optional)",
   "web_search_enabled": "boolean (optional)",
   "web_search_mode": "enum: 'off' | 'standard' | 'deep' (optional)",
-  "web_search_provider": "enum: 'linkup' | 'tavily' | 'exa' | 'kagi' (optional)",
+  "web_search_provider": "enum: 'linkup' | 'tavily' | 'exa' | 'kagi' | 'perplexity' | 'valyu' (optional)",
   "web_search_exa_depth": "enum: 'fast' | 'auto' | 'neural' | 'deep' (optional) - Exa provider depth mode",
   "web_search_context_size": "enum: 'low' | 'medium' | 'high' (optional) - Search result context amount",
   "web_search_kagi_source": "enum: 'web' | 'news' | 'search' (optional) - Kagi provider source type",
+  "web_search_valyu_search_type": "enum: 'all' | 'web' (optional) - Valyu provider search type (all sources or web only)",
   "images": [
     {
       "url": "string",
@@ -542,6 +543,7 @@ List all assistants for the user. If no assistants exist, a default one is creat
     "defaultWebSearchExaDepth": "string | null",
     "defaultWebSearchContextSize": "string | null",
     "defaultWebSearchKagiSource": "string | null",
+    "defaultWebSearchValyuSearchType": "string | null",
     "createdAt": "date",
     "updatedAt": "date"
   }
@@ -566,10 +568,11 @@ Create a new assistant.
   "systemPrompt": "string (max 10000 chars)",
   "defaultModelId": "string (optional)",
   "defaultWebSearchMode": "enum: 'off' | 'standard' | 'deep' (optional)",
-  "defaultWebSearchProvider": "enum: 'linkup' | 'tavily' | 'exa' | 'kagi' (optional)",
+  "defaultWebSearchProvider": "enum: 'linkup' | 'tavily' | 'exa' | 'kagi' | 'perplexity' | 'valyu' (optional)",
   "defaultWebSearchExaDepth": "enum: 'fast' | 'auto' | 'neural' | 'deep' (optional)",
   "defaultWebSearchContextSize": "enum: 'low' | 'medium' | 'high' (optional)",
-  "defaultWebSearchKagiSource": "enum: 'web' | 'news' | 'search' (optional)"
+  "defaultWebSearchKagiSource": "enum: 'web' | 'news' | 'search' (optional)",
+  "defaultWebSearchValyuSearchType": "enum: 'all' | 'web' (optional)"
 }
 ```
 
@@ -603,10 +606,11 @@ Update an assistant.
   "systemPrompt": "string (optional)",
   "defaultModelId": "string | null (optional)",
   "defaultWebSearchMode": "enum: 'off' | 'standard' | 'deep' | null (optional)",
-  "defaultWebSearchProvider": "enum: 'linkup' | 'tavily' | 'exa' | 'kagi' | null (optional)",
+  "defaultWebSearchProvider": "enum: 'linkup' | 'tavily' | 'exa' | 'kagi' | 'perplexity' | 'valyu' | null (optional)",
   "defaultWebSearchExaDepth": "enum: 'fast' | 'auto' | 'neural' | 'deep' | null (optional)",
   "defaultWebSearchContextSize": "enum: 'low' | 'medium' | 'high' | null (optional)",
-  "defaultWebSearchKagiSource": "enum: 'web' | 'news' | 'search' | null (optional)"
+  "defaultWebSearchKagiSource": "enum: 'web' | 'news' | 'search' | null (optional)",
+  "defaultWebSearchValyuSearchType": "enum: 'all' | 'web' | null (optional)"
 }
 ```
 

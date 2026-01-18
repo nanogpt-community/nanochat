@@ -10,10 +10,11 @@ const updateAssistantSchema = z.object({
     systemPrompt: z.string().max(10000).optional(),
     defaultModelId: z.string().nullable().optional(),
     defaultWebSearchMode: z.enum(['off', 'standard', 'deep']).nullable().optional(),
-    defaultWebSearchProvider: z.enum(['linkup', 'tavily', 'exa', 'kagi']).nullable().optional(),
+    defaultWebSearchProvider: z.enum(['linkup', 'tavily', 'exa', 'kagi', 'perplexity', 'valyu']).nullable().optional(),
     defaultWebSearchExaDepth: z.enum(['fast', 'auto', 'neural', 'deep']).nullable().optional(),
     defaultWebSearchContextSize: z.enum(['low', 'medium', 'high']).nullable().optional(),
     defaultWebSearchKagiSource: z.enum(['web', 'news', 'search']).nullable().optional(),
+    defaultWebSearchValyuSearchType: z.enum(['all', 'web']).nullable().optional(),
 });
 
 export async function PATCH({ request, params }: RequestEvent) {
@@ -40,7 +41,7 @@ export async function PATCH({ request, params }: RequestEvent) {
         return json({ error: 'Assistant not found' }, { status: 404 });
     }
 
-    const { name, systemPrompt, defaultModelId, defaultWebSearchMode, defaultWebSearchProvider, defaultWebSearchExaDepth, defaultWebSearchContextSize, defaultWebSearchKagiSource } = result.data;
+    const { name, systemPrompt, defaultModelId, defaultWebSearchMode, defaultWebSearchProvider, defaultWebSearchExaDepth, defaultWebSearchContextSize, defaultWebSearchKagiSource, defaultWebSearchValyuSearchType } = result.data;
 
     await db.update(assistants)
         .set({
@@ -52,6 +53,7 @@ export async function PATCH({ request, params }: RequestEvent) {
             ...(defaultWebSearchExaDepth !== undefined ? { defaultWebSearchExaDepth } : {}),
             ...(defaultWebSearchContextSize !== undefined ? { defaultWebSearchContextSize } : {}),
             ...(defaultWebSearchKagiSource !== undefined ? { defaultWebSearchKagiSource } : {}),
+            ...(defaultWebSearchValyuSearchType !== undefined ? { defaultWebSearchValyuSearchType } : {}),
             updatedAt: new Date()
         })
         .where(eq(assistants.id, id));

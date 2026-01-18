@@ -47,6 +47,7 @@
 	let formDefaultWebSearchExaDepth = $state<string>('');
 	let formDefaultWebSearchContextSize = $state<string>('');
 	let formDefaultWebSearchKagiSource = $state<string>('');
+	let formDefaultWebSearchValyuSearchType = $state<string>('');
 	let isSubmitting = $state(false);
 
 	function startEdit(assistant: any) {
@@ -59,6 +60,7 @@
 		formDefaultWebSearchExaDepth = assistant.defaultWebSearchExaDepth ?? '';
 		formDefaultWebSearchContextSize = assistant.defaultWebSearchContextSize ?? '';
 		formDefaultWebSearchKagiSource = assistant.defaultWebSearchKagiSource ?? '';
+		formDefaultWebSearchValyuSearchType = assistant.defaultWebSearchValyuSearchType ?? '';
 		isCreating = false;
 	}
 
@@ -72,6 +74,7 @@
 		formDefaultWebSearchExaDepth = '';
 		formDefaultWebSearchContextSize = '';
 		formDefaultWebSearchKagiSource = '';
+		formDefaultWebSearchValyuSearchType = '';
 		isCreating = true;
 	}
 
@@ -86,6 +89,7 @@
 		formDefaultWebSearchExaDepth = '';
 		formDefaultWebSearchContextSize = '';
 		formDefaultWebSearchKagiSource = '';
+		formDefaultWebSearchValyuSearchType = '';
 		// Clear the create query param if present
 		if (page.url.searchParams.has('create')) {
 			goto('/account/assistants', { replaceState: true });
@@ -117,6 +121,7 @@
 						defaultWebSearchExaDepth: formDefaultWebSearchExaDepth || undefined,
 						defaultWebSearchContextSize: formDefaultWebSearchContextSize || undefined,
 						defaultWebSearchKagiSource: formDefaultWebSearchKagiSource || undefined,
+						defaultWebSearchValyuSearchType: formDefaultWebSearchValyuSearchType || undefined,
 					}),
 				});
 				if (!res.ok) throw new Error('Failed to create');
@@ -133,6 +138,7 @@
 						defaultWebSearchExaDepth: formDefaultWebSearchExaDepth || null,
 						defaultWebSearchContextSize: formDefaultWebSearchContextSize || null,
 						defaultWebSearchKagiSource: formDefaultWebSearchKagiSource || null,
+						defaultWebSearchValyuSearchType: formDefaultWebSearchValyuSearchType || null,
 					}),
 				});
 				if (!res.ok) throw new Error('Failed to update');
@@ -296,6 +302,8 @@
 								<option value="tavily">Tavily</option>
 								<option value="exa">Exa</option>
 								<option value="kagi">Kagi</option>
+								<option value="perplexity">Perplexity</option>
+								<option value="valyu">Valyu</option>
 							</select>
 						</div>
 					</div>
@@ -345,6 +353,22 @@
 								<option value="search">Search</option>
 							</select>
 							<p class="text-muted-foreground text-xs">For Kagi provider only</p>
+						</div>
+					</div>
+
+					<div class="mt-4 grid gap-4 sm:grid-cols-3">
+						<div class="space-y-2">
+							<Label for="defaultValyuSearchType" class="text-sm font-medium">Valyu Search Type</Label>
+							<select
+								id="defaultValyuSearchType"
+								bind:value={formDefaultWebSearchValyuSearchType}
+								class="bg-background/50 border-border/50 focus:border-primary/50 h-10 w-full rounded-md border px-3 text-sm transition-colors focus:outline-none"
+							>
+								<option value="">None</option>
+								<option value="all">All (web + proprietary)</option>
+								<option value="web">Web only</option>
+							</select>
+							<p class="text-muted-foreground text-xs">For Valyu provider only</p>
 						</div>
 					</div>
 				</div>

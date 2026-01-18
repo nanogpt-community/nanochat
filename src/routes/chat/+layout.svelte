@@ -142,13 +142,15 @@
 			settings.webSearchMode =
 				(assistant.defaultWebSearchMode as 'off' | 'standard' | 'deep') || 'off';
 			settings.webSearchProvider =
-				(assistant.defaultWebSearchProvider as 'linkup' | 'tavily' | 'exa' | 'kagi') || 'linkup';
+				(assistant.defaultWebSearchProvider as 'linkup' | 'tavily' | 'exa' | 'kagi' | 'perplexity' | 'valyu') || 'linkup';
 			settings.webSearchExaDepth =
 				(assistant.defaultWebSearchExaDepth as 'fast' | 'auto' | 'neural' | 'deep') || 'auto';
 			settings.webSearchContextSize =
 				(assistant.defaultWebSearchContextSize as 'low' | 'medium' | 'high') || 'medium';
 			settings.webSearchKagiSource =
 				(assistant.defaultWebSearchKagiSource as 'web' | 'news' | 'search') || 'web';
+			settings.webSearchValyuSearchType =
+				(assistant.defaultWebSearchValyuSearchType as 'all' | 'web') || 'all';
 		}
 	});
 
@@ -367,6 +369,7 @@
 				web_search_exa_depth: settings.webSearchProvider === 'exa' ? settings.webSearchExaDepth : undefined,
 				web_search_context_size: settings.webSearchMode !== 'off' ? settings.webSearchContextSize : undefined,
 				web_search_kagi_source: settings.webSearchProvider === 'kagi' ? settings.webSearchKagiSource : undefined,
+				web_search_valyu_search_type: settings.webSearchProvider === 'valyu' ? settings.webSearchValyuSearchType : undefined,
 				assistant_id: selectedAssistantId.current || undefined,
 				project_id: page.url.searchParams.get('projectId') || undefined,
 				reasoning_effort:
@@ -1433,176 +1436,92 @@
 									<!-- Desktop: All action buttons inline -->
 									<div class="hidden items-center gap-1.5 md:flex">
 										{#if !restrictions?.webDisabled}
-											<Tooltip>
-												{#snippet trigger(tooltip)}
-													<button
-														type="button"
-														class={cn(
-															'bg-secondary/50 hover:bg-secondary text-muted-foreground relative flex size-8 items-center justify-center rounded-lg transition-colors',
-															settings.webSearchMode === 'standard' &&
-																'bg-primary/20 text-primary border-primary/50',
-															settings.webSearchMode === 'deep' &&
-																'border-amber-500/50 bg-amber-500/20 text-amber-500'
-														)}
-														onclick={() => {
-															if (settings.webSearchMode === 'off')
-																settings.webSearchMode = 'standard';
-															else if (settings.webSearchMode === 'standard')
-																settings.webSearchMode = 'deep';
-															else settings.webSearchMode = 'off';
-														}}
-														{...tooltip.trigger}
-													>
-														<SearchIcon class="size-4" />
-														{#if settings.webSearchMode === 'deep'}
-															<span
-																class="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-amber-500"
-															></span>
+											<DropdownMenu.Root>
+												<DropdownMenu.Trigger
+													class={cn(
+														'bg-secondary/50 hover:bg-secondary text-muted-foreground relative flex h-8 items-center justify-center gap-1.5 rounded-lg px-2 transition-colors',
+														settings.webSearchMode === 'standard' &&
+															'bg-primary/20 text-primary',
+														settings.webSearchMode === 'deep' &&
+															'bg-amber-500/20 text-amber-500'
+													)}
+												>
+													<SearchIcon class="size-4" />
+													<span class="text-xs font-medium">
+														{settings.webSearchMode === 'off'
+															? 'Off'
+															: settings.webSearchMode === 'standard'
+																? 'On'
+																: 'Deep'}
+													</span>
+													<ChevronDownIcon class="size-3 opacity-50" />
+												</DropdownMenu.Trigger>
+												<DropdownMenu.Content align="start" class="w-56">
+													<DropdownMenu.Label>Search Mode</DropdownMenu.Label>
+													<DropdownMenu.RadioGroup bind:value={settings.webSearchMode}>
+														<DropdownMenu.RadioItem value="off">
+															Off
+														</DropdownMenu.RadioItem>
+														<DropdownMenu.RadioItem value="standard">
+															Standard <span class="text-muted-foreground ml-auto text-xs">$0.006</span>
+														</DropdownMenu.RadioItem>
+														<DropdownMenu.RadioItem value="deep">
+															Deep <span class="text-muted-foreground ml-auto text-xs">$0.06</span>
+														</DropdownMenu.RadioItem>
+													</DropdownMenu.RadioGroup>
+
+													{#if settings.webSearchMode !== 'off'}
+														<DropdownMenu.Separator />
+														<DropdownMenu.Label>Provider</DropdownMenu.Label>
+														<DropdownMenu.RadioGroup bind:value={settings.webSearchProvider}>
+															<DropdownMenu.RadioItem value="linkup">Linkup</DropdownMenu.RadioItem>
+															<DropdownMenu.RadioItem value="tavily">Tavily</DropdownMenu.RadioItem>
+															<DropdownMenu.RadioItem value="exa">Exa</DropdownMenu.RadioItem>
+															<DropdownMenu.RadioItem value="kagi">Kagi</DropdownMenu.RadioItem>
+															<DropdownMenu.RadioItem value="perplexity">Perplexity</DropdownMenu.RadioItem>
+															<DropdownMenu.RadioItem value="valyu">Valyu</DropdownMenu.RadioItem>
+														</DropdownMenu.RadioGroup>
+
+														{#if settings.webSearchProvider === 'exa'}
+															<DropdownMenu.Separator />
+															<DropdownMenu.Label>Exa Depth</DropdownMenu.Label>
+															<DropdownMenu.RadioGroup bind:value={settings.webSearchExaDepth}>
+																<DropdownMenu.RadioItem value="fast">Fast</DropdownMenu.RadioItem>
+																<DropdownMenu.RadioItem value="auto">Auto</DropdownMenu.RadioItem>
+																<DropdownMenu.RadioItem value="neural">Neural</DropdownMenu.RadioItem>
+																<DropdownMenu.RadioItem value="deep">Deep</DropdownMenu.RadioItem>
+															</DropdownMenu.RadioGroup>
 														{/if}
-													</button>
-												{/snippet}
-												{settings.webSearchMode === 'off'
-													? 'Web Search: Off'
-													: settings.webSearchMode === 'standard'
-														? 'Web Search: Standard ($0.006)'
-														: 'Web Search: Deep ($0.06)'}
-											</Tooltip>
-											{#if settings.webSearchMode !== 'off'}
-												<Tooltip>
-													{#snippet trigger(tooltip)}
-														<button
-															type="button"
-															class={cn(
-																'bg-secondary/50 hover:bg-secondary text-muted-foreground flex h-8 items-center justify-center rounded-lg px-2 text-xs font-medium transition-colors',
-																settings.webSearchProvider === 'tavily' &&
-																	'bg-purple-500/20 text-purple-400',
-																settings.webSearchProvider === 'exa' &&
-																	'bg-blue-500/20 text-blue-400',
-																settings.webSearchProvider === 'kagi' &&
-																	'bg-yellow-500/20 text-yellow-500'
-															)}
-															onclick={() => {
-																if (settings.webSearchProvider === 'linkup')
-																	settings.webSearchProvider = 'tavily';
-																else if (settings.webSearchProvider === 'tavily')
-																	settings.webSearchProvider = 'exa';
-																else if (settings.webSearchProvider === 'exa')
-																	settings.webSearchProvider = 'kagi';
-																else settings.webSearchProvider = 'linkup';
-															}}
-															{...tooltip.trigger}
-														>
-															{settings.webSearchProvider === 'linkup'
-																? 'Linkup'
-																: settings.webSearchProvider === 'tavily'
-																	? 'Tavily'
-																	: settings.webSearchProvider === 'exa'
-																		? 'Exa'
-																		: 'Kagi'}
-														</button>
-													{/snippet}
-													{settings.webSearchProvider === 'linkup'
-														? 'Using Linkup (default). Click to switch.'
-														: settings.webSearchProvider === 'tavily'
-															? 'Using Tavily. Click to switch.'
-															: settings.webSearchProvider === 'exa'
-																? 'Using Exa. Click to switch.'
-																: 'Using Kagi. Click to switch.'}
-												</Tooltip>
-												{#if settings.webSearchProvider === 'exa'}
-													<Tooltip>
-														{#snippet trigger(tooltip)}
-															<button
-																type="button"
-																class={cn(
-																	'bg-secondary/50 hover:bg-secondary text-muted-foreground flex h-8 items-center justify-center rounded-lg px-2 text-xs font-medium transition-colors',
-																	settings.webSearchExaDepth === 'neural' &&
-																		'bg-blue-500/20 text-blue-400',
-																	settings.webSearchExaDepth === 'deep' &&
-																		'bg-amber-500/20 text-amber-500'
-																)}
-																onclick={() => {
-																	if (settings.webSearchExaDepth === 'fast')
-																		settings.webSearchExaDepth = 'auto';
-																	else if (settings.webSearchExaDepth === 'auto')
-																		settings.webSearchExaDepth = 'neural';
-																	else if (settings.webSearchExaDepth === 'neural')
-																		settings.webSearchExaDepth = 'deep';
-																	else settings.webSearchExaDepth = 'fast';
-																}}
-																{...tooltip.trigger}
-															>
-																{settings.webSearchExaDepth === 'fast'
-																	? 'Fast'
-																	: settings.webSearchExaDepth === 'auto'
-																		? 'Auto'
-																		: settings.webSearchExaDepth === 'neural'
-																			? 'Neural'
-																			: 'Deep'}
-															</button>
-														{/snippet}
-														Exa depth: {settings.webSearchExaDepth}. Click to cycle.
-													</Tooltip>
-												{/if}
-												{#if settings.webSearchProvider === 'kagi'}
-													<Tooltip>
-														{#snippet trigger(tooltip)}
-															<button
-																type="button"
-																class={cn(
-																	'bg-secondary/50 hover:bg-secondary text-muted-foreground flex h-8 items-center justify-center rounded-lg px-2 text-xs font-medium transition-colors',
-																	settings.webSearchKagiSource === 'news' &&
-																		'bg-purple-500/20 text-purple-400'
-																)}
-																onclick={() => {
-																	if (settings.webSearchKagiSource === 'web')
-																		settings.webSearchKagiSource = 'news';
-																	else if (settings.webSearchKagiSource === 'news')
-																		settings.webSearchKagiSource = 'search';
-																	else settings.webSearchKagiSource = 'web';
-																}}
-																{...tooltip.trigger}
-															>
-																{settings.webSearchKagiSource === 'web'
-																	? 'Web'
-																	: settings.webSearchKagiSource === 'news'
-																		? 'News'
-																		: 'Search'}
-															</button>
-														{/snippet}
-														Kagi source: {settings.webSearchKagiSource}. Click to cycle.
-													</Tooltip>
-												{/if}
-												<Tooltip>
-													{#snippet trigger(tooltip)}
-														<button
-															type="button"
-															class={cn(
-																'bg-secondary/50 hover:bg-secondary text-muted-foreground flex h-8 items-center justify-center rounded-lg px-2 text-xs font-medium transition-colors',
-																settings.webSearchContextSize === 'high' &&
-																	'bg-green-500/20 text-green-400',
-																settings.webSearchContextSize === 'low' &&
-																	'bg-gray-500/20 text-gray-400'
-															)}
-															onclick={() => {
-																if (settings.webSearchContextSize === 'low')
-																	settings.webSearchContextSize = 'medium';
-																else if (settings.webSearchContextSize === 'medium')
-																	settings.webSearchContextSize = 'high';
-																else settings.webSearchContextSize = 'low';
-															}}
-															{...tooltip.trigger}
-														>
-															{settings.webSearchContextSize === 'low'
-																? 'Ctx: Low'
-																: settings.webSearchContextSize === 'medium'
-																	? 'Ctx: Med'
-																	: 'Ctx: High'}
-														</button>
-													{/snippet}
-													Search context size: {settings.webSearchContextSize}. Click to cycle.
-												</Tooltip>
-											{/if}
+
+														{#if settings.webSearchProvider === 'kagi'}
+															<DropdownMenu.Separator />
+															<DropdownMenu.Label>Kagi Source</DropdownMenu.Label>
+															<DropdownMenu.RadioGroup bind:value={settings.webSearchKagiSource}>
+																<DropdownMenu.RadioItem value="web">Web</DropdownMenu.RadioItem>
+																<DropdownMenu.RadioItem value="news">News</DropdownMenu.RadioItem>
+																<DropdownMenu.RadioItem value="search">Search</DropdownMenu.RadioItem>
+															</DropdownMenu.RadioGroup>
+														{/if}
+
+														{#if settings.webSearchProvider === 'valyu'}
+															<DropdownMenu.Separator />
+															<DropdownMenu.Label>Valyu Search Type</DropdownMenu.Label>
+															<DropdownMenu.RadioGroup bind:value={settings.webSearchValyuSearchType}>
+																<DropdownMenu.RadioItem value="all">All Sources</DropdownMenu.RadioItem>
+																<DropdownMenu.RadioItem value="web">Web Only</DropdownMenu.RadioItem>
+															</DropdownMenu.RadioGroup>
+														{/if}
+
+														<DropdownMenu.Separator />
+														<DropdownMenu.Label>Context Size</DropdownMenu.Label>
+														<DropdownMenu.RadioGroup bind:value={settings.webSearchContextSize}>
+															<DropdownMenu.RadioItem value="low">Low</DropdownMenu.RadioItem>
+															<DropdownMenu.RadioItem value="medium">Medium</DropdownMenu.RadioItem>
+															<DropdownMenu.RadioItem value="high">High</DropdownMenu.RadioItem>
+														</DropdownMenu.RadioGroup>
+													{/if}
+												</DropdownMenu.Content>
+											</DropdownMenu.Root>
 										{/if}
 										{#if currentModelSupportsImages || currentModelSupportsDocuments}
 											<Tooltip>
