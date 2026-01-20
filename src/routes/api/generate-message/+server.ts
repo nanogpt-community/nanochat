@@ -57,7 +57,9 @@ const reqBodySchema = z
 		conversation_id: z.string().optional(),
 		web_search_enabled: z.boolean().optional(),
 		web_search_mode: z.enum(['off', 'standard', 'deep']).optional(),
-		web_search_provider: z.enum(['linkup', 'tavily', 'exa', 'kagi', 'perplexity', 'valyu']).optional(),
+		web_search_provider: z
+			.enum(['linkup', 'tavily', 'exa', 'kagi', 'perplexity', 'valyu'])
+			.optional(),
 		web_search_exa_depth: z.enum(['fast', 'auto', 'neural', 'deep']).optional(),
 		web_search_context_size: z.enum(['low', 'medium', 'high']).optional(),
 		web_search_kagi_source: z.enum(['web', 'news', 'search']).optional(),
@@ -878,6 +880,10 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 			if (deltaToolCalls) {
 				for (const dtc of deltaToolCalls) {
 					const idx = dtc.index;
+					// Validate index is a non-negative integer to prevent prototype pollution
+					if (typeof idx !== 'number' || !Number.isInteger(idx) || idx < 0) {
+						continue;
+					}
 					// Initialize tool call entry if needed
 					if (!toolCalls[idx]) {
 						toolCalls[idx] = {
