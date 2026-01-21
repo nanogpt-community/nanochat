@@ -224,9 +224,7 @@
 				</div>
 			{:else}
 				<div class="flex place-items-center gap-2" in:fade={{ duration: 200 }}>
-					<div class="flex animate-[spin_0.65s_linear_infinite] place-items-center justify-center">
-						<LoaderCircleIcon class="size-4" />
-					</div>
+					<LoaderCircleIcon class="size-4 animate-spin" />
 				</div>
 			{/if}
 		{/if}

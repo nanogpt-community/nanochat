@@ -393,9 +393,9 @@
 					onclick={() => (showReasoning = !showReasoning)}
 				>
 					<div
-						class="flex size-6 items-center justify-center rounded-md bg-gradient-to-br from-violet-500/20 to-purple-500/20"
+						class="from-primary/20 flex size-6 items-center justify-center rounded-md bg-gradient-to-br to-fuchsia-500/20"
 					>
-						<BrainIcon class="size-3.5 text-violet-500" />
+						<BrainIcon class="text-primary size-3.5" />
 					</div>
 					<ChevronRightIcon
 						class={cn('size-4 transition-transform duration-200', { 'rotate-90': showReasoning })}
@@ -414,10 +414,10 @@
 				>
 					<div class="overflow-hidden">
 						<div
-							class="relative mt-2 overflow-hidden rounded-lg border border-violet-500/20 bg-gradient-to-r from-violet-500/5 to-transparent"
+							class="border-primary/20 from-primary/5 relative mt-2 overflow-hidden rounded-lg border bg-gradient-to-r to-transparent"
 						>
 							<div
-								class="absolute top-0 bottom-0 left-0 w-1 bg-gradient-to-b from-violet-500 via-purple-500 to-violet-500/50"
+								class="from-primary to-primary/50 absolute top-0 bottom-0 left-0 w-1 bg-gradient-to-b via-fuchsia-500"
 							></div>
 							<div class="reasoning-content max-h-96 overflow-y-auto py-3 pr-3 pl-4">
 								<div
