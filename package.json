@@ -22,13 +22,13 @@
 	"devDependencies": {
 		"@eslint/compat": "^2.0.1",
 		"@eslint/js": "^9.39.2",
-		"@iconify/json": "^2.2.430",
-		"@playwright/test": "^1.57.0",
+		"@iconify/json": "^2.2.431",
+		"@playwright/test": "^1.58.0",
 		"@shikijs/langs": "^3.21.0",
 		"@shikijs/markdown-it": "^3.21.0",
 		"@shikijs/themes": "^3.21.0",
 		"@sveltejs/adapter-auto": "^7.0.0",
-		"@sveltejs/kit": "^2.50.0",
+		"@sveltejs/kit": "^2.50.1",
 		"@sveltejs/vite-plugin-svelte": "^6.2.4",
 		"@tailwindcss/vite": "^4.1.18",
 		"@testing-library/jest-dom": "^6.9.1",
@@ -40,17 +40,17 @@
 		"eslint": "^9.39.2",
 		"eslint-config-prettier": "^10.1.8",
 		"eslint-plugin-svelte": "^3.14.0",
-		"globals": "^17.0.0",
+		"globals": "^17.1.0",
 		"melt": "^0.44.0",
 		"mode-watcher": "^1.1.0",
 		"neverthrow": "^8.2.0",
 		"openai": "^6.16.0",
-		"prettier": "^3.8.0",
+		"prettier": "^3.8.1",
 		"prettier-plugin-svelte": "^3.4.1",
 		"prettier-plugin-tailwindcss": "^0.7.2",
 		"runed": "^0.37.1",
 		"shiki": "^3.21.0",
-		"svelte": "^5.47.1",
+		"svelte": "^5.48.2",
 		"svelte-adapter-bun": "^1.0.1",
 		"svelte-check": "^4.3.5",
 		"svelte-meta-tags": "^4.5.0",
@@ -62,7 +62,7 @@
 		"typescript-eslint": "^8.53.1",
 		"unplugin-icons": "^23.0.1",
 		"vite": "^7.3.1",
-		"vitest": "^4.0.17"
+		"vitest": "^4.0.18"
 	},
 	"pnpm": {
 		"onlyBuiltDependencies": [
@@ -86,17 +86,17 @@
 		"@fontsource-variable/open-sans": "^5.2.7",
 		"@fontsource/instrument-serif": "^5.2.8",
 		"@libsql/client": "^0.17.0",
-		"@nanogpt/mcp": "^1.1.5",
-		"@types/node": "^25.0.9",
+		"@nanogpt/mcp": "^1.1.6",
+		"@types/node": "^25.0.10",
 		"better-auth": "1.4.17",
 		"drizzle-kit": "^0.31.8",
 		"drizzle-orm": "^0.45.1",
 		"epub2": "^3.0.2",
 		"hastscript": "^9.0.1",
-		"htmlparser2": "^10.0.0",
+		"htmlparser2": "^10.1.0",
 		"markdown-it-async": "^2.2.0",
 		"pdf-parse": "^2.4.5",
 		"svelte-sonner": "^1.0.7",
-		"zod": "^4.3.5"
+		"zod": "^4.3.6"
 	}
 }
