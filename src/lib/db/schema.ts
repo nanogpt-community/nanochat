@@ -96,9 +96,7 @@ export const userSettings = sqliteTable(
 		webScrapingEnabled: integer('web_scraping_enabled', { mode: 'boolean' })
 			.notNull()
 			.default(false),
-		mcpEnabled: integer('mcp_enabled', { mode: 'boolean' })
-			.notNull()
-			.default(false),
+		mcpEnabled: integer('mcp_enabled', { mode: 'boolean' }).notNull().default(false),
 		followUpQuestionsEnabled: integer('follow_up_questions_enabled', { mode: 'boolean' })
 			.notNull()
 			.default(true),
@@ -173,9 +171,7 @@ export const apiKeys = sqliteTable(
 		lastUsedAt: integer('last_used_at', { mode: 'timestamp' }),
 		createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
 	},
-	(table) => [
-		index('api_keys_user_id_idx').on(table.userId),
-	]
+	(table) => [index('api_keys_user_id_idx').on(table.userId)]
 );
 
 export const userRules = sqliteTable(
@@ -337,6 +333,31 @@ export const assistants = sqliteTable(
 	(table) => [index('assistants_user_id_idx').on(table.userId)]
 );
 
+// Prompts - reusable prompt templates with variables
+export const prompts = sqliteTable(
+	'prompts',
+	{
+		id: text('id').primaryKey(),
+		userId: text('user_id')
+			.notNull()
+			.references(() => user.id, { onDelete: 'cascade' }),
+		name: text('name').notNull(),
+		content: text('content').notNull(), // The prompt template text with {{variables}}
+		description: text('description'),
+		// Variables stored as JSON array: [{name: string, defaultValue?: string, description?: string}]
+		variables: text('variables', { mode: 'json' }).$type<
+			Array<{ name: string; defaultValue?: string; description?: string }>
+		>(),
+		defaultModelId: text('default_model_id'),
+		defaultWebSearchMode: text('default_web_search_mode'), // 'off' | 'standard' | 'deep'
+		defaultWebSearchProvider: text('default_web_search_provider'),
+		appendMode: text('append_mode').notNull().default('replace'), // 'replace' | 'append' | 'prepend'
+		createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+		updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+	},
+	(table) => [index('prompts_user_id_idx').on(table.userId)]
+);
+
 // Project files - documents attached to a project for context
 export const projectFiles = sqliteTable(
 	'project_files',
@@ -478,6 +499,7 @@ export const userRelations = relations(user, ({ many, one }) => ({
 	storage: many(storage),
 	memories: one(userMemories),
 	assistants: many(assistants),
+	prompts: many(prompts),
 	projects: many(projects),
 	projectMemberships: many(projectMembers),
 	messageRatings: many(messageRatings),
@@ -616,6 +638,13 @@ export const assistantsRelations = relations(assistants, ({ one }) => ({
 	}),
 }));
 
+export const promptsRelations = relations(prompts, ({ one }) => ({
+	user: one(user, {
+		fields: [prompts.userId],
+		references: [user.id],
+	}),
+}));
+
 export const messageRatingsRelations = relations(messageRatings, ({ one }) => ({
 	message: one(messages, {
 		fields: [messageRatings.messageId],
@@ -671,6 +700,8 @@ export type UserMemory = typeof userMemories.$inferSelect;
 export type NewUserMemory = typeof userMemories.$inferInsert;
 export type Assistant = typeof assistants.$inferSelect;
 export type NewAssistant = typeof assistants.$inferInsert;
+export type Prompt = typeof prompts.$inferSelect;
+export type NewPrompt = typeof prompts.$inferInsert;
 export type MessageRating = typeof messageRatings.$inferSelect;
 export type NewMessageRating = typeof messageRatings.$inferInsert;
 export type MessageInteraction = typeof messageInteractions.$inferSelect;

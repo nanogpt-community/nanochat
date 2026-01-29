@@ -59,6 +59,8 @@
 	import { ModelPicker } from '$lib/components/model-picker';
 	import { ProviderPicker } from '$lib/components/provider-picker';
 	import SearchModal from './search-modal.svelte';
+	import { PromptPicker } from '$lib/components/ui/prompt-picker';
+	import type { Prompt } from '$lib/api';
 	import { shortcut, getKeybindOptions } from '$lib/actions/shortcut.svelte.js';
 	import { mergeAttrs } from 'melt';
 	import { callEnhancePrompt } from '../api/enhance-prompt/call.js';
@@ -992,9 +994,36 @@
 	);
 
 	let searchModalOpen = $state(false);
+	let promptPickerOpen = $state(false);
 
 	function openSearchModal() {
 		searchModalOpen = true;
+	}
+
+	function handlePromptApply(content: string, prompt: Prompt) {
+		// Apply the prompt content based on the append mode
+		if (prompt.appendMode === 'prepend') {
+			message.current = content + (message.current ? '\n' + message.current : '');
+		} else if (prompt.appendMode === 'append') {
+			message.current = (message.current ? message.current + '\n' : '') + content;
+		} else {
+			// Default: replace
+			message.current = content;
+		}
+
+		// Apply default settings if configured
+		if (prompt.defaultModelId) {
+			settings.modelId = prompt.defaultModelId;
+		}
+		if (prompt.defaultWebSearchMode) {
+			settings.webSearchMode = prompt.defaultWebSearchMode as 'off' | 'standard' | 'deep';
+		}
+		if (prompt.defaultWebSearchProvider) {
+			settings.webSearchProvider = prompt.defaultWebSearchProvider as 'linkup' | 'tavily' | 'exa' | 'kagi' | 'perplexity' | 'valyu';
+		}
+
+		// Focus the textarea
+		textarea?.focus();
 	}
 
 	let sidebarOpen = $state(false);
@@ -1872,6 +1901,7 @@
 </Sidebar.Root>
 
 <SearchModal bind:open={searchModalOpen} />
+<PromptPicker bind:open={promptPickerOpen} onApply={handlePromptApply} />
 <!-- <SettingsModal bind:open={settingsModalOpen} /> -->
 <VideoGenerationModal
 	bind:open={videoModalOpen}

@@ -34,6 +34,10 @@
 			href: '/account/assistants',
 		},
 		{
+			title: 'Prompts',
+			href: '/account/prompts',
+		},
+		{
 			title: 'Customization',
 			href: '/account/customization',
 		},

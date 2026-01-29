@@ -655,6 +655,164 @@ curl -X POST "http://localhost:3432/api/assistants/asst_abc123" \
 
 ---
 
+### Prompts
+
+Prompts are reusable prompt templates with user-defined variables that can be quickly applied in chat.
+
+#### GET `/api/prompts`
+List all prompts for the user.
+
+**Authentication**: Session or API Key
+
+**Response**:
+```json
+[
+  {
+    "id": "string",
+    "name": "string",
+    "content": "string",
+    "description": "string | null",
+    "variables": [
+      {
+        "name": "string",
+        "defaultValue": "string (optional)",
+        "description": "string (optional)"
+      }
+    ],
+    "defaultModelId": "string | null",
+    "defaultWebSearchMode": "off | standard | deep | null",
+    "defaultWebSearchProvider": "linkup | tavily | exa | kagi | perplexity | valyu | null",
+    "appendMode": "replace | append | prepend",
+    "createdAt": "date",
+    "updatedAt": "date"
+  }
+]
+```
+
+**CURL Example**:
+```bash
+curl -X GET "http://localhost:3432/api/prompts" \
+  -H "Authorization: Bearer your_api_key"
+```
+
+#### POST `/api/prompts`
+Create a new prompt.
+
+**Authentication**: Session or API Key
+
+**Request Body**:
+```json
+{
+  "name": "string (1-100 chars, required)",
+  "content": "string (1-50000 chars, required)",
+  "description": "string (max 500 chars, optional)",
+  "variables": [
+    {
+      "name": "string (1-50 chars)",
+      "defaultValue": "string (max 1000 chars, optional)",
+      "description": "string (max 200 chars, optional)"
+    }
+  ],
+  "defaultModelId": "string (optional)",
+  "defaultWebSearchMode": "off | standard | deep (optional)",
+  "defaultWebSearchProvider": "linkup | tavily | exa | kagi | perplexity | valyu (optional)",
+  "appendMode": "replace | append | prepend (optional, default: replace)"
+}
+```
+
+**Response**:
+```json
+{
+  "id": "string",
+  "name": "string",
+  "content": "string",
+  ... // other prompt fields
+}
+```
+
+**CURL Example**:
+```bash
+curl -X POST "http://localhost:3432/api/prompts" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your_api_key" \
+  -d '{
+    "name": "Summarize Article",
+    "content": "Summarize the following article in {{style}} style:\n\n{{text}}",
+    "variables": [
+      {"name": "style", "defaultValue": "concise"},
+      {"name": "text", "description": "The article text to summarize"}
+    ]
+  }'
+```
+
+#### GET `/api/prompts/[id]`
+Get a single prompt by ID.
+
+**Authentication**: Session or API Key
+
+**Response**:
+```json
+{
+  "id": "string",
+  "name": "string",
+  "content": "string",
+  ... // other prompt fields
+}
+```
+
+**CURL Example**:
+```bash
+curl -X GET "http://localhost:3432/api/prompts/prompt_abc123" \
+  -H "Authorization: Bearer your_api_key"
+```
+
+#### PATCH `/api/prompts/[id]`
+Update a prompt.
+
+**Authentication**: Session or API Key
+
+**Request Body**:
+```json
+{
+  "name": "string (optional)",
+  "content": "string (optional)",
+  "description": "string | null (optional)",
+  "variables": "array | null (optional)",
+  "defaultModelId": "string | null (optional)",
+  "defaultWebSearchMode": "off | standard | deep | null (optional)",
+  "defaultWebSearchProvider": "linkup | tavily | exa | kagi | perplexity | valyu | null (optional)",
+  "appendMode": "replace | append | prepend (optional)"
+}
+```
+
+**CURL Example**:
+```bash
+curl -X PATCH "http://localhost:3432/api/prompts/prompt_abc123" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your_api_key" \
+  -d '{"name": "Updated Prompt Name"}'
+```
+
+#### DELETE `/api/prompts/[id]`
+Delete a prompt.
+
+**Authentication**: Session or API Key
+
+**Response**:
+```json
+{
+  "success": true
+}
+```
+
+**CURL Example**:
+```bash
+curl -X DELETE "http://localhost:3432/api/prompts/prompt_abc123" \
+  -H "Authorization: Bearer your_api_key"
+```
+
+---
+
 ### Projects
 
 #### GET `/api/projects`

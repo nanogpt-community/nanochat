@@ -176,6 +176,13 @@
       "when": 1768326302821,
       "tag": "0024_high_angel",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "6",
+      "when": 1769679443708,
+      "tag": "0025_concerned_archangel",
+      "breakpoints": true
     }
   ]
 }
