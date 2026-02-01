@@ -5,6 +5,7 @@ import { storage } from '$lib/db/schema';
 import { eq } from 'drizzle-orm';
 
 const UPLOAD_DIR = join(process.cwd(), 'data', 'uploads');
+export const MAX_UPLOAD_BYTES = 100 * 1024 * 1024; // 100MB
 
 // Ensure upload directory exists
 if (!existsSync(UPLOAD_DIR)) {

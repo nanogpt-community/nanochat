@@ -1,7 +1,8 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { existsSync, unlinkSync } from 'fs';
-import { saveFile, deleteFile } from '$lib/backend/storage';
+import { MAX_UPLOAD_BYTES, saveFile } from '$lib/backend/storage';
+import { getStorageAccess } from '$lib/backend/storage-access';
 import { getAuthenticatedUserId } from '$lib/backend/auth-utils';
 import { db } from '$lib/db';
 import { storage } from '$lib/db/schema';
@@ -12,7 +13,14 @@ export const POST: RequestHandler = async ({ request }) => {
     const userId = await getAuthenticatedUserId(request);
 
     const contentType = request.headers.get('content-type') || 'application/octet-stream';
+    const contentLength = request.headers.get('content-length');
+    if (contentLength && Number(contentLength) > MAX_UPLOAD_BYTES) {
+        return error(413, 'File too large. Maximum size is 100MB.');
+    }
     const body = await request.arrayBuffer();
+    if (body.byteLength > MAX_UPLOAD_BYTES) {
+        return error(413, 'File too large. Maximum size is 100MB.');
+    }
 
     // We typically don't have original filename in raw POST body upload unless in header
     // Helper function defaults if not provided, or we can assume a name
@@ -39,11 +47,8 @@ export const GET: RequestHandler = async ({ request, url }) => {
         return error(400, 'Missing storage id');
     }
 
-    const file = await db.query.storage.findFirst({
-        where: eq(storage.id, storageId),
-    });
-
-    if (!file) {
+    const access = await getStorageAccess(storageId, request);
+    if (!access) {
         return error(404, 'File not found');
     }
 

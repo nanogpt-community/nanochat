@@ -970,6 +970,9 @@ Upload a file to a project. Supports PDF, Markdown, Text, and EPUB files.
 **Request Body** (FormData):
 - `file`: Binary file (PDF, Markdown, Text, or EPUB)
 
+**Limits**:
+- Max file size: 100MB
+
 **Response**:
 ```json
 {
@@ -1104,6 +1107,7 @@ curl -X DELETE "http://localhost:3432/api/projects/proj_abc123/members?userId=us
 ---
 
 ### Storage
+Files are private by default. Access is granted to the uploader, project members when the file is attached to a project, and anyone when the file is attached to a public conversation.
 
 #### POST `/api/storage`
 Upload a file.
@@ -1113,6 +1117,9 @@ Upload a file.
 **Headers**:
 - `Content-Type`: Mime type of the file.
 - `x-filename`: (Optional) Original filename.
+
+**Limits**:
+- Max file size: 100MB
 
 **Request Body**: Binary file content.
 
@@ -1136,7 +1143,7 @@ curl -X POST "http://localhost:3432/api/storage" \
 #### GET `/api/storage`
 Get file metadata/URL by ID.
 
-**Authentication**: Public (via ID)
+**Authentication**: Session or API Key (owner or project member). Public if attached to a public conversation.
 
 **Query Parameters**:
 - `id`: Storage ID.
@@ -1156,7 +1163,7 @@ curl -X GET "http://localhost:3432/api/storage?id=store_abc123"
 #### GET `/api/storage/[id]`
 Serve the raw file content.
 
-**Authentication**: Public (via ID)
+**Authentication**: Session or API Key (owner or project member). Public if attached to a public conversation.
 
 **Response**: Raw file content with appropriate Content-Type.
 

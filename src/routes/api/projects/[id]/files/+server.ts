@@ -5,7 +5,7 @@ import { eq, and } from 'drizzle-orm';
 import { z } from 'zod';
 import { extractTextFromPDF } from '$lib/utils/pdf-extraction';
 import { extractTextFromEPUB } from '$lib/utils/epub-extraction';
-import { saveFile } from '$lib/backend/storage';
+import { MAX_UPLOAD_BYTES, saveFile } from '$lib/backend/storage';
 import path from 'path';
 import { getAuthenticatedUserId } from '$lib/backend/auth-utils';
 
@@ -92,6 +92,10 @@ export async function POST({ params, request }: RequestEvent) {
 
         if (!file) {
             return json({ error: 'No file provided' }, { status: 400 });
+        }
+
+        if (file.size > MAX_UPLOAD_BYTES) {
+            return json({ error: 'File too large. Maximum size is 100MB.' }, { status: 413 });
         }
 
         const fileType = getFileType(file.type);
