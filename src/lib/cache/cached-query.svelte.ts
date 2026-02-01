@@ -22,6 +22,24 @@ export interface QueryResult<T> {
 }
 
 const globalCache = new SessionStorageCache('query-cache');
+const inFlightRequests = new Map<string, Promise<unknown>>();
+
+async function dedupedFetch<TResult>(
+	key: string,
+	fetcher: () => Promise<TResult>
+): Promise<TResult> {
+	const existing = inFlightRequests.get(key) as Promise<TResult> | undefined;
+	if (existing) return existing;
+
+	const promise = fetcher();
+	inFlightRequests.set(key, promise);
+
+	try {
+		return await promise;
+	} finally {
+		inFlightRequests.delete(key);
+	}
+}
 
 type Listener = (key: string) => void;
 const listeners = new Set<Listener>();
@@ -49,6 +67,7 @@ export function useCachedQuery<TResult>(
 	const {
 		cacheKey,
 		ttl = 7 * 24 * 60 * 60 * 1000, // 1 week default
+		staleWhileRevalidate = true,
 		enabled = true,
 	} = options;
 
@@ -72,42 +91,48 @@ export function useCachedQuery<TResult>(
 		const cached = globalCache.get(key);
 		if (cached !== undefined) {
 			data = cached as TResult;
-			isStale = true;
+			isStale = staleWhileRevalidate;
 			isLoading = false;
+			if (!staleWhileRevalidate) {
+				return;
+			}
 		}
 
 		try {
-			const args = getArgs();
-			let url = queryConfig.url;
+			const result = await dedupedFetch<TResult>(key, async () => {
+				const args = getArgs();
+				let url = queryConfig.url;
 
-			// Build URL with query params for GET requests, or use POST
-			if (queryConfig.method === 'GET' || !queryConfig.method) {
-				const params = new URLSearchParams();
-				for (const [key, value] of Object.entries(args)) {
-					if (value !== undefined && value !== null && key !== 'session_token') {
-						params.set(key, String(value));
+				// Build URL with query params for GET requests, or use POST
+				if (queryConfig.method === 'GET' || !queryConfig.method) {
+					const params = new URLSearchParams();
+					for (const [key, value] of Object.entries(args)) {
+						if (value !== undefined && value !== null && key !== 'session_token') {
+							params.set(key, String(value));
+						}
+					}
+					const queryString = params.toString();
+					if (queryString) {
+						url = `${url}${url.includes('?') ? '&' : '?'}${queryString}`;
 					}
 				}
-				const queryString = params.toString();
-				if (queryString) {
-					url = `${url}${url.includes('?') ? '&' : '?'}${queryString}`;
-				}
-			}
 
-			const response = await fetch(url, {
-				method: queryConfig.method || 'GET',
-				headers: { 'Content-Type': 'application/json' },
-				credentials: 'include', // Include cookies for session
-				cache: 'no-store',
-				...(queryConfig.method === 'POST' ? { body: JSON.stringify(args) } : {}),
+				const response = await fetch(url, {
+					method: queryConfig.method || 'GET',
+					headers: { 'Content-Type': 'application/json' },
+					credentials: 'include', // Include cookies for session
+					cache: 'no-store',
+					...(queryConfig.method === 'POST' ? { body: JSON.stringify(args) } : {}),
+				});
+
+				if (!response.ok) {
+					throw new Error(`HTTP error! status: ${response.status}`);
+				}
+
+				return (await response.json()) as TResult;
 			});
 
-			if (!response.ok) {
-				throw new Error(`HTTP error! status: ${response.status}`);
-			}
-
-			const result = await response.json();
-			data = result as TResult;
+			data = result;
 			error = undefined;
 			isStale = false;
 

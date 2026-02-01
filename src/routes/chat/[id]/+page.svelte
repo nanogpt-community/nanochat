@@ -17,6 +17,9 @@
 	import FollowUpQuestions from '$lib/components/ui/follow-up-questions.svelte';
 	import { fly, fade } from 'svelte/transition';
 
+	const INITIAL_VISIBLE_MESSAGES = 120;
+	const LOAD_MORE_MESSAGES = 120;
+
 	const messages = useCachedQuery<Message[]>(api.messages.getAllFromConversation, () => ({
 		conversationId: page.params.id ?? '',
 	}));
@@ -52,11 +55,21 @@
 		return lastMessage.reasoning?.length ?? 0 > 0;
 	});
 
+	let visibleCount = $state(INITIAL_VISIBLE_MESSAGES);
+	const totalMessages = $derived(messages.data?.length ?? 0);
+	const startIndex = $derived(Math.max(0, totalMessages - visibleCount));
+	const visibleMessages = $derived(messages.data?.slice(startIndex) ?? []);
+
+	function loadEarlierMessages() {
+		visibleCount = Math.min(totalMessages, visibleCount + LOAD_MORE_MESSAGES);
+	}
+
 	let changedRoute = $state(false);
 	watch(
 		() => page.params.id,
 		() => {
 			changedRoute = true;
+			visibleCount = INITIAL_VISIBLE_MESSAGES;
 		}
 	);
 
@@ -205,8 +218,16 @@
 			<Button size="sm" variant="outline" href="/chat">Create a new conversation</Button>
 		</div>
 	{:else}
-		{#each messages.data ?? [] as message, i (message.id)}
-			{@const nextMessage = messages.data?.[i + 1]}
+		{#if totalMessages > visibleMessages.length}
+			<div class="flex justify-center">
+				<Button size="sm" variant="outline" onclick={loadEarlierMessages}>
+					Load earlier messages ({totalMessages - visibleMessages.length})
+				</Button>
+			</div>
+		{/if}
+		{#each visibleMessages as message, i (message.id)}
+			{@const absoluteIndex = startIndex + i}
+			{@const nextMessage = messages.data?.[absoluteIndex + 1]}
 			{@const childMessageId = nextMessage?.role === 'assistant' ? nextMessage.id : undefined}
 			<MessageComponent {message} {childMessageId} />
 		{/each}
