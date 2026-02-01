@@ -124,7 +124,7 @@
 				{#each Object.entries(suggestionCategories) as [category, opts] (category)}
 					<button
 						type="button"
-						class="data-[active=true]:bg-primary data-[active=true]:text-primary-foreground focus-visible:border-ring focus-visible:ring-ring/50 bg-secondary/50 border-border hover:bg-secondary relative inline-flex h-10 shrink-0 items-center justify-center gap-2 overflow-hidden rounded-full border px-5 py-2 text-sm font-semibold whitespace-nowrap outline-hidden transition-all select-none hover:cursor-pointer focus-visible:ring-[3px] disabled:pointer-events-none disabled:opacity-50"
+						class="data-[active=true]:bg-primary data-[active=true]:text-primary-foreground focus-visible:border-ring focus-visible:ring-ring/50 bg-secondary/50 border-border hover:bg-secondary relative inline-flex h-11 shrink-0 items-center justify-center gap-2.5 overflow-hidden rounded-full border px-6 py-2.5 text-base font-semibold whitespace-nowrap outline-hidden transition-all select-none hover:cursor-pointer focus-visible:ring-[3px] disabled:pointer-events-none disabled:opacity-50"
 						data-active={selectedCategory === category}
 						onclick={() => {
 							if (selectedCategory === category) {
@@ -134,7 +134,7 @@
 							}
 						}}
 					>
-						<opts.icon class="size-4" />
+						<opts.icon class="size-5" />
 						{category}
 					</button>
 				{/each}

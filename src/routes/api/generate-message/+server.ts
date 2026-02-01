@@ -116,6 +116,45 @@ function log(message: string, startTime: number): void {
 	console.log(`[GenerateMessage] ${message} (${elapsed}ms)`);
 }
 
+function toFiniteNumber(value: unknown): number | undefined {
+	return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+}
+
+function normalizeUsageTokens(usage: Record<string, unknown>): {
+	promptTokens?: number;
+	completionTokens?: number;
+	totalTokens?: number;
+} {
+	const promptTokens =
+		toFiniteNumber(usage.prompt_tokens) ??
+		toFiniteNumber(usage.input_tokens) ??
+		toFiniteNumber(usage.promptTokens) ??
+		toFiniteNumber(usage.tokens_prompt);
+	const completionTokens =
+		toFiniteNumber(usage.completion_tokens) ??
+		toFiniteNumber(usage.output_tokens) ??
+		toFiniteNumber(usage.completionTokens) ??
+		toFiniteNumber(usage.tokens_completion);
+	const totalTokens =
+		toFiniteNumber(usage.total_tokens) ??
+		toFiniteNumber(usage.totalTokens) ??
+		toFiniteNumber(usage.tokens_total);
+
+	let resolvedCompletion = completionTokens;
+	if (resolvedCompletion === undefined && totalTokens !== undefined) {
+		if (promptTokens !== undefined) {
+			const derived = totalTokens - promptTokens;
+			if (Number.isFinite(derived) && derived >= 0) {
+				resolvedCompletion = derived;
+			}
+		} else {
+			resolvedCompletion = totalTokens;
+		}
+	}
+
+	return { promptTokens, completionTokens: resolvedCompletion, totalTokens };
+}
+
 // Helper to get user ID from session token
 async function getUserIdFromSession(sessionToken: string): Promise<Result<string, string>> {
 	try {
@@ -1060,12 +1099,17 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 				// Reset content for follow-up response
 				content = '';
 				reasoning = '';
+				firstTokenTime = null;
 
 				for await (const chunk of followUpStream) {
 					if (abortSignal?.aborted) break;
 
 					reasoning += chunk.choices[0]?.delta?.reasoning || '';
 					content += chunk.choices[0]?.delta?.content || '';
+
+					if (firstTokenTime === null && (content || reasoning)) {
+						firstTokenTime = Date.now();
+					}
 
 					if (chunk.usage) usage = chunk.usage;
 					if (chunk.id) generationId = chunk.id;
@@ -1093,6 +1137,9 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 			return;
 		}
 
+		// Capture stream end time immediately after streaming completes (before any post-processing)
+		const streamEndTime = Date.now();
+
 		const contentHtmlResultPromise = ResultAsync.fromPromise(
 			md.renderAsync(content),
 			(e) => `Failed to render HTML: ${e}`
@@ -1103,10 +1150,11 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 		let tokenCount: number | undefined = undefined;
 
 		if (usage) {
-			tokenCount = usage.completion_tokens;
+			const normalizedUsage = normalizeUsageTokens(usage as Record<string, unknown>);
+			tokenCount = normalizedUsage.completionTokens;
 
-			const promptTokens = usage.prompt_tokens ?? 0;
-			const completionTokens = usage.completion_tokens ?? 0;
+			const promptTokens = normalizedUsage.promptTokens ?? 0;
+			const completionTokens = normalizedUsage.completionTokens ?? 0;
 			let promptPricePerMillion = 0;
 			let completionPricePerMillion = 0;
 
@@ -1185,7 +1233,6 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 		// Compute streaming time for accurate tok/sec calculation
 		// responseTimeMs = time from first token to completion (streaming time only)
 		// This excludes TTFT (time-to-first-token) for more accurate tok/sec
-		const streamEndTime = Date.now();
 		const responseTimeMs =
 			firstTokenTime !== null ? streamEndTime - firstTokenTime : streamEndTime - generationStart; // fallback to total time if no tokens received
 		const ttftMs = firstTokenTime !== null ? firstTokenTime - generationStart : null;

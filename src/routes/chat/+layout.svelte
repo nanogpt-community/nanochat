@@ -144,7 +144,13 @@
 			settings.webSearchMode =
 				(assistant.defaultWebSearchMode as 'off' | 'standard' | 'deep') || 'off';
 			settings.webSearchProvider =
-				(assistant.defaultWebSearchProvider as 'linkup' | 'tavily' | 'exa' | 'kagi' | 'perplexity' | 'valyu') || 'linkup';
+				(assistant.defaultWebSearchProvider as
+					| 'linkup'
+					| 'tavily'
+					| 'exa'
+					| 'kagi'
+					| 'perplexity'
+					| 'valyu') || 'linkup';
 			settings.webSearchExaDepth =
 				(assistant.defaultWebSearchExaDepth as 'fast' | 'auto' | 'neural' | 'deep') || 'auto';
 			settings.webSearchContextSize =
@@ -368,10 +374,14 @@
 				documents: documentsCopy.length > 0 ? documentsCopy : undefined,
 				web_search_mode: settings.webSearchMode,
 				web_search_provider: settings.webSearchProvider,
-				web_search_exa_depth: settings.webSearchProvider === 'exa' ? settings.webSearchExaDepth : undefined,
-				web_search_context_size: settings.webSearchMode !== 'off' ? settings.webSearchContextSize : undefined,
-				web_search_kagi_source: settings.webSearchProvider === 'kagi' ? settings.webSearchKagiSource : undefined,
-				web_search_valyu_search_type: settings.webSearchProvider === 'valyu' ? settings.webSearchValyuSearchType : undefined,
+				web_search_exa_depth:
+					settings.webSearchProvider === 'exa' ? settings.webSearchExaDepth : undefined,
+				web_search_context_size:
+					settings.webSearchMode !== 'off' ? settings.webSearchContextSize : undefined,
+				web_search_kagi_source:
+					settings.webSearchProvider === 'kagi' ? settings.webSearchKagiSource : undefined,
+				web_search_valyu_search_type:
+					settings.webSearchProvider === 'valyu' ? settings.webSearchValyuSearchType : undefined,
 				assistant_id: selectedAssistantId.current || undefined,
 				project_id: page.url.searchParams.get('projectId') || undefined,
 				reasoning_effort:
@@ -1019,7 +1029,13 @@
 			settings.webSearchMode = prompt.defaultWebSearchMode as 'off' | 'standard' | 'deep';
 		}
 		if (prompt.defaultWebSearchProvider) {
-			settings.webSearchProvider = prompt.defaultWebSearchProvider as 'linkup' | 'tavily' | 'exa' | 'kagi' | 'perplexity' | 'valyu';
+			settings.webSearchProvider = prompt.defaultWebSearchProvider as
+				| 'linkup'
+				| 'tavily'
+				| 'exa'
+				| 'kagi'
+				| 'perplexity'
+				| 'valyu';
 		}
 
 		// Focus the textarea
@@ -1222,13 +1238,8 @@
 						<span>Temporary Mode — Messages won't be saved</span>
 					</div>
 				{/if}
-				<div class="text-muted-foreground/60 mb-2 hidden text-center text-[10px] md:block">
-					Powered by <a href="https://nano-gpt.com" class="hover:text-foreground underline"
-						>Nano-GPT</a
-					>
-				</div>
 				<div
-					class="bg-secondary/40 border-border rounded-2xl border p-2.5 shadow-2xl backdrop-blur-xl"
+					class="bg-secondary/40 border-border rounded-2xl border p-3 shadow-2xl backdrop-blur-xl"
 				>
 					<form
 						class="relative flex w-full flex-col items-stretch gap-2 transition-all duration-300 ease-in-out"
@@ -1376,7 +1387,7 @@
 									onfocus={popover.trigger.onfocus}
 									bind:this={textarea}
 									disabled={textareaDisabled}
-									class="text-foreground placeholder:text-muted-foreground/40 max-h-64 min-h-[40px] w-full resize-none !overflow-y-auto bg-transparent px-4 py-2 text-[15px] leading-relaxed outline-none disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-[50px]"
+									class="text-foreground placeholder:text-muted-foreground/40 max-h-64 min-h-[48px] w-full resize-none !overflow-y-auto bg-transparent px-4 py-3 text-base leading-relaxed outline-none disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-[56px]"
 									placeholder={isGenerating
 										? 'Generating response...'
 										: 'Type your message here...'}
@@ -1469,10 +1480,8 @@
 												<DropdownMenu.Trigger
 													class={cn(
 														'bg-secondary/50 hover:bg-secondary text-muted-foreground relative flex h-8 items-center justify-center gap-1.5 rounded-lg px-2 transition-colors',
-														settings.webSearchMode === 'standard' &&
-															'bg-primary/20 text-primary',
-														settings.webSearchMode === 'deep' &&
-															'bg-amber-500/20 text-amber-500'
+														settings.webSearchMode === 'standard' && 'bg-primary/20 text-primary',
+														settings.webSearchMode === 'deep' && 'bg-amber-500/20 text-amber-500'
 													)}
 												>
 													<SearchIcon class="size-4" />
@@ -1488,11 +1497,11 @@
 												<DropdownMenu.Content align="start" class="w-56">
 													<DropdownMenu.Label>Search Mode</DropdownMenu.Label>
 													<DropdownMenu.RadioGroup bind:value={settings.webSearchMode}>
-														<DropdownMenu.RadioItem value="off">
-															Off
-														</DropdownMenu.RadioItem>
+														<DropdownMenu.RadioItem value="off">Off</DropdownMenu.RadioItem>
 														<DropdownMenu.RadioItem value="standard">
-															Standard <span class="text-muted-foreground ml-auto text-xs">$0.006</span>
+															Standard <span class="text-muted-foreground ml-auto text-xs"
+																>$0.006</span
+															>
 														</DropdownMenu.RadioItem>
 														<DropdownMenu.RadioItem value="deep">
 															Deep <span class="text-muted-foreground ml-auto text-xs">$0.06</span>
@@ -1507,7 +1516,9 @@
 															<DropdownMenu.RadioItem value="tavily">Tavily</DropdownMenu.RadioItem>
 															<DropdownMenu.RadioItem value="exa">Exa</DropdownMenu.RadioItem>
 															<DropdownMenu.RadioItem value="kagi">Kagi</DropdownMenu.RadioItem>
-															<DropdownMenu.RadioItem value="perplexity">Perplexity</DropdownMenu.RadioItem>
+															<DropdownMenu.RadioItem value="perplexity"
+																>Perplexity</DropdownMenu.RadioItem
+															>
 															<DropdownMenu.RadioItem value="valyu">Valyu</DropdownMenu.RadioItem>
 														</DropdownMenu.RadioGroup>
 
@@ -1517,7 +1528,9 @@
 															<DropdownMenu.RadioGroup bind:value={settings.webSearchExaDepth}>
 																<DropdownMenu.RadioItem value="fast">Fast</DropdownMenu.RadioItem>
 																<DropdownMenu.RadioItem value="auto">Auto</DropdownMenu.RadioItem>
-																<DropdownMenu.RadioItem value="neural">Neural</DropdownMenu.RadioItem>
+																<DropdownMenu.RadioItem value="neural"
+																	>Neural</DropdownMenu.RadioItem
+																>
 																<DropdownMenu.RadioItem value="deep">Deep</DropdownMenu.RadioItem>
 															</DropdownMenu.RadioGroup>
 														{/if}
@@ -1528,16 +1541,23 @@
 															<DropdownMenu.RadioGroup bind:value={settings.webSearchKagiSource}>
 																<DropdownMenu.RadioItem value="web">Web</DropdownMenu.RadioItem>
 																<DropdownMenu.RadioItem value="news">News</DropdownMenu.RadioItem>
-																<DropdownMenu.RadioItem value="search">Search</DropdownMenu.RadioItem>
+																<DropdownMenu.RadioItem value="search"
+																	>Search</DropdownMenu.RadioItem
+																>
 															</DropdownMenu.RadioGroup>
 														{/if}
 
 														{#if settings.webSearchProvider === 'valyu'}
 															<DropdownMenu.Separator />
 															<DropdownMenu.Label>Valyu Search Type</DropdownMenu.Label>
-															<DropdownMenu.RadioGroup bind:value={settings.webSearchValyuSearchType}>
-																<DropdownMenu.RadioItem value="all">All Sources</DropdownMenu.RadioItem>
-																<DropdownMenu.RadioItem value="web">Web Only</DropdownMenu.RadioItem>
+															<DropdownMenu.RadioGroup
+																bind:value={settings.webSearchValyuSearchType}
+															>
+																<DropdownMenu.RadioItem value="all"
+																	>All Sources</DropdownMenu.RadioItem
+																>
+																<DropdownMenu.RadioItem value="web">Web Only</DropdownMenu.RadioItem
+																>
 															</DropdownMenu.RadioGroup>
 														{/if}
 

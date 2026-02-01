@@ -215,13 +215,19 @@
 	}
 
 	html {
-		/* Slightly smaller base font on mobile for a more compact feel */
-		font-size: 14px;
+		/* Smaller base font on mobile for a compact feel */
+		font-size: 15px;
 	}
 
 	@media (min-width: 768px) {
 		html {
 			font-size: 16px;
+		}
+	}
+
+	@media (min-width: 1280px) {
+		html {
+			font-size: 17px;
 		}
 	}
 
