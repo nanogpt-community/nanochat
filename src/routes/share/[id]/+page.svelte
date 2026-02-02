@@ -1,11 +1,10 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { useCachedQuery, api } from '$lib/cache/cached-query.svelte.js';
-	import type { Id } from '$lib/db/types';
 	import type { Conversation, Message } from '$lib/api';
 	import { GitHub, Svelte } from '$lib/components/icons';
 	import { Button } from '$lib/components/ui/button';
-	import { LightSwitch } from '$lib/components/ui/light-switch/index.js';
+	import { ThemeToggle } from '$lib/components/ui/light-switch/index.js';
 	import Tooltip from '$lib/components/ui/tooltip.svelte';
 	import MessageComponent from '../../chat/[id]/message.svelte';
 
@@ -60,7 +59,7 @@
 					{/snippet}
 					Create your own conversation
 				</Tooltip>
-				<LightSwitch variant="ghost" class="size-8" />
+				<ThemeToggle variant="ghost" class="size-8" />
 			</div>
 		</div>
 	</header>

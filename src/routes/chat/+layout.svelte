@@ -10,7 +10,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { ImageModal } from '$lib/components/ui/image-modal';
 	import { DocumentModal } from '$lib/components/ui/document-modal';
-	import { LightSwitch } from '$lib/components/ui/light-switch/index.js';
+	import { ThemeToggle } from '$lib/components/ui/light-switch/index.js';
 	import { ShareButton } from '$lib/components/ui/share-button';
 	import { ExportButton } from '$lib/components/ui/export-button';
 	import * as Sidebar from '$lib/components/ui/sidebar';
@@ -232,6 +232,11 @@
 
 	// Load settings for YouTube transcripts
 	const userSettings = useCachedQuery<UserSettings>(api.user_settings.get, {});
+	const themeToggleSettings = $derived({
+		theme: userSettings.data?.theme,
+		isLoading: userSettings.isLoading,
+		error: userSettings.error,
+	});
 	const transcriptsEnabled = $derived(userSettings.data?.youtubeTranscriptsEnabled ?? false);
 	const nanoGPTKeyQuery = useCachedQuery(api.user_keys.get, {
 		provider: Provider.NanoGPT,
@@ -1171,7 +1176,7 @@
 					{/snippet}
 					Settings
 				</Tooltip>
-				<LightSwitch variant="ghost" class="size-8" />
+				<ThemeToggle variant="ghost" class="size-8" settings={themeToggleSettings} />
 			</div>
 
 			<div class="flex items-center md:hidden">
@@ -1201,10 +1206,13 @@
 							<Settings2Icon class="mr-2 size-4" />
 							<span>Settings</span>
 						</DropdownMenu.Item>
-						<div class="flex items-center justify-between px-2 py-1.5 text-sm">
-							<span>Theme</span>
-							<LightSwitch variant="ghost" class="size-6" />
-						</div>
+						<ThemeToggle
+							label="Theme"
+							wrapperClass="flex items-center justify-between px-2 py-1.5 text-sm"
+							variant="ghost"
+							class="size-6"
+							settings={themeToggleSettings}
+						/>
 					</DropdownMenu.Content>
 				</DropdownMenu.Root>
 			</div>

@@ -3,7 +3,7 @@
 	import { active } from '$lib/actions/active.svelte';
 	import { authClient } from '$lib/backend/auth/client.js';
 	import Button from '$lib/components/ui/button/button.svelte';
-	import { LightSwitch } from '$lib/components/ui/light-switch';
+	import { ThemeToggle } from '$lib/components/ui/light-switch';
 	import ArrowLeftIcon from '~icons/lucide/arrow-left';
 	import GithubIcon from '~icons/lucide/github';
 	import CameraIcon from '~icons/lucide/camera';
@@ -22,6 +22,11 @@
 
 	const settings = useCachedQuery<UserSettings>(api.user_settings.get, {
 		session_token: session.current?.session.token ?? '',
+	});
+	const themeToggleSettings = $derived({
+		theme: settings.data?.theme,
+		isLoading: settings.isLoading,
+		error: settings.error,
 	});
 
 	const navigation: { title: string; href: string }[] = [
@@ -125,7 +130,7 @@
 			Back to Chat
 		</Button>
 		<div class="flex place-items-center gap-2">
-			<LightSwitch variant="ghost" />
+			<ThemeToggle variant="ghost" settings={themeToggleSettings} />
 			<Button variant="ghost" onClickPromise={signOut}>Sign out</Button>
 		</div>
 	</header>

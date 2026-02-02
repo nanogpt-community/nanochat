@@ -3,5 +3,6 @@
 */
 
 import LightSwitch from './light-switch.svelte';
+import ThemeToggle from './theme-toggle.svelte';
 
-export { LightSwitch };
+export { LightSwitch, ThemeToggle };
