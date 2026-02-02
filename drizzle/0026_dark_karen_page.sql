@@ -1,0 +1,1 @@
+ALTER TABLE `user_settings` ADD `suggested_prompts_enabled` integer DEFAULT true NOT NULL;

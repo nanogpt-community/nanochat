@@ -29,6 +29,7 @@ export const POST: RequestHandler = async ({ request }) => {
 				persistentMemoryEnabled: body.persistentMemoryEnabled,
 				youtubeTranscriptsEnabled: body.youtubeTranscriptsEnabled,
 				followUpQuestionsEnabled: body.followUpQuestionsEnabled,
+				suggestedPromptsEnabled: body.suggestedPromptsEnabled,
 				webScrapingEnabled: body.webScrapingEnabled,
 				mcpEnabled: body.mcpEnabled,
 				karakeepUrl: body.karakeepUrl,

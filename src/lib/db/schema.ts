@@ -100,6 +100,9 @@ export const userSettings = sqliteTable(
 		followUpQuestionsEnabled: integer('follow_up_questions_enabled', { mode: 'boolean' })
 			.notNull()
 			.default(true),
+		suggestedPromptsEnabled: integer('suggested_prompts_enabled', { mode: 'boolean' })
+			.notNull()
+			.default(true),
 		freeMessagesUsed: integer('free_messages_used').default(0),
 		dailyMessagesUsed: integer('daily_messages_used').default(0),
 		lastMessageDate: text('last_message_date'), // ISO date string (YYYY-MM-DD) for daily reset

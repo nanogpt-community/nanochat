@@ -26,6 +26,7 @@ export async function createUserSettings(
 			webScrapingEnabled: data?.webScrapingEnabled ?? false,
 			mcpEnabled: data?.mcpEnabled ?? false,
 			followUpQuestionsEnabled: data?.followUpQuestionsEnabled ?? true,
+			suggestedPromptsEnabled: data?.suggestedPromptsEnabled ?? true,
 			freeMessagesUsed: data?.freeMessagesUsed ?? 0,
 			karakeepUrl: data?.karakeepUrl ?? null,
 			karakeepApiKey: data?.karakeepApiKey ?? null,

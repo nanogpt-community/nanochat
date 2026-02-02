@@ -35,6 +35,7 @@
 	let webScrapingEnabled = $derived(settings.data?.webScrapingEnabled ?? false);
 	let mcpEnabled = $derived(settings.data?.mcpEnabled ?? false);
 	let followUpQuestionsEnabled = $derived(settings.data?.followUpQuestionsEnabled ?? true);
+	let suggestedPromptsEnabled = $derived(settings.data?.suggestedPromptsEnabled ?? true);
 	let titleModelId = $state(settings.data?.titleModelId ?? '');
 	let titleProviderId = $state(settings.data?.titleProviderId ?? '');
 	let followUpModelId = $state(settings.data?.followUpModelId ?? '');
@@ -381,6 +382,27 @@
 		);
 
 		if (res.isErr()) followUpQuestionsEnabled = !v;
+	}
+
+	async function toggleSuggestedPrompts(v: boolean) {
+		suggestedPromptsEnabled = v;
+		if (!session.current?.user.id) return;
+
+		const res = await ResultAsync.fromPromise(
+			mutate(
+				api.user_settings.set.url,
+				{
+					action: 'update',
+					suggestedPromptsEnabled: v,
+				},
+				{
+					invalidatePatterns: [api.user_settings.get.url],
+				}
+			),
+			(e) => e
+		);
+
+		if (res.isErr()) suggestedPromptsEnabled = !v;
 	}
 
 	async function saveKarakeepSettings() {
@@ -743,6 +765,15 @@
 					>
 				</div>
 				<Switch bind:value={() => followUpQuestionsEnabled, toggleFollowUpQuestions} />
+			</div>
+			<div class="flex place-items-center justify-between">
+				<div class="flex flex-col gap-1">
+					<span class="font-medium">Suggested Prompts</span>
+					<span class="text-muted-foreground text-sm"
+						>Show suggested prompts on the home screen.</span
+					>
+				</div>
+				<Switch bind:value={() => suggestedPromptsEnabled, toggleSuggestedPrompts} />
 			</div>
 
 			<div class="mt-2 border-t pt-4">

@@ -1664,6 +1664,7 @@ Get user settings.
   "privacyMode": "boolean",
   "contextMemoryEnabled": "boolean",
   "persistentMemoryEnabled": "boolean",
+  "suggestedPromptsEnabled": "boolean",
   "theme": "string | null",
   ...
 }
@@ -1686,6 +1687,7 @@ Update user settings.
   "action": "update",
   "privacyMode": "boolean (optional)",
   "contextMemoryEnabled": "boolean (optional)",
+  "suggestedPromptsEnabled": "boolean (optional)",
   ...
 }
 ```

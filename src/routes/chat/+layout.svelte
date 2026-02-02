@@ -233,6 +233,23 @@
 	// Load settings for YouTube transcripts
 	const userSettings = useCachedQuery<UserSettings>(api.user_settings.get, {});
 	const transcriptsEnabled = $derived(userSettings.data?.youtubeTranscriptsEnabled ?? false);
+	const nanoGPTKeyQuery = useCachedQuery(api.user_keys.get, {
+		provider: Provider.NanoGPT,
+		session_token: session.current?.session.token ?? '',
+	});
+	const suggestedPromptsEnabled = $derived(userSettings.data?.suggestedPromptsEnabled ?? true);
+	const centerPromptInput = $derived(
+		page.url.pathname === '/chat' &&
+			!page.params.id &&
+			nanoGPTKeyQuery.data &&
+			!nanoGPTKeyQuery.isLoading &&
+			!suggestedPromptsEnabled
+	);
+	const promptDockClass = $derived(
+		centerPromptInput
+			? 'top-1/2 -translate-y-1/2 pb-2'
+			: 'bottom-0 md:bottom-4 mt-auto pb-2 md:pb-0'
+	);
 
 	// Import messages API to check for YouTube URLs
 	const messages = useCachedQuery<Message[]>(
@@ -1227,7 +1244,10 @@
 			</div>
 
 			<div
-				class="group safe-area-pb absolute right-0 bottom-0 left-0 mx-auto mt-auto flex w-full max-w-3xl flex-col gap-1 px-2 pb-2 md:bottom-4 md:px-4 md:pb-0"
+				class={cn(
+					'group safe-area-pb absolute right-0 left-0 mx-auto flex w-full max-w-3xl flex-col gap-1 px-2 md:px-4',
+					promptDockClass
+				)}
 				bind:this={textareaWrapper}
 			>
 				{#if settings.temporaryMode}
