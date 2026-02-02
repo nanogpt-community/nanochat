@@ -8,6 +8,7 @@ import OpenAI from 'openai';
 import { z } from 'zod/v4';
 import { decryptApiKey, isEncrypted } from '$lib/encryption';
 import { env } from '$env/dynamic/private';
+import { nanoGptUrl } from '$lib/backend/nano-gpt-url.server';
 
 const reqBodySchema = z.object({
 	conversation_id: z.string(),
@@ -84,7 +85,7 @@ export const POST: RequestHandler = async ({ request }) => {
 
 	// Generate title
 	const openai = new OpenAI({
-		baseURL: 'https://nano-gpt.com/api/v1',
+		baseURL: nanoGptUrl('/api/v1'),
 		apiKey,
 		defaultHeaders: userSettingsData?.titleProviderId
 			? { 'X-Provider': userSettingsData.titleProviderId }

@@ -6,6 +6,7 @@ import { modelPerformanceStats } from '$lib/db/schema';
 import { eq, and, sql } from 'drizzle-orm';
 import { tryGetAuthenticatedUserId } from '$lib/backend/auth-utils';
 import { getUserKey } from '$lib/db/queries';
+import { nanoGptUrl } from '$lib/backend/nano-gpt-url.server';
 
 const COST_PER_1K_CHARS: Record<string, number> = {
 	'gpt-4o-mini-tts': 0.0125,
@@ -67,7 +68,7 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 		}
 
 		const start = Date.now();
-		const response = await fetch('https://nano-gpt.com/api/v1/audio/speech', {
+		const response = await fetch(nanoGptUrl('/api/v1/audio/speech'), {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',

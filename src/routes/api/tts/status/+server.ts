@@ -3,6 +3,7 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { tryGetAuthenticatedUserId } from '$lib/backend/auth-utils';
 import { getUserKey } from '$lib/db/queries';
+import { nanoGptUrl } from '$lib/backend/nano-gpt-url.server';
 
 const getExplicitNanoGPTKey = (request: Request): string | null => {
 	const headerKey = request.headers.get('x-api-key');
@@ -46,7 +47,7 @@ export const GET: RequestHandler = async ({ request, fetch, url }) => {
 		return json({ error: 'runId and model are required' }, { status: 400 });
 	}
 
-	const proxyUrl = new URL('https://nano-gpt.com/api/tts/status');
+	const proxyUrl = new URL(nanoGptUrl('/api/tts/status'));
 	for (const [key, value] of url.searchParams.entries()) {
 		proxyUrl.searchParams.set(key, value);
 	}

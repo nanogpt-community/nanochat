@@ -32,7 +32,11 @@ import * as array from '$lib/utils/array';
 import { parseMessageForRules } from '$lib/utils/rules.js';
 import { getNanoGPTModels } from '$lib/backend/models/nano-gpt';
 import { getUserMemory, upsertUserMemory } from '$lib/db/queries/user-memories';
-import { extractUrlsByType, scrapeUrls, formatScrapedContent } from '$lib/backend/url-scraper';
+import {
+	extractUrlsByType,
+	scrapeUrls,
+	formatScrapedContent,
+} from '$lib/backend/url-scraper.server';
 import { supportsVideo } from '$lib/utils/model-capabilities';
 import { decryptApiKey, isEncrypted } from '$lib/encryption';
 import {
@@ -42,6 +46,7 @@ import {
 } from '$lib/backend/message-limits';
 import { substituteSystemPromptVariables } from '$lib/utils/system-prompt-variables';
 import { mcpToolDefinitions, executeMcpTool, isMcpAvailable } from '$lib/backend/mcp-tools';
+import { nanoGptUrl } from '$lib/backend/nano-gpt-url.server';
 
 // Set to true to enable debug logging
 const ENABLE_LOGGING = true;
@@ -257,7 +262,7 @@ async function generateConversationTitle({
 	}
 
 	const openai = new OpenAI({
-		baseURL: 'https://nano-gpt.com/api/v1',
+		baseURL: nanoGptUrl('/api/v1'),
 		apiKey,
 		defaultHeaders: userSettingsData?.titleProviderId
 			? { 'X-Provider': userSettingsData.titleProviderId }
@@ -474,7 +479,7 @@ async function generateAIResponse({
 	log(`Background: ${attachedRules.length} rules attached`, startTime);
 
 	const openai = new OpenAI({
-		baseURL: 'https://nano-gpt.com/api/v1',
+		baseURL: nanoGptUrl('/api/v1'),
 		apiKey,
 		defaultHeaders: providerId ? { 'X-Provider': providerId } : undefined,
 	});
@@ -725,7 +730,7 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 	) {
 		log('Background: Applying context memory compression', startTime);
 		try {
-			const memoryResponse = await fetch('https://nano-gpt.com/api/v1/memory', {
+			const memoryResponse = await fetch(nanoGptUrl('/api/v1/memory'), {
 				method: 'POST',
 				headers: {
 					Authorization: `Bearer ${apiKey}`,
@@ -1162,7 +1167,7 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 			if (providerId) {
 				try {
 					const providersResponse = await fetch(
-						`https://nano-gpt.com/api/models/${encodeURIComponent(model.modelId)}/providers`,
+						nanoGptUrl(`/api/models/${encodeURIComponent(model.modelId)}/providers`),
 						{
 							headers: {
 								Authorization: `Bearer ${apiKey}`,
@@ -1362,7 +1367,7 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 					{ role: 'assistant' as const, content },
 				];
 
-				const memoryResponse = await fetch('https://nano-gpt.com/api/v1/memory', {
+				const memoryResponse = await fetch(nanoGptUrl('/api/v1/memory'), {
 					method: 'POST',
 					headers: {
 						Authorization: `Bearer ${apiKey}`,
@@ -1497,7 +1502,7 @@ async function generateVideoResponse({
 
 	try {
 		// Submit video generation request
-		const response = await fetch('https://nano-gpt.com/api/generate-video', {
+		const response = await fetch(nanoGptUrl('/api/generate-video'), {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
@@ -1533,7 +1538,9 @@ async function generateVideoResponse({
 			await new Promise((resolve) => setTimeout(resolve, delayMs));
 
 			const statusRes = await fetch(
-				`https://nano-gpt.com/api/generate-video/status?runId=${runId}&modelSlug=${model.modelId}`,
+				nanoGptUrl(
+					`/api/generate-video/status?runId=${runId}&modelSlug=${model.modelId}`
+				),
 				{
 					headers: { 'x-api-key': apiKey },
 				}
@@ -1549,7 +1556,7 @@ async function generateVideoResponse({
 					statusData.data?.output?.video?.url || statusData.output?.video?.url || statusData.url;
 
 				if (videoUrl && videoUrl.startsWith('/')) {
-					videoUrl = `https://nano-gpt.com${videoUrl}`;
+					videoUrl = nanoGptUrl(videoUrl);
 				}
 				if (videoUrl) {
 					const statusCost = statusData.data?.cost || statusData.cost;
@@ -1983,7 +1990,7 @@ export const POST: RequestHandler = async ({ request }) => {
 
 				const requestImages = async (count: number) => {
 					const payload = { ...payloadBase, n: count };
-					const res = await fetch('https://nano-gpt.com/v1/images/generations', {
+					const res = await fetch(nanoGptUrl('/v1/images/generations'), {
 						method: 'POST',
 						headers: {
 							Authorization: `Bearer ${actualKey}`,

@@ -10,6 +10,7 @@ import { Provider } from '$lib/types';
 import { FOLLOW_UP_QUESTIONS_PROMPT } from '$lib/prompts/follow-up-questions';
 import { decryptApiKey, isEncrypted } from '$lib/encryption';
 import { getAuthenticatedUserId } from '$lib/backend/auth-utils';
+import { nanoGptUrl } from '$lib/backend/nano-gpt-url.server';
 
 const MODEL = 'zai-org/GLM-4.5-Air';
 
@@ -93,7 +94,7 @@ export const POST: RequestHandler = async ({ request }) => {
 	const prompt = FOLLOW_UP_QUESTIONS_PROMPT(userMessage, targetMessage.content);
 
 	const openai = new OpenAI({
-		baseURL: 'https://nano-gpt.com/api/v1',
+		baseURL: nanoGptUrl('/api/v1'),
 		apiKey: apiKey,
 		defaultHeaders: userSettingsData?.followUpProviderId
 			? { 'X-Provider': userSettingsData.followUpProviderId }

@@ -1,6 +1,7 @@
 import { env } from '$env/dynamic/private';
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
+import { nanoGptUrl } from '$lib/backend/nano-gpt-url.server';
 
 export const POST: RequestHandler = async ({ request, fetch }) => {
     try {
@@ -11,7 +12,7 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
             return json({ error: 'API key is required' }, { status: 401 });
         }
 
-        const response = await fetch('https://nano-gpt.com/api/generate-video', {
+        const response = await fetch(nanoGptUrl('/api/generate-video'), {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

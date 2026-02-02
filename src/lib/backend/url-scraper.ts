@@ -1,9 +1,6 @@
 /**
- * URL Scraping module for extracting and scraping webpage content
- * Uses NanoGPT's Web Scraping API (https://nano-gpt.com/api/scrape-urls)
+ * URL scraping helpers shared by client and server.
  */
-
-const NANO_GPT_SCRAPE_URL = 'https://nano-gpt.com/api/scrape-urls';
 
 // Regex to match HTTP/HTTPS URLs
 const URL_REGEX = /https?:\/\/[^\s<>\[\]"'()]+/gi;
@@ -101,43 +98,6 @@ export function extractUrls(text: string): string[] {
 }
 
 /**
- * Scrape URLs using NanoGPT's Web Scraping API
- */
-export async function scrapeUrls(
-	urls: string[],
-	apiKey: string,
-	stealthMode: boolean = false
-): Promise<ScrapeResponse | null> {
-	if (urls.length === 0) return null;
-
-	try {
-		const response = await fetch(NANO_GPT_SCRAPE_URL, {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json',
-				'x-api-key': apiKey,
-			},
-			body: JSON.stringify({
-				urls,
-				stealthMode,
-			}),
-		});
-
-		if (!response.ok) {
-			const errorText = await response.text();
-			console.error(`[URL Scraper] API error: ${response.status} ${errorText}`);
-			return null;
-		}
-
-		const data = (await response.json()) as ScrapeResponse;
-		return data;
-	} catch (error) {
-		console.error(`[URL Scraper] Failed to scrape URLs: ${error}`);
-		return null;
-	}
-}
-
-/**
  * Format scraped results as context for the AI model
  */
 export function formatScrapedContent(results: ScrapeUrlResult[]): string {
@@ -170,36 +130,4 @@ ${formattedPages}
 Instructions: Use the above scraped page content to answer the user's query. Reference the content where relevant.
 
 `;
-}
-
-/**
- * Extract URLs from a message, scrape them, and return formatted context
- * This is the main function to use in the message generation flow
- */
-export async function scrapeUrlsFromMessage(
-	messageContent: string,
-	apiKey: string
-): Promise<{ content: string; successCount: number }> {
-	const urls = extractUrls(messageContent);
-
-	if (urls.length === 0) {
-		return { content: '', successCount: 0 };
-	}
-
-	console.log(`[URL Scraper] Found ${urls.length} URLs to scrape:`, urls);
-
-	const response = await scrapeUrls(urls, apiKey);
-
-	if (!response || !response.results) {
-		return { content: '', successCount: 0 };
-	}
-
-	console.log(
-		`[URL Scraper] Scraped ${response.summary.successful}/${response.summary.requested} URLs successfully`
-	);
-
-	return {
-		content: formatScrapedContent(response.results),
-		successCount: response.summary.successful,
-	};
 }

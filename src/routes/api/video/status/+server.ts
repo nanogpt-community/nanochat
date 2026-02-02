@@ -5,6 +5,7 @@ import { db } from '$lib/db';
 import { modelPerformanceStats } from '$lib/db/schema';
 import { eq, and, sql } from 'drizzle-orm';
 import { auth } from '$lib/auth';
+import { nanoGptUrl } from '$lib/backend/nano-gpt-url.server';
 
 export const GET: RequestHandler = async ({ request, url, fetch }) => {
     try {
@@ -21,7 +22,7 @@ export const GET: RequestHandler = async ({ request, url, fetch }) => {
         }
 
         // Construct target URL
-        const targetUrl = new URL('https://nano-gpt.com/api/generate-video/status');
+        const targetUrl = new URL(nanoGptUrl('/api/generate-video/status'));
         targetUrl.searchParams.set('runId', runId);
         // if (model) targetUrl.searchParams.set('model', model); // Try without model filtering
 

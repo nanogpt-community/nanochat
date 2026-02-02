@@ -10,6 +10,7 @@ import { userKeys, userRules } from '$lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { decryptApiKey, isEncrypted } from '$lib/encryption';
 import { getAuthenticatedUserId } from '$lib/backend/auth-utils';
+import { nanoGptUrl } from '$lib/backend/nano-gpt-url.server';
 
 const MODEL = 'zai-org/glm-4.6v';
 
@@ -80,7 +81,7 @@ export const POST: RequestHandler = async ({ request }) => {
 	);
 
 	const openai = new OpenAI({
-		baseURL: 'https://nano-gpt.com/api/v1',
+		baseURL: nanoGptUrl('/api/v1'),
 		apiKey: apiKey,
 	});
 

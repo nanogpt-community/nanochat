@@ -3,6 +3,7 @@ import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getUserKey } from '$lib/db/queries';
 import { getAuthenticatedUserId } from '$lib/backend/auth-utils';
+import { nanoGptUrl } from '$lib/backend/nano-gpt-url.server';
 
 export const POST: RequestHandler = async ({ request }) => {
     const userId = await getAuthenticatedUserId(request);
@@ -18,7 +19,7 @@ export const POST: RequestHandler = async ({ request }) => {
     }
 
     try {
-        const response = await fetch('https://nano-gpt.com/api/check-balance', {
+        const response = await fetch(nanoGptUrl('/api/check-balance'), {
             method: 'POST',
             headers: {
                 'x-api-key': apiKey

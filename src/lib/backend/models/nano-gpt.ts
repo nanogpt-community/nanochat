@@ -1,4 +1,5 @@
 import { ResultAsync } from 'neverthrow';
+import { nanoGptUrl } from '$lib/backend/nano-gpt-url.server';
 
 const MODEL_CACHE_TTL_MS = 5 * 60 * 1000;
 let cachedModels: NanoGPTModel[] | null = null;
@@ -11,9 +12,9 @@ function isCacheFresh(now: number) {
 
 async function fetchNanoGPTModels(): Promise<NanoGPTModel[]> {
 	const [textModelsRes, imageModelsRes, videoModelsRes] = await Promise.all([
-		fetch('https://nano-gpt.com/api/v1/models?detailed=true'),
-		fetch('https://nano-gpt.com/api/models/image'),
-		fetch('https://nano-gpt.com/api/models/video'),
+		fetch(nanoGptUrl('/api/v1/models?detailed=true')),
+		fetch(nanoGptUrl('/api/models/image')),
+		fetch(nanoGptUrl('/api/models/video')),
 	]);
 
 	if (!textModelsRes.ok) {

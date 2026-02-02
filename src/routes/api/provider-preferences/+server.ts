@@ -5,6 +5,7 @@ import { eq, and } from 'drizzle-orm';
 import { z } from 'zod/v4';
 import { decryptApiKey, isEncrypted } from '$lib/encryption';
 import { getAuthenticatedUserId } from '$lib/backend/auth-utils';
+import { nanoGptUrl } from '$lib/backend/nano-gpt-url.server';
 
 // Schema for provider preferences
 const providerPreferencesSchema = z.object({
@@ -48,7 +49,7 @@ export const GET: RequestHandler = async ({ request }) => {
     }
 
     try {
-        const response = await fetch('https://nano-gpt.com/api/user/provider-preferences', {
+        const response = await fetch(nanoGptUrl('/api/user/provider-preferences'), {
             headers: {
                 'Authorization': `Bearer ${apiKey}`,
                 'Content-Type': 'application/json',
@@ -107,7 +108,7 @@ export const PATCH: RequestHandler = async ({ request }) => {
     }
 
     try {
-        const response = await fetch('https://nano-gpt.com/api/user/provider-preferences', {
+        const response = await fetch(nanoGptUrl('/api/user/provider-preferences'), {
             method: 'PATCH',
             headers: {
                 'Authorization': `Bearer ${apiKey}`,
@@ -146,7 +147,7 @@ export const DELETE: RequestHandler = async ({ request }) => {
     }
 
     try {
-        const response = await fetch('https://nano-gpt.com/api/user/provider-preferences', {
+        const response = await fetch(nanoGptUrl('/api/user/provider-preferences'), {
             method: 'DELETE',
             headers: {
                 'Authorization': `Bearer ${apiKey}`,

@@ -30,7 +30,11 @@ import * as array from '$lib/utils/array';
 import { parseMessageForRules } from '$lib/utils/rules.js';
 import { getNanoGPTModels } from '$lib/backend/models/nano-gpt';
 import { getUserMemory, upsertUserMemory } from '$lib/db/queries/user-memories';
-import { extractUrlsByType, scrapeUrls, formatScrapedContent } from '$lib/backend/url-scraper';
+import {
+	extractUrlsByType,
+	scrapeUrls,
+	formatScrapedContent,
+} from '$lib/backend/url-scraper.server';
 import { supportsVideo } from '$lib/utils/model-capabilities';
 import { decryptApiKey, isEncrypted } from '$lib/encryption';
 import {
@@ -40,6 +44,7 @@ import {
 } from '$lib/backend/message-limits';
 import { substituteSystemPromptVariables } from '$lib/utils/system-prompt-variables';
 import { mcpToolDefinitions, executeMcpTool, isMcpAvailable } from '$lib/backend/mcp-tools';
+import { nanoGptUrl } from '$lib/backend/nano-gpt-url.server';
 import { SSEEncoder, sseHeaders } from '$lib/sse';
 
 // Set to true to enable debug logging
@@ -236,7 +241,7 @@ async function generateConversationTitle({
 	}
 
 	const openai = new OpenAI({
-		baseURL: 'https://nano-gpt.com/api/v1',
+		baseURL: nanoGptUrl('/api/v1'),
 		apiKey,
 		defaultHeaders: userSettingsData?.titleProviderId
 			? { 'X-Provider': userSettingsData.titleProviderId }
@@ -817,7 +822,7 @@ async function streamAIResponse({
 	log(`${attachedRules.length} rules attached`, startTime);
 
 	const openai = new OpenAI({
-		baseURL: 'https://nano-gpt.com/api/v1',
+		baseURL: nanoGptUrl('/api/v1'),
 		apiKey,
 		defaultHeaders: providerId ? { 'X-Provider': providerId } : undefined,
 	});
@@ -1056,7 +1061,7 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 	) {
 		log('Applying context memory compression', startTime);
 		try {
-			const memoryResponse = await fetch('https://nano-gpt.com/api/v1/memory', {
+			const memoryResponse = await fetch(nanoGptUrl('/api/v1/memory'), {
 				method: 'POST',
 				headers: {
 					Authorization: `Bearer ${apiKey}`,
@@ -1504,7 +1509,7 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 			if (providerId) {
 				try {
 					const providersResponse = await fetch(
-						`https://nano-gpt.com/api/models/${encodeURIComponent(model.modelId)}/providers`,
+						nanoGptUrl(`/api/models/${encodeURIComponent(model.modelId)}/providers`),
 						{
 							headers: {
 								Authorization: `Bearer ${apiKey}`,
@@ -1695,7 +1700,7 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 					{ role: 'assistant' as const, content },
 				];
 
-				const memoryResponse = await fetch('https://nano-gpt.com/api/v1/memory', {
+				const memoryResponse = await fetch(nanoGptUrl('/api/v1/memory'), {
 					method: 'POST',
 					headers: {
 						Authorization: `Bearer ${apiKey}`,

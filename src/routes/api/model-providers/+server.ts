@@ -4,6 +4,7 @@ import { userKeys } from '$lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { decryptApiKey, isEncrypted } from '$lib/encryption';
 import { getAuthenticatedUserId } from '$lib/backend/auth-utils';
+import { nanoGptUrl } from '$lib/backend/nano-gpt-url.server';
 
 /**
  * GET /api/model-providers?modelId=xxx
@@ -44,7 +45,9 @@ export const GET: RequestHandler = async ({ url, request }) => {
 
     try {
         // Fetch providers from NanoGPT API
-        const response = await fetch(`https://nano-gpt.com/api/models/${encodeURIComponent(modelId)}/providers`, {
+        const response = await fetch(
+            nanoGptUrl(`/api/models/${encodeURIComponent(modelId)}/providers`),
+            {
             headers: {
                 'Authorization': `Bearer ${apiKey}`,
                 'Content-Type': 'application/json',
@@ -84,4 +87,3 @@ export const GET: RequestHandler = async ({ url, request }) => {
         });
     }
 };
-

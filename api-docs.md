@@ -11,6 +11,8 @@ All endpoints are relative to the base URL. For example, to call the generate-me
 http://localhost:3432/api/generate-message
 ```
 
+**NanoGPT API Base URL Override**: Set `NANOGPT_BASE_URL` to route upstream NanoGPT API calls through a proxy or alternate endpoint (default: `https://nano-gpt.com`).
+
 ## Authentication
 
 The API supports two methods of authentication:

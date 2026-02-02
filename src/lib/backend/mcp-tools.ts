@@ -6,6 +6,7 @@
  */
 
 import type { ChatCompletionTool } from 'openai/resources/chat/completions';
+import { nanoGptUrl } from '$lib/backend/nano-gpt-url.server';
 
 /**
  * MCP tool definitions in OpenAI-compatible format
@@ -264,7 +265,7 @@ export async function executeMcpTool(
 async function executeGetBalance(
     apiKey: string
 ): Promise<{ success: boolean; result: string; error?: string }> {
-    const response = await fetch('https://nano-gpt.com/api/check-balance', {
+    const response = await fetch(nanoGptUrl('/api/check-balance'), {
         method: 'POST',
         headers: {
             'Authorization': `Bearer ${apiKey}`,
@@ -295,7 +296,7 @@ async function executeWebSearch(
     const query = args.query as string;
     const depth = (args.depth as string) || 'standard';
 
-    const response = await fetch('https://nano-gpt.com/api/web', {
+    const response = await fetch(nanoGptUrl('/api/web'), {
         method: 'POST',
         headers: {
             'Authorization': `Bearer ${apiKey}`,
@@ -335,7 +336,7 @@ async function executeScrapeUrls(
 ): Promise<{ success: boolean; result: string; error?: string }> {
     const urls = args.urls as string[];
 
-    const response = await fetch('https://nano-gpt.com/api/scrape-urls', {
+    const response = await fetch(nanoGptUrl('/api/scrape-urls'), {
         method: 'POST',
         headers: {
             'Authorization': `Bearer ${apiKey}`,
@@ -381,7 +382,7 @@ async function executeYoutubeTranscribe(
 ): Promise<{ success: boolean; result: string; error?: string }> {
     const url = args.url as string;
 
-    const response = await fetch('https://nano-gpt.com/api/youtube-transcribe', {
+    const response = await fetch(nanoGptUrl('/api/youtube-transcribe'), {
         method: 'POST',
         headers: {
             'Authorization': `Bearer ${apiKey}`,
@@ -449,7 +450,7 @@ async function executeImageGenerate(
     if (size) requestBody.size = size;
     if (n) requestBody.n = n;
 
-    const response = await fetch('https://nano-gpt.com/v1/images/generations', {
+    const response = await fetch(nanoGptUrl('/v1/images/generations'), {
         method: 'POST',
         headers: {
             'Authorization': `Bearer ${apiKey}`,
@@ -492,7 +493,11 @@ async function executeListModels(
         video: '/api/v1/video-models',
     };
 
-    let url = `https://nano-gpt.com${paths[type]}`;
+    const path = paths[type];
+    if (!path) {
+        return { success: false, result: '', error: `Unknown model type: ${String(type)}` };
+    }
+    let url = nanoGptUrl(path);
     if (detailed !== undefined) {
         url += `?detailed=${detailed}`;
     }
@@ -537,7 +542,7 @@ async function executeListAudioModels(
     const detailed = args.detailed as boolean | undefined;
     const type = args.type as 'tts' | 'stt' | 'all' | undefined;
 
-    let url = 'https://nano-gpt.com/api/v1/audio-models';
+    let url = nanoGptUrl('/api/v1/audio-models');
     const params = new URLSearchParams();
     if (detailed !== undefined) params.append('detailed', String(detailed));
     if (type) params.append('type', type);
@@ -595,7 +600,7 @@ async function executeVision(
         stream: false,
     };
 
-    const response = await fetch('https://nano-gpt.com/v1/chat/completions', {
+    const response = await fetch(nanoGptUrl('/v1/chat/completions'), {
         method: 'POST',
         headers: {
             'Authorization': `Bearer ${apiKey}`,

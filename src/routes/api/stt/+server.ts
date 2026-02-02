@@ -6,6 +6,7 @@ import { modelPerformanceStats } from '$lib/db/schema';
 import { eq, and, sql } from 'drizzle-orm';
 import { tryGetAuthenticatedUserId } from '$lib/backend/auth-utils';
 import { getUserKey } from '$lib/db/queries';
+import { nanoGptUrl } from '$lib/backend/nano-gpt-url.server';
 
 const COST_PER_MINUTE: Record<string, number> = {
 	'Whisper-Large-V3': 0.01,
@@ -84,7 +85,7 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 		}
 
 		const start = Date.now();
-		const response = await fetch('https://nano-gpt.com/api/transcribe', {
+		const response = await fetch(nanoGptUrl('/api/transcribe'), {
 			method: 'POST',
 			headers: upstreamHeaders,
 			body: formData,
