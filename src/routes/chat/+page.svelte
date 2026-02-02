@@ -9,6 +9,7 @@
 	import { scale } from 'svelte/transition';
 	import { useCachedQuery, api } from '$lib/cache/cached-query.svelte';
 	import { Provider } from '$lib/types';
+	import type { UserSettings } from '$lib/api';
 	import { untrack } from 'svelte';
 	import { page } from '$app/state';
 	import { settings } from '$lib/state/settings.svelte.js';
@@ -20,7 +21,7 @@
 		'What is the meaning of life?',
 	];
 
-	const userSettingsQuery = useCachedQuery(api.user_settings.get, {
+	const userSettingsQuery = useCachedQuery<UserSettings>(api.user_settings.get, {
 		session_token: session.current?.session.token ?? '',
 	});
 
