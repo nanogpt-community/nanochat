@@ -43,6 +43,10 @@
 			href: '/account/prompts',
 		},
 		{
+			title: 'Schedules',
+			href: '/account/schedules',
+		},
+		{
 			title: 'Customization',
 			href: '/account/customization',
 		},

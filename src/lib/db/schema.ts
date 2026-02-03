@@ -76,17 +76,18 @@ export const passkey = sqliteTable('passkey', {
 // Application Tables (migrated from Convex)
 // ============================================================================
 
-export const userSettings = sqliteTable(
-	'user_settings',
-	{
-		id: text('id').primaryKey(),
-		userId: text('user_id')
-			.notNull()
-			.references(() => user.id, { onDelete: 'cascade' }),
-		privacyMode: integer('privacy_mode', { mode: 'boolean' }).notNull().default(false),
-		contextMemoryEnabled: integer('context_memory_enabled', { mode: 'boolean' })
-			.notNull()
-			.default(false),
+	export const userSettings = sqliteTable(
+		'user_settings',
+		{
+			id: text('id').primaryKey(),
+			userId: text('user_id')
+				.notNull()
+				.references(() => user.id, { onDelete: 'cascade' }),
+			timezone: text('timezone').notNull().default('UTC'),
+			privacyMode: integer('privacy_mode', { mode: 'boolean' }).notNull().default(false),
+			contextMemoryEnabled: integer('context_memory_enabled', { mode: 'boolean' })
+				.notNull()
+				.default(false),
 		persistentMemoryEnabled: integer('persistent_memory_enabled', { mode: 'boolean' })
 			.notNull()
 			.default(false),
@@ -361,6 +362,38 @@ export const prompts = sqliteTable(
 	(table) => [index('prompts_user_id_idx').on(table.userId)]
 );
 
+// Scheduled tasks - cron/interval/one-off tasks that execute prompts
+export const scheduledTasks = sqliteTable(
+	'scheduled_tasks',
+	{
+		id: text('id').primaryKey(),
+		userId: text('user_id')
+			.notNull()
+			.references(() => user.id, { onDelete: 'cascade' }),
+		name: text('name').notNull(),
+		description: text('description'),
+		enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
+		scheduleType: text('schedule_type').notNull(), // 'cron' | 'interval' | 'once'
+		cronExpression: text('cron_expression'),
+		intervalSeconds: integer('interval_seconds'),
+		runAt: integer('run_at', { mode: 'timestamp' }),
+		payload: text('payload', { mode: 'json' }).$type<Record<string, unknown>>().notNull(),
+		nextRunAt: integer('next_run_at', { mode: 'timestamp' }),
+		lastRunAt: integer('last_run_at', { mode: 'timestamp' }),
+		lastRunStatus: text('last_run_status'), // 'queued' | 'error'
+		lastRunError: text('last_run_error'),
+		lockedAt: integer('locked_at', { mode: 'timestamp' }),
+		lockedBy: text('locked_by'),
+		createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+		updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+	},
+	(table) => [
+		index('scheduled_tasks_user_id_idx').on(table.userId),
+		index('scheduled_tasks_next_run_idx').on(table.nextRunAt),
+		index('scheduled_tasks_user_next_run_idx').on(table.userId, table.nextRunAt),
+	]
+);
+
 // Project files - documents attached to a project for context
 export const projectFiles = sqliteTable(
 	'project_files',
@@ -503,6 +536,7 @@ export const userRelations = relations(user, ({ many, one }) => ({
 	memories: one(userMemories),
 	assistants: many(assistants),
 	prompts: many(prompts),
+	scheduledTasks: many(scheduledTasks),
 	projects: many(projects),
 	projectMemberships: many(projectMembers),
 	messageRatings: many(messageRatings),
@@ -719,3 +753,5 @@ export type ProjectMember = typeof projectMembers.$inferSelect;
 export type NewProjectMember = typeof projectMembers.$inferInsert;
 export type ApiKey = typeof apiKeys.$inferSelect;
 export type NewApiKey = typeof apiKeys.$inferInsert;
+export type ScheduledTask = typeof scheduledTasks.$inferSelect;
+export type NewScheduledTask = typeof scheduledTasks.$inferInsert;

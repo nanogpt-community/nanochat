@@ -14,6 +14,7 @@ export type {
     Storage,
     User,
     Session,
+    ScheduledTask,
 } from '$lib/db/schema';
 
 // Table name to type mapping 
@@ -25,6 +26,7 @@ type TableTypes = {
     conversations: import('$lib/db/schema').Conversation;
     messages: import('$lib/db/schema').Message;
     storage: import('$lib/db/schema').Storage;
+    scheduled_tasks: import('$lib/db/schema').ScheduledTask;
     user: import('$lib/db/schema').User;
     session: import('$lib/db/schema').Session;
 };

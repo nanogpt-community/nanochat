@@ -23,7 +23,7 @@ import { join, resolve } from 'path';
 import { auth } from '$lib/auth';
 import { Provider, type Annotation } from '$lib/types';
 import { error, json, type RequestHandler } from '@sveltejs/kit';
-import { Result, ResultAsync, ok, err, okAsync } from 'neverthrow';
+import { Result, ResultAsync, ok, err } from 'neverthrow';
 import OpenAI from 'openai';
 import { z } from 'zod/v4';
 import { generationAbortControllers } from './cache.js';
@@ -668,6 +668,7 @@ async function generateAIResponse({
 				modelName: model.modelId, // NanoGPT doesn't have separate model names
 				provider: model.provider,
 				userName: userName,
+				timezone: userSettingsData?.timezone,
 			});
 			systemContent += `${substitutedPrompt}\n\n`;
 		}
@@ -690,6 +691,7 @@ async function generateAIResponse({
 					modelName: model.modelId,
 					provider: model.provider,
 					userName: userName,
+					timezone: userSettingsData?.timezone,
 				});
 				systemContent += `\n[PROJECT INSTRUCTIONS]\n${substitutedPrompt}\n\n`;
 			}
@@ -1620,64 +1622,15 @@ async function generateVideoResponse({
 	}
 }
 
-export const POST: RequestHandler = async ({ request }) => {
-	const startTime = Date.now();
-	log('Starting message generation request', startTime);
-
-	const bodyResult = await ResultAsync.fromPromise(
-		request.json(),
-		() => 'Failed to parse request body'
-	);
-
-	if (bodyResult.isErr()) {
-		log(`Request body parsing failed: ${bodyResult.error}`, startTime);
-		return error(400, 'Failed to parse request body');
-	}
-
-	log('Request body parsed successfully', startTime);
-
-	const parsed = reqBodySchema.safeParse(bodyResult.value);
-	if (!parsed.success) {
-		log(`Schema validation failed: ${parsed.error}`, startTime);
-		return error(400, parsed.error);
-	}
-	const args = parsed.data;
-
-	log('Schema validation passed', startTime);
-
-	// Try API key auth first (Bearer token), then session cookie, then session_token
-	const authHeader = request.headers.get('Authorization');
-	let userId: string;
-
-	if (authHeader?.startsWith('Bearer nc_')) {
-		// API key authentication
-		const userIdResult = await getUserIdFromApiKey(authHeader);
-		if (userIdResult.isErr()) {
-			log(`API key auth failed: ${userIdResult.error}`, startTime);
-			return error(401, userIdResult.error);
-		}
-		userId = userIdResult.value;
-		log('API key authentication successful', startTime);
-	} else if (args.session_token) {
-		// Session token authentication (for external API calls with session token)
-		const userIdResult = await getUserIdFromSession(args.session_token);
-		if (userIdResult.isErr()) {
-			log(`Session token auth failed: ${userIdResult.error}`, startTime);
-			return error(401, userIdResult.error);
-		}
-		userId = userIdResult.value;
-		log('Session token authentication successful', startTime);
-	} else {
-		// Cookie-based session authentication (for web UI)
-		const session = await auth.api.getSession({ headers: request.headers });
-		if (!session?.user?.id) {
-			log('No valid authentication found', startTime);
-			return error(401, 'Authentication required: provide Bearer token or session_token');
-		}
-		userId = session.user.id;
-		log('Cookie session authentication successful', startTime);
-	}
-
+export async function _generateMessageForUser({
+	args,
+	userId,
+	startTime,
+}: {
+	args: GenerateMessageRequestBody;
+	userId: string;
+	startTime: number;
+}): Promise<GenerateMessageResponse> {
 	// Fetch model, API key, rules, user settings, and user in parallel
 	const [modelRecord, keyRecord, rulesRecords, userSettingsRecord, userRecord] = await Promise.all([
 		db.query.userEnabledModels.findFirst({
@@ -2156,10 +2109,10 @@ export const POST: RequestHandler = async ({ request }) => {
 			}
 		})();
 
-		return response({
+		return {
 			ok: true,
 			conversation_id: conversationId,
-		});
+		};
 	}
 
 	// Create and cache AbortController for this generation
@@ -2249,7 +2202,69 @@ export const POST: RequestHandler = async ({ request }) => {
 	}
 
 	log('Response sent, AI generation started in background', startTime);
-	return response({ ok: true, conversation_id: conversationId });
+	return { ok: true, conversation_id: conversationId };
+}
+
+export const POST: RequestHandler = async ({ request }) => {
+	const startTime = Date.now();
+	log('Starting message generation request', startTime);
+
+	const bodyResult = await ResultAsync.fromPromise(
+		request.json(),
+		() => 'Failed to parse request body'
+	);
+
+	if (bodyResult.isErr()) {
+		log(`Request body parsing failed: ${bodyResult.error}`, startTime);
+		return error(400, 'Failed to parse request body');
+	}
+
+	log('Request body parsed successfully', startTime);
+
+	const parsed = reqBodySchema.safeParse(bodyResult.value);
+	if (!parsed.success) {
+		log(`Schema validation failed: ${parsed.error}`, startTime);
+		return error(400, parsed.error);
+	}
+	const args = parsed.data;
+
+	log('Schema validation passed', startTime);
+
+	// Try API key auth first (Bearer token), then session cookie, then session_token
+	const authHeader = request.headers.get('Authorization');
+	let userId: string;
+
+	if (authHeader?.startsWith('Bearer nc_')) {
+		// API key authentication
+		const userIdResult = await getUserIdFromApiKey(authHeader);
+		if (userIdResult.isErr()) {
+			log(`API key auth failed: ${userIdResult.error}`, startTime);
+			return error(401, userIdResult.error);
+		}
+		userId = userIdResult.value;
+		log('API key authentication successful', startTime);
+	} else if (args.session_token) {
+		// Session token authentication (for external API calls with session token)
+		const userIdResult = await getUserIdFromSession(args.session_token);
+		if (userIdResult.isErr()) {
+			log(`Session token auth failed: ${userIdResult.error}`, startTime);
+			return error(401, userIdResult.error);
+		}
+		userId = userIdResult.value;
+		log('Session token authentication successful', startTime);
+	} else {
+		// Cookie-based session authentication (for web UI)
+		const session = await auth.api.getSession({ headers: request.headers });
+		if (!session?.user?.id) {
+			log('No valid authentication found', startTime);
+			return error(401, 'Authentication required: provide Bearer token or session_token');
+		}
+		userId = session.user.id;
+		log('Cookie session authentication successful', startTime);
+	}
+
+	const result = await _generateMessageForUser({ args, userId, startTime });
+	return response(result);
 };
 
 async function retryResult<T, E>(

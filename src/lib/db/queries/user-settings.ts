@@ -19,6 +19,7 @@ export async function createUserSettings(
 		.values({
 			id: generateId(),
 			userId,
+			timezone: data?.timezone ?? 'UTC',
 			privacyMode: data?.privacyMode ?? false,
 			contextMemoryEnabled: data?.contextMemoryEnabled ?? false,
 			persistentMemoryEnabled: data?.persistentMemoryEnabled ?? false,

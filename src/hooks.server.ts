@@ -10,9 +10,8 @@ export const handle: Handle = async ({ event, resolve }) => {
 };
 
 import { building } from '$app/environment';
-import { migrate } from 'drizzle-orm/bun-sqlite/migrator';
-import { db } from '$lib/db';
 import { migrateEmailDomains } from '$lib/migrations/email-domain';
+import { startScheduler } from '$lib/backend/scheduler';
 
 if (!building) {
 	// try {
@@ -23,4 +22,5 @@ if (!building) {
 	// }
 
 	migrateEmailDomains();
+	startScheduler();
 }

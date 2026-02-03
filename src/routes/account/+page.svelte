@@ -40,12 +40,24 @@
 	let titleProviderId = $state(settings.data?.titleProviderId ?? '');
 	let followUpModelId = $state(settings.data?.followUpModelId ?? '');
 	let followUpProviderId = $state(settings.data?.followUpProviderId ?? '');
+	let timezone = $state(settings.data?.timezone ?? '');
+	let timezoneSaving = $state(false);
+	const browserTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone ?? 'UTC';
+	const intlWithSupported = Intl as typeof Intl & {
+		supportedValuesOf?: (key: string) => string[];
+	};
+	const timezoneOptions = $derived(
+		typeof intlWithSupported.supportedValuesOf === 'function'
+			? intlWithSupported.supportedValuesOf('timeZone')
+			: Array.from(new Set([browserTimezone, 'UTC']))
+	);
 
 	$effect(() => {
 		if (settings.data?.titleModelId) titleModelId = settings.data.titleModelId;
 		if (settings.data?.titleProviderId) titleProviderId = settings.data.titleProviderId;
 		if (settings.data?.followUpModelId) followUpModelId = settings.data.followUpModelId;
 		if (settings.data?.followUpProviderId) followUpProviderId = settings.data.followUpProviderId;
+		if (settings.data?.timezone) timezone = settings.data.timezone;
 	});
 
 	type ProviderInfo = {
@@ -361,6 +373,33 @@
 		);
 
 		if (res.isErr()) mcpEnabled = !v;
+	}
+
+	async function saveTimezone() {
+		if (!session.current?.user.id) return;
+		const resolvedTimezone = timezone || browserTimezone || 'UTC';
+		timezone = resolvedTimezone;
+		timezoneSaving = true;
+
+		const res = await ResultAsync.fromPromise(
+			mutate(
+				api.user_settings.set.url,
+				{
+					action: 'update',
+					timezone: resolvedTimezone,
+				},
+				{
+					invalidatePatterns: [api.user_settings.get.url],
+				}
+			),
+			(e) => e
+		);
+
+		if (res.isErr()) {
+			console.error(res.error);
+		}
+
+		timezoneSaving = false;
 	}
 
 	async function toggleFollowUpQuestions(v: boolean) {
@@ -738,6 +777,41 @@
 					>
 				</div>
 				<Switch bind:value={() => webScrapingEnabled, toggleWebScraping} />
+			</div>
+			<div class="grid gap-2">
+				<div class="flex flex-col gap-1">
+					<span class="font-medium">Timezone</span>
+					<span class="text-muted-foreground text-sm">
+						Used for scheduled tasks and date/time variables in prompts.
+					</span>
+				</div>
+				<div class="flex flex-wrap items-center gap-2">
+					<Input
+						id="timezone"
+						list="timezone-options"
+						placeholder={browserTimezone || 'UTC'}
+						bind:value={timezone}
+						class="w-[260px]"
+					/>
+					<Button onclick={saveTimezone} disabled={timezoneSaving}>
+						{timezoneSaving ? 'Saving...' : 'Save'}
+					</Button>
+					<Button
+						variant="ghost"
+						onclick={() => {
+							timezone = browserTimezone;
+							saveTimezone();
+						}}
+						disabled={timezoneSaving || !browserTimezone}
+					>
+						Use browser timezone
+					</Button>
+				</div>
+				<datalist id="timezone-options">
+					{#each timezoneOptions as tz}
+						<option value={tz}></option>
+					{/each}
+				</datalist>
 			</div>
 			<div class="flex place-items-center justify-between">
 				<div class="flex flex-col gap-1">

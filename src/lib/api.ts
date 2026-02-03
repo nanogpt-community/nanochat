@@ -17,6 +17,7 @@ export type {
 	Session,
 	Assistant,
 	Prompt,
+	ScheduledTask,
 	Project,
 	ProjectFile,
 	ProjectMember,
@@ -36,6 +37,7 @@ interface DocTypes {
 	storage: import('$lib/db/schema').Storage;
 	assistants: import('$lib/db/schema').Assistant;
 	prompts: import('$lib/db/schema').Prompt;
+	scheduled_tasks: import('$lib/db/schema').ScheduledTask;
 	projects: import('$lib/db/schema').Project;
 	project_files: import('$lib/db/schema').ProjectFile;
 	project_members: import('$lib/db/schema').ProjectMember;

@@ -259,6 +259,13 @@ export const api = {
 		update: { url: '/api/prompts', method: 'PATCH' } as QueryConfig, // client side needs to append /id
 		delete: { url: '/api/prompts', method: 'DELETE' } as QueryConfig, // client side needs to append /id
 	},
+	scheduled_tasks: {
+		list: { url: '/api/scheduled-tasks', method: 'GET' } as QueryConfig,
+		create: { url: '/api/scheduled-tasks', method: 'POST' } as QueryConfig,
+		update: { url: '/api/scheduled-tasks', method: 'PATCH' } as QueryConfig, // client side needs to append /id
+		delete: { url: '/api/scheduled-tasks', method: 'DELETE' } as QueryConfig, // client side needs to append /id
+		run: { url: '/api/scheduled-tasks', method: 'POST' } as QueryConfig, // client side needs to append /id/run
+	},
 	projects: {
 		list: { url: '/api/projects', method: 'GET' } as QueryConfig,
 		get: { url: '/api/projects', method: 'GET' } as QueryConfig, // client side needs to append /id

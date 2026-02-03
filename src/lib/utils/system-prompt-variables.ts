@@ -33,7 +33,12 @@ export function substituteSystemPromptVariables(
 	context: SystemPromptContext
 ): string {
 	const now = new Date();
-	const timezone = context.timezone || 'UTC';
+	let timezone = context.timezone || 'UTC';
+	try {
+		new Intl.DateTimeFormat('en-US', { timeZone: timezone }).format(now);
+	} catch {
+		timezone = 'UTC';
+	}
 
 	// Human-readable date (e.g., "January 21, 2026")
 	const curDateHuman = now.toLocaleDateString('en-US', {

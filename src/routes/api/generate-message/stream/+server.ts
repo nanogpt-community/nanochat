@@ -1002,6 +1002,7 @@ async function streamAIResponse({
 				modelName: model.modelId,
 				provider: model.provider,
 				userName: userName,
+				timezone: userSettingsData?.timezone,
 			});
 			systemContent += `${substitutedPrompt}\n\n`;
 		}
@@ -1023,6 +1024,7 @@ async function streamAIResponse({
 					modelName: model.modelId,
 					provider: model.provider,
 					userName: userName,
+					timezone: userSettingsData?.timezone,
 				});
 				systemContent += `\n[PROJECT INSTRUCTIONS]\n${substitutedPrompt}\n\n`;
 			}

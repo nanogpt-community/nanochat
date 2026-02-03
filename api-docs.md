@@ -815,6 +815,164 @@ curl -X DELETE "http://localhost:3432/api/prompts/prompt_abc123" \
 
 ---
 
+### Scheduled Tasks
+
+Scheduled tasks run prompts on a cron, interval, or one-time schedule. All times use the user's timezone setting.
+
+#### GET `/api/scheduled-tasks`
+List all scheduled tasks for the user.
+
+**Authentication**: Session or API Key
+
+**Response**:
+```json
+[
+  {
+    "id": "string",
+    "name": "string",
+    "description": "string | null",
+    "enabled": "boolean",
+    "scheduleType": "cron | interval | once",
+    "cronExpression": "string | null",
+    "intervalSeconds": "number | null",
+    "runAt": "date | null",
+    "payload": "object",
+    "nextRunAt": "date | null",
+    "lastRunAt": "date | null",
+    "lastRunStatus": "queued | error | null",
+    "lastRunError": "string | null",
+    "createdAt": "date",
+    "updatedAt": "date"
+  }
+]
+```
+
+**CURL Example**:
+```bash
+curl -X GET "http://localhost:3432/api/scheduled-tasks" \
+  -H "Authorization: Bearer your_api_key"
+```
+
+#### POST `/api/scheduled-tasks`
+Create a scheduled task.
+
+**Authentication**: Session or API Key
+
+**Request Body**:
+```json
+{
+  "name": "string (required)",
+  "description": "string (optional)",
+  "enabled": "boolean (optional, default true)",
+  "schedule": {
+    "type": "cron | interval | once",
+    "cron": "string (required if type=cron)",
+    "intervalSeconds": "number (required if type=interval)",
+    "runAt": "string (ISO date, required if type=once)"
+  },
+  "payload": {
+    "message": "string (required if conversation_id not provided)",
+    "model_id": "string (required)",
+    "assistant_id": "string (optional)",
+    "project_id": "string (optional)",
+    "conversation_id": "string (optional)",
+    "web_search_mode": "off | standard | deep (optional)",
+    "web_search_provider": "linkup | tavily | exa | kagi | perplexity | valyu (optional)",
+    "reasoning_effort": "low | medium | high (optional)"
+  }
+}
+```
+
+**Response**:
+```json
+{
+  "id": "string",
+  "name": "string",
+  "scheduleType": "cron | interval | once",
+  "nextRunAt": "date | null",
+  "...": "other task fields"
+}
+```
+
+**CURL Example**:
+```bash
+curl -X POST "http://localhost:3432/api/scheduled-tasks" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your_api_key" \
+  -d '{
+    "name": "Daily summary",
+    "schedule": { "type": "cron", "cron": "0 9 * * *" },
+    "payload": { "message": "Summarize my latest project updates.", "model_id": "zai-org/glm-4.7" }
+  }'
+```
+
+#### PATCH `/api/scheduled-tasks/[id]`
+Update a scheduled task.
+
+**Authentication**: Session or API Key
+
+**Request Body**:
+```json
+{
+  "name": "string (optional)",
+  "description": "string | null (optional)",
+  "enabled": "boolean (optional)",
+  "schedule": "schedule object (optional)",
+  "payload": "payload object (optional)"
+}
+```
+
+**CURL Example**:
+```bash
+curl -X PATCH "http://localhost:3432/api/scheduled-tasks/task_abc123" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your_api_key" \
+  -d '{"enabled": false}'
+```
+
+#### DELETE `/api/scheduled-tasks/[id]`
+Delete a scheduled task.
+
+**Authentication**: Session or API Key
+
+**Response**:
+```json
+{
+  "ok": true
+}
+```
+
+**CURL Example**:
+```bash
+curl -X DELETE "http://localhost:3432/api/scheduled-tasks/task_abc123" \
+  -H "Authorization: Bearer your_api_key"
+```
+
+#### POST `/api/scheduled-tasks/[id]/run`
+Run a scheduled task immediately.
+
+**Authentication**: Session or API Key
+
+**Response**:
+```json
+{
+  "status": "queued | error",
+  "error": "string (optional)",
+  "result": {
+    "ok": true,
+    "conversation_id": "string"
+  }
+}
+```
+
+**CURL Example**:
+```bash
+curl -X POST "http://localhost:3432/api/scheduled-tasks/task_abc123/run" \
+  -H "Authorization: Bearer your_api_key"
+```
+
+---
+
 ### Projects
 
 #### GET `/api/projects`
@@ -1663,6 +1821,7 @@ Get user settings.
 ```json
 {
   "userId": "string",
+  "timezone": "string (IANA timezone, e.g. America/Los_Angeles)",
   "privacyMode": "boolean",
   "contextMemoryEnabled": "boolean",
   "persistentMemoryEnabled": "boolean",
@@ -1687,6 +1846,7 @@ Update user settings.
 ```json
 {
   "action": "update",
+  "timezone": "string (optional, IANA timezone)",
   "privacyMode": "boolean (optional)",
   "contextMemoryEnabled": "boolean (optional)",
   "suggestedPromptsEnabled": "boolean (optional)",
