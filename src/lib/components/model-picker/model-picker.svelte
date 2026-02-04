@@ -260,7 +260,9 @@
 		<div
 			class={cn(
 				'border-border bg-muted/30 flex gap-1 p-2',
-				isMobile.current ? 'flex-row overflow-x-auto border-b' : 'flex-col border-r'
+				isMobile.current
+					? 'flex-row overflow-x-auto border-b'
+					: 'flex-col border-r min-h-0 overflow-y-auto'
 			)}
 		>
 			<!-- Favorites/All button -->
