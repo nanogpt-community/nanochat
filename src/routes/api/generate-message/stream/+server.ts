@@ -600,6 +600,7 @@ export const POST: RequestHandler = async ({ request }) => {
 
 	// Return SSE stream
 	const sse = new SSEEncoder();
+	let assistantMessageIdFromStream: string | undefined;
 
 	const stream = new ReadableStream({
 		async start(controller) {
@@ -628,9 +629,18 @@ export const POST: RequestHandler = async ({ request }) => {
 					providerId: capturedProviderId,
 					mcpEnabled: capturedMcpEnabled,
 					usingServerKey: capturedUsingServerKey,
+					onMessageId: (messageId) => {
+						assistantMessageIdFromStream = messageId;
+					},
 				});
 			} catch (e) {
 				log(`Stream error: ${e}`, startTime);
+				await handleGenerationError({
+					error: e instanceof Error ? e.message : 'Unknown streaming error',
+					conversationId: capturedConversationId,
+					messageId: assistantMessageIdFromStream,
+					startTime,
+				});
 				controller.enqueue(
 					sse.encode({
 						event: 'error',
@@ -701,6 +711,7 @@ async function streamAIResponse({
 	providerId?: string;
 	mcpEnabled?: boolean;
 	usingServerKey?: boolean;
+	onMessageId?: (messageId: string) => void;
 }) {
 	log('Starting SSE AI response generation', startTime);
 
@@ -764,6 +775,7 @@ async function streamAIResponse({
 	// Create assistant message
 	const assistantMessageId = generateId();
 	const now = new Date();
+	onMessageId?.(assistantMessageId);
 
 	await db.insert(messages).values({
 		id: assistantMessageId,

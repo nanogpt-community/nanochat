@@ -148,6 +148,7 @@ data: {"token_count":123,"cost_usd":0.001,"response_time_ms":1500}
 event: error
 data: {"error":"Something went wrong"}
 ```
+On an `error`, the server also persists the error on the assistant message (when available) and resets `conversations.generating` to `false`.
 
 **Notes**:
 - Image and video generation models are **not supported** for streaming. Use `/api/generate-message` instead.
