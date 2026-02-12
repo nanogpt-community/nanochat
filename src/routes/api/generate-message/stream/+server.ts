@@ -687,6 +687,7 @@ async function streamAIResponse({
 	providerId,
 	mcpEnabled,
 	usingServerKey,
+	onMessageId,
 }: {
 	controller: ReadableStreamDefaultController<Uint8Array>;
 	sse: SSEEncoder;
