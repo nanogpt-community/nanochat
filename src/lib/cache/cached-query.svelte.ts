@@ -245,6 +245,7 @@ export const api = {
 		generateUploadUrl: { url: '/api/storage/upload-url', method: 'POST' } as QueryConfig,
 		getUrl: { url: '/api/storage/url', method: 'GET' } as QueryConfig,
 		deleteFile: { url: '/api/storage/delete', method: 'POST' } as QueryConfig,
+		gallery: { url: '/api/storage/gallery', method: 'GET' } as QueryConfig,
 	},
 	assistants: {
 		list: { url: '/api/assistants', method: 'GET' } as QueryConfig,

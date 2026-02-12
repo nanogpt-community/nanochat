@@ -28,6 +28,7 @@
 	import FolderInputIcon from '~icons/lucide/folder-input';
 	import FolderOpenIcon from '~icons/lucide/folder-open';
 	import PlusIcon from '~icons/lucide/plus';
+	import ImageIcon from '~icons/lucide/image';
 	import ChevronRightIcon from '~icons/lucide/chevron-right';
 	import { Input } from '$lib/components/ui/input';
 	import CreateProjectModal from '$lib/components/projects/create-project-modal.svelte';
@@ -264,6 +265,22 @@
 				</a>
 			{/snippet}
 			New Chat ({cmdOrCtrl} + Shift + O)
+		</Tooltip>
+	</div>
+	<div class="mt-2 flex w-full flex-col gap-2 px-2">
+		<Tooltip>
+			{#snippet trigger(tooltip)}
+				<a
+					href="/gallery"
+					class="bg-secondary text-secondary-foreground font-fake-proxima hover:bg-secondary/80 flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-semibold tracking-[-0.01em] transition-all duration-200"
+					{...tooltip.trigger}
+					onclick={controls.closeMobile}
+				>
+					<ImageIcon class="size-4" />
+					My Stuff
+				</a>
+			{/snippet}
+			My Stuff
 		</Tooltip>
 	</div>
 	<div class="mt-2 flex w-full flex-col gap-2 px-2">

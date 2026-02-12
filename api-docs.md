@@ -1320,6 +1320,44 @@ Get file metadata/URL by ID.
 curl -X GET "http://localhost:3432/api/storage?id=store_abc123"
 ```
 
+#### GET `/api/storage/gallery`
+List user-scoped files for the gallery view.
+
+**Authentication**: Session or API Key
+
+**Response**:
+```json
+[
+  {
+    "id": "string",
+    "filename": "string",
+    "mimeType": "string",
+    "size": 12345,
+    "createdAt": "2025-12-15T12:00:00.000Z",
+    "url": "/api/storage/store_abc123",
+    "source": "generated_image | message_document | project_file | unlinked",
+    "conversationId": "conv_abc123",
+    "conversationTitle": "Project ideas",
+    "projectId": "proj_abc123",
+    "projectName": "Design Project"
+  }
+]
+```
+
+Notes:
+- Files are filtered to the authenticated user and exclude avatar files.
+- `source` indicates how the file is referenced:
+  - `generated_image`: Used in a chat message `images` array.
+  - `message_document`: Used in a chat message `documents` array.
+  - `project_file`: Linked to a project file.
+  - `unlinked`: Not currently referenced by a conversation/project message.
+
+**CURL Example**:
+```bash
+curl -X GET "http://localhost:3432/api/storage/gallery" \
+  -b "session_cookie=your_session"
+```
+
 #### GET `/api/storage/[id]`
 Serve the raw file content.
 
