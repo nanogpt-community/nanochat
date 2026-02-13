@@ -19,7 +19,7 @@
 <Sidebar.Root bind:open={sidebarOpen} class="bg-sidebar fill-device-height overflow-clip">
 	<AppSidebar bind:searchModalOpen />
 
-	<Sidebar.Inset>
+	<Sidebar.Inset class="relative fill-device-height overflow-y-auto">
 		{#if !sidebarOpen}
 			<div
 				class={cn(
