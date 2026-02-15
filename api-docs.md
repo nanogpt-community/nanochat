@@ -140,7 +140,12 @@ data: {"content":"Hello","reasoning":""}
 3. **`message_complete`** - Sent when generation finishes successfully
 ```
 event: message_complete
-data: {"token_count":123,"cost_usd":0.001,"response_time_ms":1500}
+data: {
+  "token_count": 123,
+  "cost_usd": 0.001,
+  "response_time_ms": 1500,
+  "time_to_first_token_ms": 320
+}
 ```
 
 4. **`error`** - Sent if an error occurs during generation

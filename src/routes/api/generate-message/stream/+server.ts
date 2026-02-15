@@ -1495,7 +1495,14 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 		if (!generationId) {
 			log('No generation id found', startTime);
 			controller.enqueue(
-				sse.encode({ event: 'message_complete', data: { token_count: 0, response_time_ms: 0 } })
+				sse.encode({
+					event: 'message_complete',
+					data: {
+						token_count: 0,
+						response_time_ms: 0,
+						time_to_first_token_ms: 0,
+					},
+				})
 			);
 			return;
 		}
@@ -1584,6 +1591,7 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 		const responseTimeMs =
 			firstTokenTime !== null ? streamEndTime - firstTokenTime : streamEndTime - generationStart;
 		const ttftMs = firstTokenTime !== null ? firstTokenTime - generationStart : null;
+		const timeToFirstTokenMs = ttftMs;
 		log(
 			`Stream processing completed. ${chunkCount} chunks, ${content.length} chars, TTFT=${ttftMs}ms, streamingTime=${responseTimeMs}ms`,
 			startTime
@@ -1598,6 +1606,7 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 				generationId,
 				contentHtml: contentHtmlResult.unwrapOr(null),
 				responseTimeMs,
+				timeToFirstTokenMs,
 			})
 			.where(eq(messages.id, assistantMessageId));
 
@@ -1609,6 +1618,7 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 					token_count: tokenCount,
 					cost_usd: costUsd,
 					response_time_ms: responseTimeMs,
+					time_to_first_token_ms: timeToFirstTokenMs,
 				},
 			})
 		);

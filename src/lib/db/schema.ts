@@ -261,6 +261,7 @@ export const messages = sqliteTable(
 		tokenCount: integer('token_count'),
 		// Total generation time for this assistant response in milliseconds
 		responseTimeMs: integer('response_time_ms'),
+		timeToFirstTokenMs: integer('time_to_first_token_ms'),
 		images: text('images', { mode: 'json' }).$type<
 			Array<{ url: string; storage_id: string; fileName?: string }>
 		>(),

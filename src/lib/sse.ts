@@ -8,7 +8,12 @@ export type SSEEvent =
 	| { event: 'delta'; data: { content: string; reasoning: string } }
 	| {
 			event: 'message_complete';
-			data: { token_count?: number; cost_usd?: number; response_time_ms?: number };
+			data: {
+				token_count?: number;
+				cost_usd?: number;
+				response_time_ms?: number;
+				time_to_first_token_ms?: number;
+			};
 	  }
 	| { event: 'error'; data: { error: string } };
 

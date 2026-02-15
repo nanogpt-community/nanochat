@@ -1243,6 +1243,7 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 		const responseTimeMs =
 			firstTokenTime !== null ? streamEndTime - firstTokenTime : streamEndTime - generationStart; // fallback to total time if no tokens received
 		const ttftMs = firstTokenTime !== null ? firstTokenTime - generationStart : null;
+		const timeToFirstTokenMs = ttftMs;
 		log(
 			`Background stream processing completed. Processed ${chunkCount} chunks, final content length: ${content.length}, TTFT=${ttftMs}ms, streamingTime=${responseTimeMs}ms`,
 			startTime
@@ -1257,6 +1258,7 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 				generationId,
 				contentHtml: contentHtmlResult.unwrapOr(null),
 				responseTimeMs,
+				timeToFirstTokenMs,
 			})
 			.where(eq(messages.id, assistantMessageId));
 

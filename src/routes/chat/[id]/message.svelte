@@ -690,6 +690,13 @@
 							{tps.toFixed(1)} t/s
 						</span>
 					{/if}
+					{#if message.timeToFirstTokenMs != null}
+						{@const ttftMs = message.timeToFirstTokenMs}
+						{@const showTtftSeconds = ttftMs >= 1000}
+						<span class="text-muted-foreground text-xs">
+							TTFT {showTtftSeconds ? `${(ttftMs / 1000).toFixed(2)}s` : `${ttftMs}ms`}
+						</span>
+					{/if}
 				</div>
 				<!-- Mobile: Compact metadata in a single info chip -->
 				<div class="flex items-center gap-1.5 md:hidden">
