@@ -1591,7 +1591,7 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 		const responseTimeMs =
 			firstTokenTime !== null ? streamEndTime - firstTokenTime : streamEndTime - generationStart;
 		const ttftMs = firstTokenTime !== null ? firstTokenTime - generationStart : null;
-		const timeToFirstTokenMs = ttftMs;
+		const timeToFirstTokenMs = ttftMs === null ? undefined : ttftMs;
 		log(
 			`Stream processing completed. ${chunkCount} chunks, ${content.length} chars, TTFT=${ttftMs}ms, streamingTime=${responseTimeMs}ms`,
 			startTime
