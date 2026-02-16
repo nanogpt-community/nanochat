@@ -2,12 +2,14 @@
 	import { useCachedQuery, api } from '$lib/cache/cached-query.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Search } from '$lib/components/ui/search';
+	import { mutate } from '$lib/client/mutation.svelte';
 	import { models } from '$lib/state/models.svelte';
 	import { session } from '$lib/state/session.svelte';
 	import { Provider } from '$lib/types.js';
 	import { fuzzysearch } from '$lib/utils/fuzzy-search';
 	import { cn } from '$lib/utils/utils';
 	import { Toggle } from 'melt/builders';
+	import { ResultAsync } from 'neverthrow';
 	import PlusIcon from '~icons/lucide/plus';
 	import XIcon from '~icons/lucide/x';
 	import TicketIcon from '~icons/lucide/ticket';
@@ -42,19 +44,44 @@
 		value: false,
 	});
 
-	let initiallyEnabled = $state<string[]>([]);
-	$effect(() => {
-		if (Object.keys(models.enabled).length && initiallyEnabled.length === 0) {
-			initiallyEnabled = models
-				.from(Provider.NanoGPT)
-				.filter((m) => m.enabled)
-				.map((m) => m.id);
-		}
-	});
+	const nanoGPTModelCollection = $derived(models.from(Provider.NanoGPT));
+	let bulkToggleState = $state<'enable' | 'disable' | null>(null);
+
+	const allNanoGPTModelsEnabled = $derived(nanoGPTModelCollection.every((model) => model.enabled));
+	const someNanoGPTModelsEnabled = $derived(
+		nanoGPTModelCollection.some((model) => model.enabled)
+	);
+
+	async function setAllNanoGPTModels(enabled: boolean) {
+		if (!session.current?.user.id) return;
+		if (nanoGPTModelCollection.length === 0) return;
+
+		bulkToggleState = enabled ? 'enable' : 'disable';
+
+		await ResultAsync.fromPromise(
+			mutate(
+				api.user_enabled_models.set.url,
+				{
+					action: 'setAll',
+					provider: Provider.NanoGPT,
+					enabled,
+				},
+				{
+					invalidatePatterns: [api.user_enabled_models.get_enabled.url],
+				}
+			),
+			(error) => {
+				console.error(`Failed to ${enabled ? 'enable' : 'disable'} all NanoGPT models`, error);
+				return error;
+			}
+		);
+
+		bulkToggleState = null;
+	}
 
 	const nanoGPTModels = $derived(
 		fuzzysearch({
-			haystack: models.from(Provider.NanoGPT).filter((m) => {
+			haystack: nanoGPTModelCollection.filter((m) => {
 				// Filter by subscription if toggle is enabled
 				if (subscriptionToggle.value && !m.subscription?.included) {
 					return false;
@@ -72,8 +99,8 @@
 			needle: search,
 			property: 'name',
 		}).sort((a, b) => {
-			const aEnabled = initiallyEnabled.includes(a.id);
-			const bEnabled = initiallyEnabled.includes(b.id);
+			const aEnabled = a.enabled;
+			const bEnabled = b.enabled;
 			if (aEnabled && !bEnabled) return -1;
 			if (!aEnabled && bEnabled) return 1;
 			return 0;
@@ -132,6 +159,26 @@
 			<XIcon class="inline size-3 group-aria-[pressed=false]:hidden" />
 			<PlusIcon class="inline size-3 group-aria-[pressed=true]:hidden" />
 		</button>
+	</div>
+	<div class="flex items-center gap-2">
+		<Button
+			variant="outline"
+			size="sm"
+			onclick={() => setAllNanoGPTModels(true)}
+			loading={bulkToggleState === 'enable'}
+			disabled={bulkToggleState !== null || allNanoGPTModelsEnabled}
+		>
+			Enable all
+		</Button>
+		<Button
+			variant="outline"
+			size="sm"
+			onclick={() => setAllNanoGPTModels(false)}
+			loading={bulkToggleState === 'disable'}
+			disabled={bulkToggleState !== null || !someNanoGPTModelsEnabled}
+		>
+			Disable all
+		</Button>
 	</div>
 </div>
 

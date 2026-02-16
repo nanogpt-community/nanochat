@@ -2122,12 +2122,17 @@ Enable/disable models or toggle pinned status.
 **Request Body**:
 ```json
 {
-  "action": "set" | "togglePinned" | "enableInitial",
+  "action": "set" | "togglePinned" | "enableInitial" | "setAll",
   "provider": "string",
   "modelId": "string",
   "enabled": "boolean"
 }
 ```
+
+`setAll` enables or disables all NanoGPT models at once.
+`provider` must be `"nanogpt"` and `modelId` is optional for this action.
+When `SUBSCRIPTION_MODELS_ONLY=true` and the user uses the server NanoGPT key, only models with
+`subscription.included === true` are enabled.
 
 **CURL Example**:
 ```bash
@@ -2135,6 +2140,13 @@ curl -X POST "http://localhost:3432/api/db/user-models" \
   -H "Content-Type: application/json" \
   -b "session_cookie=your_session" \
   -d '{"action": "set", "provider": "openai", "modelId": "gpt-4", "enabled": true}'
+```
+
+```bash
+curl -X POST "http://localhost:3432/api/db/user-models" \
+  -H "Content-Type: application/json" \
+  -b "session_cookie=your_session" \
+  -d '{"action": "setAll", "provider": "nanogpt", "enabled": false}'
 ```
 
 #### GET `/api/models`

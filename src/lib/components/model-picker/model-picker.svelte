@@ -3,12 +3,10 @@
 	import Tooltip from '$lib/components/ui/tooltip.svelte';
 	import { IsMobile } from '$lib/hooks/is-mobile.svelte';
 	import { models as modelsState } from '$lib/state/models.svelte';
-	import { session } from '$lib/state/session.svelte';
 	import { settings } from '$lib/state/settings.svelte';
 	import { Provider } from '$lib/types';
 	import { fuzzysearch } from '$lib/utils/fuzzy-search';
 	import {
-		supportsImages,
 		supportsReasoning,
 		supportsVideo,
 		isImageOnlyModel,
@@ -29,11 +27,10 @@
 	import { shortcut, getKeybindOptions } from '$lib/actions/shortcut.svelte';
 	import { Button } from '../ui/button';
 	import { Kbd } from '../ui/kbd';
-	import { cmdOrCtrl, formatKeybind } from '$lib/hooks/is-mac.svelte';
+	import { formatKeybind } from '$lib/hooks/is-mac.svelte';
 	import { keybinds, DEFAULT_KEYBINDS } from '$lib/state/keybinds.svelte';
 	import { mutate } from '$lib/client/mutation.svelte';
 	import { ResultAsync } from 'neverthrow';
-	import PinIcon from '~icons/lucide/pin';
 	import { isFirefox } from '$lib/hooks/is-firefox.svelte';
 	import ModelInfoPanel from './model-info-panel.svelte';
 	import type { NanoGPTModel } from '$lib/backend/models/nano-gpt';
@@ -44,19 +41,71 @@
 		return model.pinned === true;
 	}
 
+	function getProviderIconKey(iconUrl: string | undefined, modelId?: string): string {
+		if (iconUrl) return iconUrl;
+
+		const lowerModelId = modelId?.toLowerCase();
+		if (lowerModelId && (lowerModelId.includes('grok') || lowerModelId.includes('x-ai'))) {
+			return 'fallback:grok';
+		}
+
+		return '';
+	}
+
 	type Props = {
 		class?: string;
 		/* When images are attached, we should not select models that don't support images */
 		onlyImageModels?: boolean;
 	};
 
-	let { class: className, onlyImageModels }: Props = $props();
+	let { class: className }: Props = $props();
 
 	const enabledModelsQuery = useCachedQuery(api.user_enabled_models.get_enabled, {});
 
 	const enabledArr = $derived(Object.values(enabledModelsQuery.data ?? {}));
 
 	modelsState.init();
+	const nanoGPTModels = $derived(modelsState.from(Provider.NanoGPT));
+	const nanoGPTModelById = $derived.by(() => {
+		const map = new Map<string, NanoGPTModel>();
+		for (const model of nanoGPTModels) {
+			map.set(model.id, model);
+		}
+		return map;
+	});
+
+	const enrichedEnabledModels = $derived.by(() =>
+		enabledArr.map((model) => {
+			const nanoModel = nanoGPTModelById.get(model.modelId);
+			const providerIconKey = getProviderIconKey(nanoModel?.icon_url, model.modelId);
+			const hasVision = !!(nanoModel && supportsVision(nanoModel));
+			const hasReasoning = !!(nanoModel && supportsReasoning(nanoModel));
+			const isImageOnly = !!(nanoModel && isImageOnlyModel(nanoModel));
+			const hasVideo = !!(nanoModel && supportsVideo(nanoModel));
+
+			return {
+				...model,
+				nanoModel,
+				providerIconKey,
+				providerIconUrl: getIconUrl(providerIconKey, model.modelId),
+				capabilities: {
+					vision: hasVision,
+					reasoning: hasReasoning,
+					imageOnly: isImageOnly,
+					video: hasVideo,
+				},
+				formattedModelName: formatModelName(model.modelId),
+			};
+		})
+	);
+
+	const enabledModelById = $derived.by(() => {
+		const map = new Map<string, (typeof enrichedEnabledModels)[number]>();
+		for (const model of enrichedEnabledModels) {
+			map.set(model.modelId, model);
+		}
+		return map;
+	});
 
 	let search = $state('');
 	let selectedProvider = $state<string | null>(null);
@@ -64,50 +113,36 @@
 
 	// Get unique providers from enabled models using icon_url or fallback
 	const uniqueProviders = $derived.by(() => {
-		const providers = new Map<string, { iconUrl: string; count: number }>();
+		const providers = new Map<string, { iconKey: string; count: number }>();
 
-		for (const model of enabledArr) {
-			const nanoModel = modelsState.from(Provider.NanoGPT).find((m) => m.id === model.modelId);
-			// Use icon_url from API, or check for fallback icon
-			let iconUrl = nanoModel?.icon_url;
-			if (!iconUrl) {
-				// Check for fallback icon based on model ID
-				const lowerModelId = model.modelId.toLowerCase();
-				if (lowerModelId.includes('grok') || lowerModelId.includes('x-ai')) {
-					iconUrl = 'fallback:grok';
-				}
-			}
-			if (iconUrl) {
-				const existing = providers.get(iconUrl);
-				providers.set(iconUrl, {
-					iconUrl: iconUrl,
-					count: (existing?.count ?? 0) + 1,
-				});
-			}
+		for (const model of enrichedEnabledModels) {
+			const iconKey = model.providerIconKey;
+			if (!iconKey) continue;
+			const existing = providers.get(iconKey);
+			providers.set(iconKey, {
+				iconKey,
+				count: (existing?.count ?? 0) + 1,
+			});
 		}
 
 		return Array.from(providers.values());
 	});
 
-	const filteredModels = $derived(
-		fuzzysearch({
-			haystack: enabledArr,
-			needle: search,
-			property: 'modelId',
-		})
+	const filteredModels = $derived.by(() => {
+		const models = search
+			? fuzzysearch({
+					haystack: enrichedEnabledModels,
+					needle: search,
+					property: 'modelId',
+			  })
+			: enrichedEnabledModels;
+
+		return models
 			.filter((model) => {
 				// When searching, show all providers
 				if (search) return true;
 				if (!selectedProvider) return true;
-				const nanoModel = modelsState.from(Provider.NanoGPT).find((m) => m.id === model.modelId);
-				// Check icon_url first, then check for fallback match
-				if (nanoModel?.icon_url === selectedProvider) return true;
-				// Check for fallback provider match
-				if (selectedProvider === 'fallback:grok') {
-					const lowerModelId = model.modelId.toLowerCase();
-					if (lowerModelId.includes('grok') || lowerModelId.includes('x-ai')) return true;
-				}
-				return false;
+				return model.providerIconKey === selectedProvider;
 			})
 			.sort((a, b) => {
 				const aPinned = isPinned(a);
@@ -115,19 +150,28 @@
 				if (aPinned && !bPinned) return -1;
 				if (!aPinned && bPinned) return 1;
 				return 0;
-			})
-	);
+			});
+	});
 
-	const currentModel = $derived(enabledArr.find((m) => m.modelId === settings.modelId));
+	const currentModel = $derived(settings.modelId ? enabledModelById.get(settings.modelId) : undefined);
 
 	$effect(() => {
 		if (enabledModelsQuery.isLoading) return;
-		if (!enabledArr.find((m) => m.modelId === settings.modelId) && enabledArr.length > 0) {
+		const selectedModelId = settings.modelId;
+
+		if ((selectedModelId == null || !enabledModelById.has(selectedModelId)) && enabledArr.length > 0) {
 			settings.modelId = enabledArr[0]!.modelId;
 		}
 	});
 
 	let open = $state(false);
+	const MODEL_RENDER_BATCH = 120;
+	let visibleModelsCount = $state(MODEL_RENDER_BATCH);
+
+	function setInitialVisibleModelsCount() {
+		const maxCount = filteredModels.length;
+		visibleModelsCount = Math.min(MODEL_RENDER_BATCH, maxCount);
+	}
 
 	// Touch gesture handling for mobile drawer
 	let touchStartY = $state(0);
@@ -142,6 +186,27 @@
 			activeModel = filteredModels[0]?.modelId ?? '';
 		}
 	});
+
+	// Reset and tune the rendered rows when filters change
+	$effect(() => {
+		if (!open) return;
+		setInitialVisibleModelsCount();
+	});
+
+	const visibleModels = $derived.by(() => filteredModels.slice(0, visibleModelsCount));
+
+	function onModelListScroll(event: Event) {
+		const target = event.currentTarget as HTMLDivElement | null;
+		if (!target) return;
+
+		const nearBottom = target.scrollHeight - target.scrollTop - target.clientHeight < 180;
+		if (!nearBottom) return;
+
+		const nextCount = Math.min(filteredModels.length, visibleModelsCount + MODEL_RENDER_BATCH);
+		if (nextCount > visibleModelsCount) {
+			visibleModelsCount = nextCount;
+		}
+	}
 
 	// Model name formatting utility
 	const termReplacements = [
@@ -205,7 +270,7 @@
 	const activeModelInfo = $derived.by(() => {
 		if (activeModel === '') return null;
 
-		const model = enabledArr.find((m) => m.modelId === activeModel);
+		const model = enabledModelById.get(activeModel);
 
 		if (!model) return null;
 
@@ -214,8 +279,6 @@
 			formatted: formatModelName(activeModel),
 		};
 	});
-
-	const pinnedModels = $derived(enabledArr.filter((m) => isPinned(m)));
 
 	// Fallback icons for providers that don't have icon_url in the API
 	const FALLBACK_ICONS: Record<string, string> = {
@@ -281,20 +344,20 @@
 			</button>
 
 			<!-- Provider icons -->
-			{#each uniqueProviders as provider (provider.iconUrl)}
+			{#each uniqueProviders as provider (provider.iconKey)}
 				<button
 					class={cn(
 						'hover:bg-accent flex flex-shrink-0 items-center justify-center rounded-lg transition-colors',
 						isMobile.current ? 'p-3' : 'p-2',
-						selectedProvider === provider.iconUrl && 'bg-accent text-accent-foreground'
+						selectedProvider === provider.iconKey && 'bg-accent text-accent-foreground'
 					)}
 					onclick={() => {
 						search = '';
-						selectedProvider = provider.iconUrl;
+						selectedProvider = provider.iconKey;
 					}}
 				>
 					<img
-						src={getIconUrl(provider.iconUrl)}
+						src={getIconUrl(provider.iconKey)}
 						alt="Provider"
 						class={cn(isMobile.current ? 'size-6' : 'size-5', 'object-contain')}
 					/>
@@ -336,6 +399,12 @@
 								const newModel = filteredModels[newIndex];
 								if (newModel) {
 									activeModel = newModel.modelId;
+									if (newIndex >= visibleModelsCount - 8) {
+										visibleModelsCount = Math.min(
+											filteredModels.length,
+											newIndex + MODEL_RENDER_BATCH
+										);
+									}
 								}
 								return;
 							}
@@ -372,14 +441,14 @@
 						<FilterIcon class="text-muted-foreground size-4 opacity-50" />
 					{/if}
 				</label>
-				<div class={cn('min-h-0 flex-1 overflow-y-auto', isMobile.current ? 'p-2' : 'p-1')}>
+				<div
+					class={cn('min-h-0 flex-1 overflow-y-auto', isMobile.current ? 'p-2' : 'p-1')}
+					onscroll={onModelListScroll}
+				>
 					<Command.List class="flex flex-col gap-0.5">
-						{#each filteredModels as model (model.id)}
-							{@const formatted = formatModelName(model.modelId)}
-							{@const nanoGPTModel = modelsState
-								.from(Provider.NanoGPT)
-								.find((m) => m.id === model.modelId)}
-							{@const modelIconUrl = getIconUrl(nanoGPTModel?.icon_url, model.modelId)}
+						{#each visibleModels as model (model.id)}
+							{@const nanoGPTModel = model.nanoModel}
+							{@const modelIconUrl = model.providerIconUrl}
 							{@const disabled = false}
 
 							<Command.Item
@@ -425,7 +494,7 @@
 												isMobile.current ? 'text-base' : 'text-sm'
 											)}
 										>
-											{formatted.full}
+											{model.formattedModelName.full}
 										</span>
 
 										<!-- Favorite star toggle -->
@@ -449,22 +518,22 @@
 										<!-- Mobile: Compact capability indicators -->
 										{#if isMobile.current}
 											<div class="ml-auto flex items-center gap-1">
-												{#if nanoGPTModel && supportsVision(nanoGPTModel)}
+												{#if model.capabilities?.vision}
 													<div class="rounded bg-purple-500/20 p-1 text-purple-400">
 														<EyeIcon class="size-3" />
 													</div>
 												{/if}
-												{#if nanoGPTModel && supportsReasoning(nanoGPTModel)}
+												{#if model.capabilities?.reasoning}
 													<div class="rounded bg-green-500/20 p-1 text-green-400">
 														<BrainIcon class="size-3" />
 													</div>
 												{/if}
-												{#if nanoGPTModel && isImageOnlyModel(nanoGPTModel)}
+												{#if model.capabilities?.imageOnly}
 													<div class="rounded bg-blue-500/20 p-1 text-blue-400">
 														<ImageIcon class="size-3" />
 													</div>
 												{/if}
-												{#if nanoGPTModel && supportsVideo(nanoGPTModel)}
+												{#if model.capabilities?.video}
 													<div class="rounded bg-cyan-500/20 p-1 text-cyan-400">
 														<VideoIcon class="size-3" />
 													</div>
@@ -477,7 +546,7 @@
 								<!-- Capability badges - Desktop only with tooltips -->
 								{#if !isMobile.current}
 									<div class="flex flex-shrink-0 items-center gap-1.5">
-										{#if nanoGPTModel && supportsVision(nanoGPTModel)}
+										{#if model.capabilities?.vision}
 											<Tooltip>
 												{#snippet trigger(tooltip)}
 													<div
@@ -491,7 +560,7 @@
 											</Tooltip>
 										{/if}
 
-										{#if nanoGPTModel && supportsReasoning(nanoGPTModel)}
+										{#if model.capabilities?.reasoning}
 											<Tooltip>
 												{#snippet trigger(tooltip)}
 													<div
@@ -505,7 +574,7 @@
 											</Tooltip>
 										{/if}
 
-										{#if nanoGPTModel && isImageOnlyModel(nanoGPTModel)}
+										{#if model.capabilities?.imageOnly}
 											<Tooltip>
 												{#snippet trigger(tooltip)}
 													<div
@@ -519,7 +588,7 @@
 											</Tooltip>
 										{/if}
 
-										{#if nanoGPTModel && supportsVideo(nanoGPTModel)}
+										{#if model.capabilities?.video}
 											<Tooltip>
 												{#snippet trigger(tooltip)}
 													<div
@@ -583,7 +652,7 @@
 				{#if enabledArr.length === 0}
 					Loading...
 				{:else if currentModel}
-					{formatModelName(currentModel.modelId).full}
+					{currentModel.formattedModelName.full}
 				{:else}
 					Select model
 				{/if}
