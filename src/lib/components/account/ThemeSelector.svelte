@@ -20,16 +20,16 @@
 	let saving = $state(false);
 	const hexColorRegex = /^#([0-9a-f]{6})$/i;
 
-	const currentThemeData = $derived(currentTheme ? getTheme(currentTheme) : null);
+	const currentThemeData = $derived(currentTheme ? getTheme(currentTheme) ?? null : null);
 	const primarySwatch = $derived(
 		primaryColor && hexColorRegex.test(primaryColor)
 			? primaryColor.toLowerCase()
-			: currentThemeData?.colors.primary ?? '#0f172a'
+			: currentThemeData?.colors.primary ?? getComputedThemeColor('--primary') ?? '#0f172a'
 	);
 	const accentSwatch = $derived(
 		accentColor && hexColorRegex.test(accentColor)
 			? accentColor.toLowerCase()
-			: currentThemeData?.colors.accent ?? '#0f172a'
+			: currentThemeData?.colors.accent ?? getComputedThemeColor('--accent') ?? '#0f172a'
 	);
 
 	function normalizeHex(color: string | null | undefined): string | null {
@@ -38,10 +38,16 @@
 		return /^#([0-9a-f]{6})$/.test(trimmed) ? trimmed : null;
 	}
 
+	function getComputedThemeColor(variable: '--primary' | '--accent'): string | null {
+		if (typeof document === 'undefined') return null;
+		const style = getComputedStyle(document.documentElement).getPropertyValue(variable).trim().toLowerCase();
+		return /^#([0-9a-f]{6})$/.test(style) ? style : null;
+	}
+
 	async function saveTheme(themeId: string | null, nextPrimaryColor: string | null, nextAccentColor: string | null) {
 		if (!session.current?.user.id) return;
 
-		const theme = themeId ? getTheme(themeId) : null;
+		const theme = themeId ? getTheme(themeId) ?? null : null;
 		const previousTheme = currentTheme;
 		const previousPrimaryColor = normalizeHex(primaryColor);
 		const previousAccentColor = normalizeHex(accentColor);
@@ -76,7 +82,7 @@
 			currentTheme = previousTheme;
 			primaryColor = previousPrimaryColor;
 			accentColor = previousAccentColor;
-			const previousThemeData = previousTheme ? getTheme(previousTheme) : null;
+			const previousThemeData = previousTheme ? getTheme(previousTheme) ?? null : null;
 			applyTheme(previousThemeData, {
 				primaryColor: previousPrimaryColor,
 				accentColor: previousAccentColor,
@@ -92,24 +98,24 @@
 	async function handlePrimaryColorChange(event: Event) {
 		const nextColor = normalizeHex((event.currentTarget as HTMLInputElement).value);
 		if (!nextColor) return;
-		await saveTheme(currentTheme, nextColor, normalizeHex(accentColor));
+		await saveTheme(currentTheme ?? null, nextColor, normalizeHex(accentColor));
 	}
 
 	async function handleAccentColorChange(event: Event) {
 		const nextColor = normalizeHex((event.currentTarget as HTMLInputElement).value);
 		if (!nextColor) return;
-		await saveTheme(currentTheme, normalizeHex(primaryColor), nextColor);
+		await saveTheme(currentTheme ?? null, normalizeHex(primaryColor), nextColor);
 	}
 
 	function resetPrimaryColor() {
 		if (!saving) {
-			void saveTheme(currentTheme, null, normalizeHex(accentColor));
+			void saveTheme(currentTheme ?? null, null, normalizeHex(accentColor));
 		}
 	}
 
 	function resetAccentColor() {
 		if (!saving) {
-			void saveTheme(currentTheme, normalizeHex(primaryColor), null);
+			void saveTheme(currentTheme ?? null, normalizeHex(primaryColor), null);
 		}
 	}
 

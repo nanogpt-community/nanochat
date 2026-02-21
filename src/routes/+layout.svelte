@@ -28,7 +28,7 @@
 				});
 				if (response.ok) {
 					const settings = await response.json();
-					const theme = settings.theme ? getTheme(settings.theme) : null;
+					const theme = settings.theme ? getTheme(settings.theme) ?? null : null;
 					applyTheme(theme, {
 						primaryColor: settings.themePrimaryColor ?? null,
 						accentColor: settings.themeAccentColor ?? null,
