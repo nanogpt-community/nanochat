@@ -72,9 +72,15 @@ import { slide } from 'svelte/transition';
 
 	$effect(() => {
 		if (userSettings.data?.theme !== undefined) {
-			currentTheme = userSettings.data.theme;
-			currentThemePrimaryColor = userSettings.data.themePrimaryColor ?? null;
-			currentThemeAccentColor = userSettings.data.themeAccentColor ?? null;
+			if (currentTheme !== userSettings.data.theme) {
+				currentTheme = userSettings.data.theme;
+			}
+			if (currentThemePrimaryColor !== (userSettings.data.themePrimaryColor ?? null)) {
+				currentThemePrimaryColor = userSettings.data.themePrimaryColor ?? null;
+			}
+			if (currentThemeAccentColor !== (userSettings.data.themeAccentColor ?? null)) {
+				currentThemeAccentColor = userSettings.data.themeAccentColor ?? null;
+			}
 		}
 		if (searchForwardModel && !availableModels.some((model) => model.id === searchForwardModel)) {
 			searchForwardModel = availableModels[0]?.id ?? '';
@@ -83,15 +89,24 @@ import { slide } from 'svelte/transition';
 			searchForwardModel = availableModels[0]!.id;
 		}
 		if (searchForwardModel) {
-			clientSettings.modelId = searchForwardModel;
+			if (clientSettings.modelId !== searchForwardModel) {
+				clientSettings.modelId = searchForwardModel;
+			}
 		}
-		searchForwardSearchMode = clientSettings.webSearchMode;
-		searchForwardSearchProvider = clientSettings.webSearchProvider;
+		if (searchForwardSearchMode !== clientSettings.webSearchMode) {
+			searchForwardSearchMode = clientSettings.webSearchMode;
+		}
+		if (searchForwardSearchProvider !== clientSettings.webSearchProvider) {
+			searchForwardSearchProvider = clientSettings.webSearchProvider;
+		}
 	});
 
 	function handleSearchForwardModelChange(event: Event) {
 		searchForwardModel = (event.currentTarget as HTMLSelectElement).value;
-		clientSettings.modelId = searchForwardModel || undefined;
+		const nextModelId = searchForwardModel || undefined;
+		if (clientSettings.modelId !== nextModelId) {
+			clientSettings.modelId = nextModelId;
+		}
 	}
 
 	function handleSearchForwardModeChange(event: Event) {
@@ -99,7 +114,9 @@ import { slide } from 'svelte/transition';
 			| 'off'
 			| 'standard'
 			| 'deep';
-		clientSettings.webSearchMode = searchForwardSearchMode;
+		if (clientSettings.webSearchMode !== searchForwardSearchMode) {
+			clientSettings.webSearchMode = searchForwardSearchMode;
+		}
 	}
 
 	function handleSearchForwardProviderChange(event: Event) {
@@ -113,7 +130,9 @@ import { slide } from 'svelte/transition';
 			| 'brave'
 			| 'brave-pro'
 			| 'brave-research';
-		clientSettings.webSearchProvider = searchForwardSearchProvider;
+		if (clientSettings.webSearchProvider !== searchForwardSearchProvider) {
+			clientSettings.webSearchProvider = searchForwardSearchProvider;
+		}
 	}
 
 	function copySearchForwardUrl() {
