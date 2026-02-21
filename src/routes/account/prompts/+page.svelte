@@ -383,6 +383,9 @@
 								<option value="kagi">Kagi</option>
 								<option value="perplexity">Perplexity</option>
 								<option value="valyu">Valyu</option>
+								<option value="brave">Brave</option>
+								<option value="brave-pro">Brave Pro</option>
+								<option value="brave-research">Brave Research</option>
 							</select>
 						</div>
 					</div>

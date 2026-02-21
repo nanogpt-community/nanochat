@@ -110,10 +110,30 @@
 
 			if (
 				searchProviderParam &&
-				['linkup', 'tavily', 'exa', 'kagi'].includes(searchProviderParam) &&
+				[
+					'linkup',
+					'tavily',
+					'exa',
+					'kagi',
+					'perplexity',
+					'valyu',
+					'brave',
+					'brave-pro',
+					'brave-research',
+				].includes(searchProviderParam) &&
 				settings.webSearchProvider !== searchProviderParam
 			) {
-				settings.webSearchProvider = searchProviderParam as 'linkup' | 'tavily' | 'exa' | 'kagi';
+				settings.webSearchProvider =
+					searchProviderParam as
+						| 'linkup'
+						| 'tavily'
+						| 'exa'
+						| 'kagi'
+						| 'perplexity'
+						| 'valyu'
+						| 'brave'
+						| 'brave-pro'
+						| 'brave-research';
 			}
 		});
 	});

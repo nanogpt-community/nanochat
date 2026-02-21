@@ -28,12 +28,11 @@
 				});
 				if (response.ok) {
 					const settings = await response.json();
-					if (settings.theme) {
-						const theme = getTheme(settings.theme);
-						if (theme) {
-							applyTheme(theme);
-						}
-					}
+					const theme = settings.theme ? getTheme(settings.theme) : null;
+					applyTheme(theme, {
+						primaryColor: settings.themePrimaryColor ?? null,
+						accentColor: settings.themeAccentColor ?? null,
+					});
 				}
 			} catch (error) {
 				console.error('Failed to load theme:', error);

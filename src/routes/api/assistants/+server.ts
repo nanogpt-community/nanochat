@@ -44,7 +44,17 @@ const createAssistantSchema = z.object({
     systemPrompt: z.string().max(10000),
     defaultModelId: z.string().optional(),
     defaultWebSearchMode: z.enum(['off', 'standard', 'deep']).optional(),
-    defaultWebSearchProvider: z.enum(['linkup', 'tavily', 'exa', 'kagi', 'perplexity', 'valyu']).optional(),
+    defaultWebSearchProvider: z.enum([
+        'linkup',
+        'tavily',
+        'exa',
+        'kagi',
+        'perplexity',
+        'valyu',
+        'brave',
+        'brave-pro',
+        'brave-research',
+    ]).optional(),
     defaultWebSearchExaDepth: z.enum(['fast', 'auto', 'neural', 'deep']).optional(),
     defaultWebSearchContextSize: z.enum(['low', 'medium', 'high']).optional(),
     defaultWebSearchKagiSource: z.enum(['web', 'news', 'search']).optional(),
@@ -88,4 +98,3 @@ export async function POST({ request }: RequestEvent) {
 
     return json(newAssistant);
 }
-

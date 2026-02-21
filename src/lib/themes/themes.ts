@@ -47,6 +47,11 @@ export interface Theme {
 	colors: ThemeColors;
 }
 
+export interface ThemeColorOverrides {
+	primaryColor?: string | null;
+	accentColor?: string | null;
+}
+
 export const themes: Theme[] = [
 	// Dracula
 	{
@@ -234,13 +239,43 @@ export function getTheme(themeId: string): Theme | undefined {
 	return themes.find((t) => t.id === themeId);
 }
 
-export function applyTheme(theme: Theme | null) {
+function normalizeThemeColor(value: string | null | undefined): string | null {
+	if (typeof value !== 'string') return null;
+	const trimmed = value.trim().toLowerCase();
+	if (!/^#([0-9a-f]{6})$/.test(trimmed)) return null;
+	return trimmed;
+}
+
+function hexToLuminance(hex: string): number {
+	const normalized = hex.startsWith('#') ? hex.slice(1) : hex;
+	if (normalized.length !== 6) return 0.5;
+	const r = Number.parseInt(normalized.slice(0, 2), 16) / 255;
+	const g = Number.parseInt(normalized.slice(2, 4), 16) / 255;
+	const b = Number.parseInt(normalized.slice(4, 6), 16) / 255;
+
+	const adjust = (value: number) =>
+		value <= 0.03928 ? value / 12.92 : Math.pow((value + 0.055) / 1.055, 2.4);
+	const adjustedR = adjust(r);
+	const adjustedG = adjust(g);
+	const adjustedB = adjust(b);
+	return 0.2126 * adjustedR + 0.7152 * adjustedG + 0.0722 * adjustedB;
+}
+
+function chooseForeground(backgroundColor: string): string {
+	return hexToLuminance(backgroundColor) > 0.55 ? '#111827' : '#f8fafc';
+}
+
+function resolveThemeColor(override: string | null | undefined, fallback: string): string {
+	return normalizeThemeColor(override) ?? fallback;
+}
+
+export function applyTheme(theme: Theme | null, overrides: ThemeColorOverrides = {}) {
 	if (typeof document === 'undefined') return;
 
 	const root = document.documentElement;
 
 	if (!theme) {
-		// Reset to default theme - remove all custom properties
+		// Reset to default theme variables (auto/system colors) while retaining optional color overrides.
 		const props = [
 			'--background',
 			'--foreground',
@@ -272,26 +307,61 @@ export function applyTheme(theme: Theme | null) {
 			'--sidebar-ring',
 		];
 		props.forEach((prop) => root.style.removeProperty(prop));
+
+		const primaryColor = normalizeThemeColor(overrides.primaryColor);
+		const accentColor = normalizeThemeColor(overrides.accentColor);
+		if (primaryColor) {
+			root.style.setProperty('--primary', primaryColor);
+			root.style.setProperty('--primary-foreground', chooseForeground(primaryColor));
+		}
+		if (accentColor) {
+			root.style.setProperty('--accent', accentColor);
+			root.style.setProperty('--accent-foreground', chooseForeground(accentColor));
+		}
+		if (primaryColor) {
+			root.style.setProperty('--sidebar-primary', primaryColor);
+			root.style.setProperty('--sidebar-primary-foreground', chooseForeground(primaryColor));
+		}
+		if (accentColor) {
+			root.style.setProperty('--sidebar-accent', accentColor);
+			root.style.setProperty('--sidebar-accent-foreground', chooseForeground(accentColor));
+		}
+
 		return;
 	}
 
 	// Apply theme colors
 	const { colors } = theme;
+	const primaryColor = resolveThemeColor(overrides.primaryColor, colors.primary);
+	const accentColor = resolveThemeColor(overrides.accentColor, colors.accent);
+	const sidebarPrimaryColor = resolveThemeColor(overrides.primaryColor, colors.sidebarPrimary);
+	const sidebarAccentColor = resolveThemeColor(overrides.accentColor, colors.sidebarAccent);
+
 	root.style.setProperty('--background', colors.background);
 	root.style.setProperty('--foreground', colors.foreground);
 	root.style.setProperty('--card', colors.card);
 	root.style.setProperty('--card-foreground', colors.cardForeground);
 	root.style.setProperty('--popover', colors.popover);
 	root.style.setProperty('--popover-foreground', colors.popoverForeground);
-	root.style.setProperty('--primary', colors.primary);
-	root.style.setProperty('--primary-foreground', colors.primaryForeground);
+	root.style.setProperty('--primary', primaryColor);
+	root.style.setProperty(
+		'--primary-foreground',
+		normalizeThemeColor(overrides.primaryColor)
+			? chooseForeground(primaryColor)
+			: colors.primaryForeground
+	);
 	root.style.setProperty('--heading', colors.heading);
 	root.style.setProperty('--secondary', colors.secondary);
 	root.style.setProperty('--secondary-foreground', colors.secondaryForeground);
 	root.style.setProperty('--muted', colors.muted);
 	root.style.setProperty('--muted-foreground', colors.mutedForeground);
-	root.style.setProperty('--accent', colors.accent);
-	root.style.setProperty('--accent-foreground', colors.accentForeground);
+	root.style.setProperty('--accent', accentColor);
+	root.style.setProperty(
+		'--accent-foreground',
+		normalizeThemeColor(overrides.accentColor)
+			? chooseForeground(accentColor)
+			: colors.accentForeground
+	);
 	root.style.setProperty('--destructive', colors.destructive);
 	root.style.setProperty('--destructive-foreground', colors.destructiveForeground);
 	root.style.setProperty('--border', colors.border);
@@ -299,10 +369,20 @@ export function applyTheme(theme: Theme | null) {
 	root.style.setProperty('--ring', colors.ring);
 	root.style.setProperty('--sidebar', colors.sidebar);
 	root.style.setProperty('--sidebar-foreground', colors.sidebarForeground);
-	root.style.setProperty('--sidebar-primary', colors.sidebarPrimary);
-	root.style.setProperty('--sidebar-primary-foreground', colors.sidebarPrimaryForeground);
-	root.style.setProperty('--sidebar-accent', colors.sidebarAccent);
-	root.style.setProperty('--sidebar-accent-foreground', colors.sidebarAccentForeground);
+	root.style.setProperty('--sidebar-primary', sidebarPrimaryColor);
+	root.style.setProperty(
+		'--sidebar-primary-foreground',
+		normalizeThemeColor(overrides.primaryColor)
+			? chooseForeground(sidebarPrimaryColor)
+			: colors.sidebarPrimaryForeground
+	);
+	root.style.setProperty('--sidebar-accent', sidebarAccentColor);
+	root.style.setProperty(
+		'--sidebar-accent-foreground',
+		normalizeThemeColor(overrides.accentColor)
+			? chooseForeground(sidebarAccentColor)
+			: colors.sidebarAccentForeground
+	);
 	root.style.setProperty('--sidebar-border', colors.sidebarBorder);
 	root.style.setProperty('--sidebar-ring', colors.sidebarRing);
 

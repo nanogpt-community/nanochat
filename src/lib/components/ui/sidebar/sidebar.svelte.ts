@@ -1,23 +1,61 @@
 import { IsMobile } from '$lib/hooks/is-mobile.svelte';
 import { Context } from 'runed';
 
+const SIDEBAR_WIDTH_STORAGE_KEY = 'nanochat-sidebar-width';
+const DEFAULT_SIDEBAR_WIDTH = 280;
+const MIN_SIDEBAR_WIDTH = 200;
+const MAX_SIDEBAR_WIDTH = 460;
+
+function clampSidebarWidth(width: number): number {
+	const clampedWidth = Number.isFinite(width)
+		? Math.max(MIN_SIDEBAR_WIDTH, Math.min(MAX_SIDEBAR_WIDTH, Math.round(width)))
+		: DEFAULT_SIDEBAR_WIDTH;
+	return clampedWidth;
+}
+
+function loadStoredSidebarWidth(): number {
+	if (typeof localStorage === 'undefined') return DEFAULT_SIDEBAR_WIDTH;
+	const value = localStorage.getItem(SIDEBAR_WIDTH_STORAGE_KEY);
+	if (!value) return DEFAULT_SIDEBAR_WIDTH;
+	const parsed = Number.parseInt(value, 10);
+	return clampSidebarWidth(parsed);
+}
+
 export class SidebarRootState {
 	open = $state(true);
 	openMobile = $state(false);
 	isMobile = new IsMobile();
+	width = $state(loadStoredSidebarWidth());
 
 	// When switching to mobile, ensure sidebar is closed by default
 	constructor() {
 		this.toggle = this.toggle.bind(this);
+		this.setWidth = this.setWidth.bind(this);
+		this.persistWidth = this.persistWidth.bind(this);
 
 		$effect(() => {
 			if (this.isMobile.current) {
 				this.openMobile = false;
 			}
 		});
+
+		$effect(() => {
+			this.persistWidth(this.width);
+		});
 	}
 
 	showSidebar = $derived(this.isMobile.current ? this.openMobile : this.open);
+
+	persistWidth(width: number) {
+		if (typeof localStorage === 'undefined') return;
+		localStorage.setItem(SIDEBAR_WIDTH_STORAGE_KEY, String(width));
+	}
+
+	setWidth(nextWidth: number) {
+		const clampedWidth = clampSidebarWidth(nextWidth);
+		this.width = clampedWidth;
+		this.persistWidth(clampedWidth);
+	}
 
 	toggle() {
 		if (this.isMobile.current) {

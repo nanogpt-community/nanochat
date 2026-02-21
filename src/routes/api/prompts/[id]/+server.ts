@@ -33,7 +33,17 @@ const updatePromptSchema = z.object({
     variables: z.array(variableSchema).nullable().optional(),
     defaultModelId: z.string().nullable().optional(),
     defaultWebSearchMode: z.enum(['off', 'standard', 'deep']).nullable().optional(),
-    defaultWebSearchProvider: z.enum(['linkup', 'tavily', 'exa', 'kagi', 'perplexity', 'valyu']).nullable().optional(),
+    defaultWebSearchProvider: z.enum([
+        'linkup',
+        'tavily',
+        'exa',
+        'kagi',
+        'perplexity',
+        'valyu',
+        'brave',
+        'brave-pro',
+        'brave-research',
+    ]).nullable().optional(),
     appendMode: z.enum(['replace', 'append', 'prepend']).optional(),
 });
 

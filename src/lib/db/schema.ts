@@ -110,6 +110,8 @@ export const passkey = sqliteTable('passkey', {
 		karakeepUrl: text('karakeep_url'),
 		karakeepApiKey: text('karakeep_api_key'),
 		theme: text('theme'),
+		themePrimaryColor: text('theme_primary_color'),
+		themeAccentColor: text('theme_accent_color'),
 		titleModelId: text('title_model_id'),
 		titleProviderId: text('title_provider_id'),
 		followUpModelId: text('follow_up_model_id'),
@@ -327,7 +329,7 @@ export const assistants = sqliteTable(
 		isDefault: integer('is_default', { mode: 'boolean' }).notNull().default(false),
 		defaultModelId: text('default_model_id'),
 		defaultWebSearchMode: text('default_web_search_mode'), // 'off' | 'standard' | 'deep'
-		defaultWebSearchProvider: text('default_web_search_provider'), // 'linkup' | 'tavily' | 'exa' | 'kagi' | 'perplexity' | 'valyu'
+		defaultWebSearchProvider: text('default_web_search_provider'), // 'linkup' | 'tavily' | 'exa' | 'kagi' | 'perplexity' | 'valyu' | 'brave' | 'brave-pro' | 'brave-research'
 		defaultWebSearchExaDepth: text('default_web_search_exa_depth'), // 'fast' | 'auto' | 'neural' | 'deep'
 		defaultWebSearchContextSize: text('default_web_search_context_size'), // 'low' | 'medium' | 'high'
 		defaultWebSearchKagiSource: text('default_web_search_kagi_source'), // 'web' | 'news' | 'search'

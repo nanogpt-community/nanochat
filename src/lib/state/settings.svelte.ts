@@ -4,7 +4,16 @@ export const settings = createPersistedObj('settings', {
 	modelId: undefined as string | undefined,
 	providerId: undefined as string | undefined, // X-Provider header value for provider selection
 	webSearchMode: 'off' as 'off' | 'standard' | 'deep',
-	webSearchProvider: 'linkup' as 'linkup' | 'tavily' | 'exa' | 'kagi' | 'perplexity' | 'valyu',
+	webSearchProvider: 'linkup' as
+		| 'linkup'
+		| 'tavily'
+		| 'exa'
+		| 'kagi'
+		| 'perplexity'
+		| 'valyu'
+		| 'brave'
+		| 'brave-pro'
+		| 'brave-research',
 	webSearchExaDepth: 'auto' as 'fast' | 'auto' | 'neural' | 'deep',
 	webSearchContextSize: 'medium' as 'low' | 'medium' | 'high',
 	webSearchKagiSource: 'web' as 'web' | 'news' | 'search',
@@ -17,4 +26,3 @@ export const settings = createPersistedObj('settings', {
 	ttsModel: 'tts-1' as string,
 	sttModel: 'Whisper-Large-V3' as string,
 });
-

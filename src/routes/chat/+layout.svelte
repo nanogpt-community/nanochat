@@ -150,7 +150,10 @@
 					| 'exa'
 					| 'kagi'
 					| 'perplexity'
-					| 'valyu') || 'linkup';
+					| 'valyu'
+					| 'brave'
+					| 'brave-pro'
+					| 'brave-research') || 'linkup';
 			settings.webSearchExaDepth =
 				(assistant.defaultWebSearchExaDepth as 'fast' | 'auto' | 'neural' | 'deep') || 'auto';
 			settings.webSearchContextSize =
@@ -1057,7 +1060,10 @@
 				| 'exa'
 				| 'kagi'
 				| 'perplexity'
-				| 'valyu';
+				| 'valyu'
+				| 'brave'
+				| 'brave-pro'
+				| 'brave-research';
 		}
 
 		// Focus the textarea
@@ -1548,6 +1554,13 @@
 																>Perplexity</DropdownMenu.RadioItem
 															>
 															<DropdownMenu.RadioItem value="valyu">Valyu</DropdownMenu.RadioItem>
+															<DropdownMenu.RadioItem value="brave">Brave</DropdownMenu.RadioItem>
+															<DropdownMenu.RadioItem value="brave-pro"
+																>Brave Pro</DropdownMenu.RadioItem
+															>
+															<DropdownMenu.RadioItem value="brave-research"
+																>Brave Research</DropdownMenu.RadioItem
+															>
 														</DropdownMenu.RadioGroup>
 
 														{#if settings.webSearchProvider === 'exa'}

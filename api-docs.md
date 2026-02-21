@@ -61,7 +61,7 @@ Notes:
   "conversation_id": "string (optional)",
   "web_search_enabled": "boolean (optional)",
   "web_search_mode": "enum: 'off' | 'standard' | 'deep' (optional)",
-  "web_search_provider": "enum: 'linkup' | 'tavily' | 'exa' | 'kagi' | 'perplexity' | 'valyu' (optional)",
+  "web_search_provider": "enum: 'linkup' | 'tavily' | 'exa' | 'kagi' | 'perplexity' | 'valyu' | 'brave' | 'brave-pro' | 'brave-research' (optional)",
   "web_search_exa_depth": "enum: 'fast' | 'auto' | 'neural' | 'deep' (optional) - Exa provider depth mode",
   "web_search_context_size": "enum: 'low' | 'medium' | 'high' (optional) - Search result context amount",
   "web_search_kagi_source": "enum: 'web' | 'news' | 'search' (optional) - Kagi provider source type",
@@ -576,7 +576,7 @@ Create a new assistant.
   "systemPrompt": "string (max 10000 chars)",
   "defaultModelId": "string (optional)",
   "defaultWebSearchMode": "enum: 'off' | 'standard' | 'deep' (optional)",
-  "defaultWebSearchProvider": "enum: 'linkup' | 'tavily' | 'exa' | 'kagi' | 'perplexity' | 'valyu' (optional)",
+  "defaultWebSearchProvider": "enum: 'linkup' | 'tavily' | 'exa' | 'kagi' | 'perplexity' | 'valyu' | 'brave' | 'brave-pro' | 'brave-research' (optional)",
   "defaultWebSearchExaDepth": "enum: 'fast' | 'auto' | 'neural' | 'deep' (optional)",
   "defaultWebSearchContextSize": "enum: 'low' | 'medium' | 'high' (optional)",
   "defaultWebSearchKagiSource": "enum: 'web' | 'news' | 'search' (optional)",
@@ -614,7 +614,7 @@ Update an assistant.
   "systemPrompt": "string (optional)",
   "defaultModelId": "string | null (optional)",
   "defaultWebSearchMode": "enum: 'off' | 'standard' | 'deep' | null (optional)",
-  "defaultWebSearchProvider": "enum: 'linkup' | 'tavily' | 'exa' | 'kagi' | 'perplexity' | 'valyu' | null (optional)",
+  "defaultWebSearchProvider": "enum: 'linkup' | 'tavily' | 'exa' | 'kagi' | 'perplexity' | 'valyu' | 'brave' | 'brave-pro' | 'brave-research' | null (optional)",
   "defaultWebSearchExaDepth": "enum: 'fast' | 'auto' | 'neural' | 'deep' | null (optional)",
   "defaultWebSearchContextSize": "enum: 'low' | 'medium' | 'high' | null (optional)",
   "defaultWebSearchKagiSource": "enum: 'web' | 'news' | 'search' | null (optional)",
@@ -689,7 +689,7 @@ List all prompts for the user.
     ],
     "defaultModelId": "string | null",
     "defaultWebSearchMode": "off | standard | deep | null",
-    "defaultWebSearchProvider": "linkup | tavily | exa | kagi | perplexity | valyu | null",
+    "defaultWebSearchProvider": "linkup | tavily | exa | kagi | perplexity | valyu | brave | brave-pro | brave-research | null",
     "appendMode": "replace | append | prepend",
     "createdAt": "date",
     "updatedAt": "date"
@@ -723,7 +723,7 @@ Create a new prompt.
   ],
   "defaultModelId": "string (optional)",
   "defaultWebSearchMode": "off | standard | deep (optional)",
-  "defaultWebSearchProvider": "linkup | tavily | exa | kagi | perplexity | valyu (optional)",
+  "defaultWebSearchProvider": "linkup | tavily | exa | kagi | perplexity | valyu | brave | brave-pro | brave-research (optional)",
   "appendMode": "replace | append | prepend (optional, default: replace)"
 }
 ```
@@ -788,7 +788,7 @@ Update a prompt.
   "variables": "array | null (optional)",
   "defaultModelId": "string | null (optional)",
   "defaultWebSearchMode": "off | standard | deep | null (optional)",
-  "defaultWebSearchProvider": "linkup | tavily | exa | kagi | perplexity | valyu | null (optional)",
+  "defaultWebSearchProvider": "linkup | tavily | exa | kagi | perplexity | valyu | brave | brave-pro | brave-research | null (optional)",
   "appendMode": "replace | append | prepend (optional)"
 }
 ```
@@ -883,7 +883,7 @@ Create a scheduled task.
     "project_id": "string (optional)",
     "conversation_id": "string (optional)",
     "web_search_mode": "off | standard | deep (optional)",
-    "web_search_provider": "linkup | tavily | exa | kagi | perplexity | valyu (optional)",
+    "web_search_provider": "linkup | tavily | exa | kagi | perplexity | valyu | brave | brave-pro | brave-research (optional)",
     "reasoning_effort": "low | medium | high (optional)"
   }
 }
@@ -1871,6 +1871,8 @@ Get user settings.
   "persistentMemoryEnabled": "boolean",
   "suggestedPromptsEnabled": "boolean",
   "theme": "string | null",
+  "themePrimaryColor": "string | null",
+  "themeAccentColor": "string | null",
   ...
 }
 ```
@@ -1893,7 +1895,10 @@ Update user settings.
   "timezone": "string (optional, IANA timezone)",
   "privacyMode": "boolean (optional)",
   "contextMemoryEnabled": "boolean (optional)",
+  "theme": "string (optional, theme id or null)",
   "suggestedPromptsEnabled": "boolean (optional)",
+  "themePrimaryColor": "string (optional, #RRGGBB)",
+  "themeAccentColor": "string (optional, #RRGGBB)",
   ...
 }
 ```

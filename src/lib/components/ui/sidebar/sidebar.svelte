@@ -23,11 +23,9 @@
 	{...rest}
 	class={cn(
 		'[--sidebar-width:0px] md:grid md:grid-cols-[var(--sidebar-width)_1fr]',
-		{
-			'[--sidebar-width:280px]': sidebar.showSidebar,
-		},
 		rest.class
 	)}
+	style={`--sidebar-width: ${sidebar.showSidebar ? `${sidebar.width}px` : '0px'};`}
 >
 	{@render children?.()}
 </div>

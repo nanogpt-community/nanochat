@@ -54,6 +54,8 @@ export const POST: RequestHandler = async ({ request }) => {
 				karakeepUrl: body.karakeepUrl,
 				karakeepApiKey: body.karakeepApiKey,
 				theme: body.theme,
+				themePrimaryColor: body.themePrimaryColor,
+				themeAccentColor: body.themeAccentColor,
 				titleModelId: body.titleModelId,
 				titleProviderId: body.titleProviderId,
 				followUpModelId: body.followUpModelId,

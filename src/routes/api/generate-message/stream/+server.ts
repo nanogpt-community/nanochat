@@ -62,7 +62,17 @@ const reqBodySchema = z
 		web_search_enabled: z.boolean().optional(),
 		web_search_mode: z.enum(['off', 'standard', 'deep']).optional(),
 		web_search_provider: z
-			.enum(['linkup', 'tavily', 'exa', 'kagi', 'perplexity', 'valyu'])
+			.enum([
+				'linkup',
+				'tavily',
+				'exa',
+				'kagi',
+				'perplexity',
+				'valyu',
+				'brave',
+				'brave-pro',
+				'brave-research',
+			])
 			.optional(),
 		web_search_exa_depth: z.enum(['fast', 'auto', 'neural', 'deep']).optional(),
 		web_search_context_size: z.enum(['low', 'medium', 'high']).optional(),
@@ -701,7 +711,16 @@ async function streamAIResponse({
 	abortSignal?: AbortSignal;
 	reasoningEffort?: 'low' | 'medium' | 'high';
 	webSearchDepth?: 'standard' | 'deep';
-	webSearchProvider?: 'linkup' | 'tavily' | 'exa' | 'kagi' | 'perplexity' | 'valyu';
+	webSearchProvider?:
+		| 'linkup'
+		| 'tavily'
+		| 'exa'
+		| 'kagi'
+		| 'perplexity'
+		| 'valyu'
+		| 'brave'
+		| 'brave-pro'
+		| 'brave-research';
 	webSearchExaDepth?: 'fast' | 'auto' | 'neural' | 'deep';
 	webSearchContextSize?: 'low' | 'medium' | 'high';
 	webSearchKagiSource?: 'web' | 'news' | 'search';

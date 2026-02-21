@@ -56,9 +56,17 @@
 	let formAssistantId = $state('');
 	let formProjectId = $state('');
 	let formWebSearchMode = $state<'off' | 'standard' | 'deep'>('off');
-	let formWebSearchProvider = $state<'linkup' | 'tavily' | 'exa' | 'kagi' | 'perplexity' | 'valyu'>(
-		'linkup'
-	);
+	let formWebSearchProvider = $state<
+		| 'linkup'
+		| 'tavily'
+		| 'exa'
+		| 'kagi'
+		| 'perplexity'
+		| 'valyu'
+		| 'brave'
+		| 'brave-pro'
+		| 'brave-research'
+	>('linkup');
 	let formReasoningEffort = $state<'low' | 'medium' | 'high' | ''>('');
 	let formEnabled = $state(true);
 
@@ -474,6 +482,9 @@
 						<option value="kagi">Kagi</option>
 						<option value="perplexity">Perplexity</option>
 						<option value="valyu">Valyu</option>
+						<option value="brave">Brave</option>
+						<option value="brave-pro">Brave Pro</option>
+						<option value="brave-research">Brave Research</option>
 					</select>
 				</div>
 			{/if}
