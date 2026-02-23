@@ -726,11 +726,11 @@
 <h2 class="text-muted-foreground mt-2 text-sm">Configure the settings for your account.</h2>
 
 <div class="mt-6 flex flex-col gap-6">
-	<!-- Account Settings Section -->
+	<!-- Privacy & Display -->
 	<Card>
 		<CardHeader>
-			<CardTitle>General Settings</CardTitle>
-			<CardDescription>Privacy and memory preferences for your account.</CardDescription>
+			<CardTitle>Privacy & Display</CardTitle>
+			<CardDescription>Control how your personal information appears.</CardDescription>
 		</CardHeader>
 		<CardContent class="grid gap-4">
 			<div class="flex place-items-center justify-between">
@@ -741,42 +741,6 @@
 					>
 				</div>
 				<Switch bind:value={() => privacyMode, togglePrivacyMode} />
-			</div>
-			<div class="flex place-items-center justify-between">
-				<div class="flex flex-col gap-1">
-					<span class="font-medium">Context Memory</span>
-					<span class="text-muted-foreground text-sm"
-						>Compress long conversations for better context retention.</span
-					>
-				</div>
-				<Switch bind:value={() => contextMemoryEnabled, toggleContextMemory} />
-			</div>
-			<div class="flex place-items-center justify-between">
-				<div class="flex flex-col gap-1">
-					<span class="font-medium">Persistent Memory</span>
-					<span class="text-muted-foreground text-sm"
-						>Remember facts about you across different conversations.</span
-					>
-				</div>
-				<Switch bind:value={() => persistentMemoryEnabled, togglePersistentMemory} />
-			</div>
-			<div class="flex place-items-center justify-between">
-				<div class="flex flex-col gap-1">
-					<span class="font-medium">YouTube Transcripts</span>
-					<span class="text-muted-foreground text-sm"
-						>Automatically fetch YouTube video transcripts ($0.01 each).</span
-					>
-				</div>
-				<Switch bind:value={() => youtubeTranscriptsEnabled, toggleYoutubeTranscripts} />
-			</div>
-			<div class="flex place-items-center justify-between">
-				<div class="flex flex-col gap-1">
-					<span class="font-medium">Web Scraping</span>
-					<span class="text-muted-foreground text-sm"
-						>Automatically scrape web page content when URLs are detected.</span
-					>
-				</div>
-				<Switch bind:value={() => webScrapingEnabled, toggleWebScraping} />
 			</div>
 			<div class="grid gap-2">
 				<div class="flex flex-col gap-1">
@@ -812,6 +776,62 @@
 						<option value={tz}></option>
 					{/each}
 				</datalist>
+			</div>
+		</CardContent>
+	</Card>
+
+	<!-- Memory -->
+	<Card>
+		<CardHeader>
+			<CardTitle>Memory</CardTitle>
+			<CardDescription>Configure how the AI remembers conversation context.</CardDescription>
+		</CardHeader>
+		<CardContent class="grid gap-4">
+			<div class="flex place-items-center justify-between">
+				<div class="flex flex-col gap-1">
+					<span class="font-medium">Context Memory</span>
+					<span class="text-muted-foreground text-sm"
+						>Compress long conversations for better context retention.</span
+					>
+				</div>
+				<Switch bind:value={() => contextMemoryEnabled, toggleContextMemory} />
+			</div>
+			<div class="flex place-items-center justify-between">
+				<div class="flex flex-col gap-1">
+					<span class="font-medium">Persistent Memory</span>
+					<span class="text-muted-foreground text-sm"
+						>Remember facts about you across different conversations.</span
+					>
+				</div>
+				<Switch bind:value={() => persistentMemoryEnabled, togglePersistentMemory} />
+			</div>
+		</CardContent>
+	</Card>
+
+	<!-- AI Features -->
+	<Card>
+		<CardHeader>
+			<CardTitle>AI Features</CardTitle>
+			<CardDescription>Control automatic AI capabilities and enhancements.</CardDescription>
+		</CardHeader>
+		<CardContent class="grid gap-4">
+			<div class="flex place-items-center justify-between">
+				<div class="flex flex-col gap-1">
+					<span class="font-medium">YouTube Transcripts</span>
+					<span class="text-muted-foreground text-sm"
+						>Automatically fetch YouTube video transcripts ($0.01 each).</span
+					>
+				</div>
+				<Switch bind:value={() => youtubeTranscriptsEnabled, toggleYoutubeTranscripts} />
+			</div>
+			<div class="flex place-items-center justify-between">
+				<div class="flex flex-col gap-1">
+					<span class="font-medium">Web Scraping</span>
+					<span class="text-muted-foreground text-sm"
+						>Automatically scrape web page content when URLs are detected.</span
+					>
+				</div>
+				<Switch bind:value={() => webScrapingEnabled, toggleWebScraping} />
 			</div>
 			<div class="flex place-items-center justify-between">
 				<div class="flex flex-col gap-1">
@@ -849,191 +869,198 @@
 				</div>
 				<Switch bind:value={() => suggestedPromptsEnabled, toggleSuggestedPrompts} />
 			</div>
+		</CardContent>
+	</Card>
 
-			<div class="mt-2 border-t pt-4">
-				<h3 class="mb-3 font-medium">Model Preferences</h3>
-				<div class="grid gap-4">
-					<div class="flex flex-col gap-2">
-						<label
-							class="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-						>
-							Chat Title Generation Model
-							<select
-								class="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus:ring-ring mt-2 flex h-10 w-full items-center justify-between rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-								value={titleModelId}
-								onchange={(e) => updateTitleModel(e.currentTarget.value)}
-							>
-								<option value="">Default (GLM-4.5-Air)</option>
-								{#each enabledModels as model}
-									<option value={model.value}>{model.label}</option>
-								{/each}
-							</select>
-						</label>
-						<p class="text-muted-foreground text-xs">
-							Select the model used to generate chat titles.
-						</p>
-					</div>
-
-					{#if titleSupportsProviderSelection && titleModelProviders.length > 0}
-						<div class="flex flex-col gap-2">
-							<label
-								class="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-							>
-								Chat Title Generation Provider
-								<select
-									class="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus:ring-ring mt-2 flex h-10 w-full items-center justify-between rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-									value={titleProviderId}
-									onchange={(e) => updateTitleProvider(e.currentTarget.value)}
-								>
-									<option value="">Auto (Platform Default)</option>
-									{#each titleModelProviders as provider}
-										<option value={provider.provider}>
-											{formatProviderName(provider.provider)} ({formatPrice(provider.pricing)})
-										</option>
-									{/each}
-								</select>
-							</label>
-							<p class="text-muted-foreground text-xs">
-								Select the specific backend provider for the title model.
-							</p>
-						</div>
-					{/if}
-
-					<div class="flex flex-col gap-2">
-						<label
-							class="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-						>
-							Follow-up Questions Model
-							<select
-								class="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus:ring-ring mt-2 flex h-10 w-full items-center justify-between rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-								value={followUpModelId}
-								onchange={(e) => updateFollowUpModel(e.currentTarget.value)}
-							>
-								<option value="">Default (GLM-4.5-Air)</option>
-								{#each enabledModels as model}
-									<option value={model.value}>{model.label}</option>
-								{/each}
-							</select>
-						</label>
-						<p class="text-muted-foreground text-xs">
-							Select the model used to generate follow-up questions.
-						</p>
-					</div>
-
-					{#if followUpSupportsProviderSelection && followUpModelProviders.length > 0}
-						<div class="flex flex-col gap-2">
-							<label
-								class="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-							>
-								Follow-up Questions Provider
-								<select
-									class="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus:ring-ring mt-2 flex h-10 w-full items-center justify-between rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-									value={followUpProviderId}
-									onchange={(e) => updateFollowUpProvider(e.currentTarget.value)}
-								>
-									<option value="">Auto (Platform Default)</option>
-									{#each followUpModelProviders as provider}
-										<option value={provider.provider}>
-											{formatProviderName(provider.provider)} ({formatPrice(provider.pricing)})
-										</option>
-									{/each}
-								</select>
-							</label>
-							<p class="text-muted-foreground text-xs">
-								Select the specific backend provider for the follow-up model.
-							</p>
-						</div>
-					{/if}
-				</div>
+	<!-- Model Preferences -->
+	<Card>
+		<CardHeader>
+			<CardTitle>Model Preferences</CardTitle>
+			<CardDescription>Choose which models are used for automatic tasks.</CardDescription>
+		</CardHeader>
+		<CardContent class="grid gap-4">
+			<div class="flex flex-col gap-2">
+				<label
+					class="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+				>
+					Chat Title Generation Model
+					<select
+						class="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus:ring-ring mt-2 flex h-10 w-full items-center justify-between rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+						value={titleModelId}
+						onchange={(e) => updateTitleModel(e.currentTarget.value)}
+					>
+						<option value="">Default (GLM-4.5-Air)</option>
+						{#each enabledModels as model}
+							<option value={model.value}>{model.label}</option>
+						{/each}
+					</select>
+				</label>
+				<p class="text-muted-foreground text-xs">
+					Select the model used to generate chat titles.
+				</p>
 			</div>
 
-			<div class="mt-2 border-t pt-4">
-				<h3 class="mb-3 font-medium">Text to Speech</h3>
-				<div class="grid gap-4">
-					<div class="flex flex-col gap-2">
-						<label
-							class="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+			{#if titleSupportsProviderSelection && titleModelProviders.length > 0}
+				<div class="flex flex-col gap-2">
+					<label
+						class="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+					>
+						Chat Title Generation Provider
+						<select
+							class="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus:ring-ring mt-2 flex h-10 w-full items-center justify-between rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+							value={titleProviderId}
+							onchange={(e) => updateTitleProvider(e.currentTarget.value)}
 						>
-							Model
-							<select
-								class="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus:ring-ring mt-2 flex h-10 w-full items-center justify-between rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-								bind:value={localSettings.ttsModel}
-								onchange={() => {
-									if (localSettings.ttsModel?.startsWith('Eleven'))
-										localSettings.ttsVoice = 'Rachel';
-									else if (localSettings.ttsModel?.startsWith('Kokoro'))
-										localSettings.ttsVoice = 'af_bella';
-									else localSettings.ttsVoice = 'alloy';
-								}}
-							>
-								{#each ttsModels as model}
-									<option value={model.value}>{model.label}</option>
-								{/each}
-							</select>
-						</label>
-						<p class="text-muted-foreground text-xs">
-							Choose a TTS model. Pricing varies significantly.
-						</p>
-					</div>
-
-					<div class="flex flex-col gap-2">
-						<label
-							class="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-						>
-							Voice
-							<select
-								class="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus:ring-ring mt-2 flex h-10 w-full items-center justify-between rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-								bind:value={localSettings.ttsVoice}
-							>
-								{#each availableVoices as voice}
-									<option value={voice.value}>{voice.label}</option>
-								{/each}
-							</select>
-						</label>
-						<p class="text-muted-foreground text-xs">
-							Select the voice used for reading messages aloud.
-						</p>
-					</div>
-
-					<div class="flex flex-col gap-2">
-						<div class="flex justify-between">
-							<label for="tts-speed" class="text-sm leading-none font-medium">Speed</label>
-							<span class="text-muted-foreground text-xs">{localSettings.ttsSpeed}x</span>
-						</div>
-						<input
-							id="tts-speed"
-							type="range"
-							min="0.25"
-							max="4.0"
-							step="0.05"
-							class="accent-primary h-2 w-full cursor-pointer appearance-none rounded-lg bg-gray-200 dark:bg-gray-700"
-							bind:value={localSettings.ttsSpeed}
-						/>
-					</div>
+							<option value="">Auto (Platform Default)</option>
+							{#each titleModelProviders as provider}
+								<option value={provider.provider}>
+									{formatProviderName(provider.provider)} ({formatPrice(provider.pricing)})
+								</option>
+							{/each}
+						</select>
+					</label>
+					<p class="text-muted-foreground text-xs">
+						Select the specific backend provider for the title model.
+					</p>
 				</div>
+			{/if}
+
+			<div class="flex flex-col gap-2">
+				<label
+					class="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+				>
+					Follow-up Questions Model
+					<select
+						class="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus:ring-ring mt-2 flex h-10 w-full items-center justify-between rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+						value={followUpModelId}
+						onchange={(e) => updateFollowUpModel(e.currentTarget.value)}
+					>
+						<option value="">Default (GLM-4.5-Air)</option>
+						{#each enabledModels as model}
+							<option value={model.value}>{model.label}</option>
+						{/each}
+					</select>
+				</label>
+				<p class="text-muted-foreground text-xs">
+					Select the model used to generate follow-up questions.
+				</p>
 			</div>
 
-			<div class="mt-2 border-t pt-4">
-				<h3 class="mb-3 font-medium">Speech to Text</h3>
-				<div class="grid gap-4">
-					<div class="flex flex-col gap-2">
-						<label
-							class="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+			{#if followUpSupportsProviderSelection && followUpModelProviders.length > 0}
+				<div class="flex flex-col gap-2">
+					<label
+						class="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+					>
+						Follow-up Questions Provider
+						<select
+							class="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus:ring-ring mt-2 flex h-10 w-full items-center justify-between rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+							value={followUpProviderId}
+							onchange={(e) => updateFollowUpProvider(e.currentTarget.value)}
 						>
-							Model
-							<select
-								class="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus:ring-ring mt-2 flex h-10 w-full items-center justify-between rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-								bind:value={localSettings.sttModel}
-							>
-								{#each sttModels as model}
-									<option value={model.value}>{model.label}</option>
-								{/each}
-							</select>
-						</label>
-						<p class="text-muted-foreground text-xs">
-							Choose an STT model for voice transcription.
-						</p>
-					</div>
+							<option value="">Auto (Platform Default)</option>
+							{#each followUpModelProviders as provider}
+								<option value={provider.provider}>
+									{formatProviderName(provider.provider)} ({formatPrice(provider.pricing)})
+								</option>
+							{/each}
+						</select>
+					</label>
+					<p class="text-muted-foreground text-xs">
+						Select the specific backend provider for the follow-up model.
+					</p>
+				</div>
+			{/if}
+		</CardContent>
+	</Card>
+
+	<!-- Audio -->
+	<Card>
+		<CardHeader>
+			<CardTitle>Audio</CardTitle>
+			<CardDescription>Configure text-to-speech and speech-to-text settings.</CardDescription>
+		</CardHeader>
+		<CardContent class="grid gap-4">
+			<h4 class="font-medium">Text to Speech</h4>
+			<div class="flex flex-col gap-2">
+				<label
+					class="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+				>
+					Model
+					<select
+						class="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus:ring-ring mt-2 flex h-10 w-full items-center justify-between rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+						bind:value={localSettings.ttsModel}
+						onchange={() => {
+							if (localSettings.ttsModel?.startsWith('Eleven'))
+								localSettings.ttsVoice = 'Rachel';
+							else if (localSettings.ttsModel?.startsWith('Kokoro'))
+								localSettings.ttsVoice = 'af_bella';
+							else localSettings.ttsVoice = 'alloy';
+						}}
+					>
+						{#each ttsModels as model}
+							<option value={model.value}>{model.label}</option>
+						{/each}
+					</select>
+				</label>
+				<p class="text-muted-foreground text-xs">
+					Choose a TTS model. Pricing varies significantly.
+				</p>
+			</div>
+
+			<div class="flex flex-col gap-2">
+				<label
+					class="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+				>
+					Voice
+					<select
+						class="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus:ring-ring mt-2 flex h-10 w-full items-center justify-between rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+						bind:value={localSettings.ttsVoice}
+					>
+						{#each availableVoices as voice}
+							<option value={voice.value}>{voice.label}</option>
+						{/each}
+					</select>
+				</label>
+				<p class="text-muted-foreground text-xs">
+					Select the voice used for reading messages aloud.
+				</p>
+			</div>
+
+			<div class="flex flex-col gap-2">
+				<div class="flex justify-between">
+					<label for="tts-speed" class="text-sm leading-none font-medium">Speed</label>
+					<span class="text-muted-foreground text-xs">{localSettings.ttsSpeed}x</span>
+				</div>
+				<input
+					id="tts-speed"
+					type="range"
+					min="0.25"
+					max="4.0"
+					step="0.05"
+					class="accent-primary h-2 w-full cursor-pointer appearance-none rounded-lg bg-gray-200 dark:bg-gray-700"
+					bind:value={localSettings.ttsSpeed}
+				/>
+			</div>
+
+			<div class="border-t pt-4">
+				<h4 class="mb-3 font-medium">Speech to Text</h4>
+				<div class="flex flex-col gap-2">
+					<label
+						class="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+					>
+						Model
+						<select
+							class="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus:ring-ring mt-2 flex h-10 w-full items-center justify-between rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+							bind:value={localSettings.sttModel}
+						>
+							{#each sttModels as model}
+								<option value={model.value}>{model.label}</option>
+							{/each}
+						</select>
+					</label>
+					<p class="text-muted-foreground text-xs">
+						Choose an STT model for voice transcription.
+					</p>
 				</div>
 			</div>
 		</CardContent>
