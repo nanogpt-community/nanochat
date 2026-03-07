@@ -7,6 +7,7 @@
 	import MarkdownRenderer from './markdown-renderer.svelte';
 	import { ImageModal } from '$lib/components/ui/image-modal';
 	import { sanitizeHtml } from '$lib/utils/markdown-it';
+	import { toSafeHttpUrl } from '$lib/utils/html-sanitizer';
 	import { on } from 'svelte/events';
 	import { isHtmlElement } from '$lib/utils/is';
 	import { Button } from '$lib/components/ui/button';
@@ -77,6 +78,7 @@
 		imageUrl: '',
 		fileName: '',
 	});
+	let renderedContentContainer: HTMLDivElement | null = $state(null);
 
 	function openImageModal(imageUrl: string, fileName: string) {
 		imageModal = {
@@ -85,6 +87,35 @@
 			fileName,
 		};
 	}
+
+	function handleRenderedContentClick(event: MouseEvent) {
+		const target = event.target;
+		if (!(target instanceof Element)) return;
+
+		const button = target.closest<HTMLButtonElement>(
+			'button.copy[data-code], button[data-copy-button][data-code]'
+		);
+		if (!button) return;
+
+		event.preventDefault();
+
+		const code = button.dataset.code;
+		if (!code) return;
+
+		void navigator.clipboard.writeText(code).then(() => {
+			button.classList.add('copied');
+			setTimeout(() => button.classList.remove('copied'), 3000);
+		});
+	}
+
+	$effect(() => {
+		if (!renderedContentContainer) return;
+		renderedContentContainer.addEventListener('click', handleRenderedContentClick);
+
+		return () => {
+			renderedContentContainer?.removeEventListener('click', handleRenderedContentClick);
+		};
+	});
 
 	async function createBranchedConversation() {
 		// Log regenerate interaction
@@ -431,7 +462,10 @@
 				</div>
 			</div>
 		{/if}
-		<div class={style({ role: message.role as 'user' | 'assistant' })}>
+		<div
+			bind:this={renderedContentContainer}
+			class={style({ role: message.role as 'user' | 'assistant' })}
+		>
 			{#if isEditing}
 				<div class="flex min-w-[300px] flex-col gap-2">
 					<textarea
@@ -484,14 +518,18 @@
 				<div class="flex items-center">
 					{#each annotations as annotation}
 						{#if annotation.type === 'url_citation'}
-							{@const url = new URL(annotation.url_citation.url)}
-							<a
-								href={annotation.url_citation.url}
-								target="_blank"
-								class="border-border bg-background bg-noise -m-1 flex place-items-center justify-center rounded-full border p-0.5 transition-transform hover:scale-110"
-							>
-								{@render siteIcon({ url })}
-							</a>
+							{@const safeHref = toSafeHttpUrl(annotation.url_citation.url)}
+							{#if safeHref}
+								{@const url = new URL(safeHref)}
+								<a
+									href={safeHref}
+									target="_blank"
+									rel="noopener noreferrer"
+									class="border-border bg-background bg-noise -m-1 flex place-items-center justify-center rounded-full border p-0.5 transition-transform hover:scale-110"
+								>
+									{@render siteIcon({ url })}
+								</a>
+							{/if}
 						{/if}
 					{/each}
 				</div>
@@ -499,30 +537,34 @@
 			<div class="scrollbar-hide flex place-items-center gap-2 overflow-x-auto p-2">
 				{#each annotations as annotation}
 					{#if annotation.type === 'url_citation'}
-						{@const url = new URL(annotation.url_citation.url)}
-						<div
-							class="border-border hover:border-primary/50 text-muted-foreground group relative flex h-32 min-w-60 flex-col justify-between rounded-lg border p-4 transition-colors"
-						>
-							<div>
-								<a
-									href={annotation.url_citation.url}
-									target="_blank"
-									class="group-hover:text-foreground block max-w-full truncate font-medium transition-colors"
-								>
-									<span class="absolute inset-0"></span>
-									{annotation.url_citation.title}
-								</a>
-								<p class="truncate text-sm">
-									{annotation.url_citation.content}
-								</p>
-							</div>
-							<span class="flex items-center gap-2 text-xs">
-								{@render siteIcon({ url })}
-								{url.hostname}
-							</span>
+						{@const safeHref = toSafeHttpUrl(annotation.url_citation.url)}
+						{#if safeHref}
+							{@const url = new URL(safeHref)}
+							<div
+								class="border-border hover:border-primary/50 text-muted-foreground group relative flex h-32 min-w-60 flex-col justify-between rounded-lg border p-4 transition-colors"
+							>
+								<div>
+									<a
+										href={safeHref}
+										target="_blank"
+										rel="noopener noreferrer"
+										class="group-hover:text-foreground block max-w-full truncate font-medium transition-colors"
+									>
+										<span class="absolute inset-0"></span>
+										{annotation.url_citation.title}
+									</a>
+									<p class="truncate text-sm">
+										{annotation.url_citation.content}
+									</p>
+								</div>
+								<span class="flex items-center gap-2 text-xs">
+									{@render siteIcon({ url })}
+									{url.hostname}
+								</span>
 
-							<ExternalLinkIcon class="text-primary absolute top-2 right-2 size-3" />
-						</div>
+								<ExternalLinkIcon class="text-primary absolute top-2 right-2 size-3" />
+							</div>
+						{/if}
 					{/if}
 				{/each}
 			</div>

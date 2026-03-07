@@ -1,5 +1,6 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
+import { and, eq } from 'drizzle-orm';
 import {
 	getConversationMessages,
 	getPublicConversationMessages,
@@ -10,8 +11,28 @@ import {
 	deleteMessage,
 	setMessageStarred,
 } from '$lib/db/queries';
+import { db } from '$lib/db';
+import { conversations, messages } from '$lib/db/schema';
 import { getConversationById } from '$lib/db/queries/conversations';
 import { getAuthenticatedUserId } from '$lib/backend/auth-utils';
+
+async function requireOwnedMessage(messageId: string, userId: string) {
+	const message = await db
+		.select({
+			id: messages.id,
+			conversationId: messages.conversationId,
+		})
+		.from(messages)
+		.innerJoin(conversations, eq(messages.conversationId, conversations.id))
+		.where(and(eq(messages.id, messageId), eq(conversations.userId, userId)))
+		.get();
+
+	if (!message) {
+		throw error(403, 'Unauthorized');
+	}
+
+	return message;
+}
 
 function extractMarkdownImages(content: string): Array<{ url: string; fileName?: string }> {
 	const images: Array<{ url: string; fileName?: string }> = [];
@@ -107,6 +128,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		}
 
 		case 'updateContent': {
+			await requireOwnedMessage(body.messageId, userId);
 			await updateMessageContent(body.messageId, {
 				content: body.content,
 				contentHtml: body.contentHtml,
@@ -119,6 +141,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		}
 
 		case 'update': {
+			await requireOwnedMessage(body.messageId, userId);
 			await updateMessage(body.messageId, {
 				tokenCount: body.tokenCount,
 				costUsd: body.costUsd,
@@ -129,16 +152,27 @@ export const POST: RequestHandler = async ({ request }) => {
 		}
 
 		case 'updateError': {
+			const conversation = await getConversationById(body.conversationId, userId);
+			if (!conversation || conversation.userId !== userId) {
+				return error(403, 'Unauthorized');
+			}
+
+			if (body.messageId) {
+				await requireOwnedMessage(body.messageId, userId);
+			}
+
 			await updateMessageError(body.messageId, body.conversationId, body.error);
 			return json({ ok: true });
 		}
 
 		case 'delete': {
+			await requireOwnedMessage(body.messageId, userId);
 			await deleteMessage(body.messageId);
 			return json({ ok: true });
 		}
 
 		case 'setStarred': {
+			await requireOwnedMessage(body.messageId, userId);
 			await setMessageStarred(body.messageId, body.starred);
 			return json({ ok: true });
 		}

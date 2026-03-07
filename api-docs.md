@@ -7,6 +7,7 @@ This document provides an overview of the API endpoints available in the applica
 **Base URL**: `http://localhost:3432` (development) or your deployed domain (production)
 
 All endpoints are relative to the base URL. For example, to call the generate-message endpoint:
+
 ```
 http://localhost:3432/api/generate-message
 ```
@@ -16,12 +17,14 @@ http://localhost:3432/api/generate-message
 ## Authentication
 
 The API supports two methods of authentication:
+
 1. **Session Cookie**: For browser-based authenticated sessions.
 2. **API Key**: For external tools and scripts. Use the `Authorization: Bearer <your_api_key>` header.
 
 ### Authentication Examples
 
 **Using API Key (Bearer Token)**:
+
 ```bash
 curl -X POST "http://localhost:3432/api/generate-message" \
   -H "Content-Type: application/json" \
@@ -30,6 +33,7 @@ curl -X POST "http://localhost:3432/api/generate-message" \
 ```
 
 **Using Session Cookie**:
+
 ```bash
 curl -X GET "http://localhost:3432/api/assistants" \
   -b "session_cookie_name=session_cookie_value"
@@ -42,68 +46,74 @@ curl -X GET "http://localhost:3432/api/assistants" \
 ### Generation
 
 #### POST `/api/generate-message`
+
 Generates a response from an AI model. This is the core endpoint for chat functionality.
 
 **Authentication**: Session or API Key
 
 Notes:
+
 - If you authenticate with a NanoChat API key (`Authorization: Bearer nc_...`) or a session cookie, the server will use your stored NanoGPT key or the server `NANOGPT_API_KEY`.
 - To pass a NanoGPT key directly, send it via `x-api-key` or `Authorization: Bearer <nanogpt_key>` (non-`nc_`).
 
 **Request Body**:
+
 ```json
 {
-  "message": "string (optional if conversation_id exists)",
-  "model_id": "string",
-  "assistant_id": "string (optional)",
-  "project_id": "string (optional)",
-  "session_token": "string (optional)",
-  "conversation_id": "string (optional)",
-  "web_search_enabled": "boolean (optional)",
-  "web_search_mode": "enum: 'off' | 'standard' | 'deep' (optional)",
-  "web_search_provider": "enum: 'linkup' | 'tavily' | 'exa' | 'kagi' | 'perplexity' | 'valyu' | 'brave' | 'brave-pro' | 'brave-research' (optional)",
-  "web_search_exa_depth": "enum: 'fast' | 'auto' | 'neural' | 'deep' (optional) - Exa provider depth mode",
-  "web_search_context_size": "enum: 'low' | 'medium' | 'high' (optional) - Search result context amount",
-  "web_search_kagi_source": "enum: 'web' | 'news' | 'search' (optional) - Kagi provider source type",
-  "web_search_valyu_search_type": "enum: 'all' | 'web' (optional) - Valyu provider search type (all sources or web only)",
-  "images": [
-    {
-      "url": "string",
-      "storage_id": "string",
-      "fileName": "string (optional)"
-    }
-  ],
-  "documents": [
-    {
-      "url": "string",
-      "storage_id": "string",
-      "fileName": "string (optional)",
-      "fileType": "enum: 'pdf' | 'markdown' | 'text' | 'epub'"
-    }
-  ],
-  "image_params": {
-    "nImages": "number (optional) - number of images to generate (if supported)",
-    "resolution": "string (optional)",
-    "quality": "string (optional)",
-    "aspect_ratio": "string (optional)",
-    "seed": "number (optional, set -1 for random)"
-  },
-  "reasoning_effort": "enum: 'low' | 'medium' | 'high' (optional)",
-  "temporary": "boolean (optional)",
-  "provider_id": "string (optional) - Select specific provider for this generation"
+	"message": "string (optional if conversation_id exists)",
+	"model_id": "string",
+	"assistant_id": "string (optional)",
+	"project_id": "string (optional)",
+	"session_token": "string (optional)",
+	"conversation_id": "string (optional)",
+	"web_search_enabled": "boolean (optional)",
+	"web_search_mode": "enum: 'off' | 'standard' | 'deep' (optional)",
+	"web_search_provider": "enum: 'linkup' | 'tavily' | 'exa' | 'kagi' | 'perplexity' | 'valyu' | 'brave' | 'brave-pro' | 'brave-research' (optional)",
+	"web_search_exa_depth": "enum: 'fast' | 'auto' | 'neural' | 'deep' (optional) - Exa provider depth mode",
+	"web_search_context_size": "enum: 'low' | 'medium' | 'high' (optional) - Search result context amount",
+	"web_search_kagi_source": "enum: 'web' | 'news' | 'search' (optional) - Kagi provider source type",
+	"web_search_valyu_search_type": "enum: 'all' | 'web' (optional) - Valyu provider search type (all sources or web only)",
+	"images": [
+		{
+			"url": "string",
+			"storage_id": "string",
+			"fileName": "string (optional)"
+		}
+	],
+	"documents": [
+		{
+			"url": "string",
+			"storage_id": "string",
+			"fileName": "string (optional)",
+			"fileType": "enum: 'pdf' | 'markdown' | 'text' | 'epub'"
+		}
+	],
+	"image_params": {
+		"nImages": "number (optional) - number of images to generate (if supported)",
+		"resolution": "string (optional)",
+		"quality": "string (optional)",
+		"aspect_ratio": "string (optional)",
+		"seed": "number (optional, set -1 for random)"
+	},
+	"reasoning_effort": "enum: 'low' | 'medium' | 'high' (optional)",
+	"temporary": "boolean (optional)",
+	"provider_id": "string (optional) - Select specific provider for this generation"
 }
 ```
 
 **Response**:
+
 ```json
 {
-  "ok": true,
-  "conversation_id": "string"
+	"ok": true,
+	"conversation_id": "string"
 }
 ```
+
 Note: This endpoint triggers a background process for generation. The response returns immediately with the conversation ID. The client typically subscribes to changes or polls for the message content (implementation detail: specific mechanism for real-time updates might need further check, e.g., SSE or polling).
 
 **CURL Example**:
+
 ```bash
 curl -X POST "http://localhost:3432/api/generate-message" \
   -H "Content-Type: application/json" \
@@ -115,6 +125,7 @@ curl -X POST "http://localhost:3432/api/generate-message" \
 ```
 
 #### POST `/api/generate-message/stream`
+
 Generates a response from an AI model with real-time Server-Sent Events (SSE) streaming. Ideal for native apps that want to display tokens as they arrive instead of polling.
 
 **Authentication**: Session or API Key
@@ -126,18 +137,21 @@ Generates a response from an AI model with real-time Server-Sent Events (SSE) st
 **Event Types**:
 
 1. **`message_start`** - Sent immediately when generation begins
+
 ```
 event: message_start
 data: {"conversation_id":"conv_abc123","message_id":"msg_xyz789"}
 ```
 
 2. **`delta`** - Sent for each token/chunk received (may be many of these)
+
 ```
 event: delta
 data: {"content":"Hello","reasoning":""}
 ```
 
 3. **`message_complete`** - Sent when generation finishes successfully
+
 ```
 event: message_complete
 data: {
@@ -149,13 +163,16 @@ data: {
 ```
 
 4. **`error`** - Sent if an error occurs during generation
+
 ```
 event: error
 data: {"error":"Something went wrong"}
 ```
+
 On an `error`, the server also persists the error on the assistant message (when available) and resets `conversations.generating` to `false`.
 
 **Notes**:
+
 - Image and video generation models are **not supported** for streaming. Use `/api/generate-message` instead.
 - The connection remains open until generation completes or an error occurs.
 - Messages are still saved to the database, preserving conversation history.
@@ -163,6 +180,7 @@ On an `error`, the server also persists the error on the assistant message (when
 - Supports all features of the non-streaming endpoint (web search, MCP tools, reasoning models, etc.).
 
 **CURL Example**:
+
 ```bash
 curl -N -X POST "http://localhost:3432/api/generate-message/stream" \
   -H "Content-Type: application/json" \
@@ -174,6 +192,7 @@ curl -N -X POST "http://localhost:3432/api/generate-message/stream" \
 ```
 
 **iOS/Swift Example**:
+
 ```swift
 let url = URL(string: "https://your-app.com/api/generate-message/stream")!
 var request = URLRequest(url: url)
@@ -189,6 +208,7 @@ task.resume()
 ```
 
 **Android/Kotlin Example**:
+
 ```kotlin
 val client = OkHttpClient()
 val jsonBody = """{"message":"Hello","model_id":"gpt-4o"}""".toRequestBody("application/json".toMediaType())
@@ -216,29 +236,34 @@ client.newCall(request).enqueue(object : Callback {
 ### Text-to-Speech
 
 #### POST `/api/tts`
+
 Proxies requests to NanoGPT TTS API for speech synthesis.
 
 **Authentication**: Session or API Key
 
 Notes:
+
 - If you authenticate with a NanoChat API key (`Authorization: Bearer nc_...`) or a session cookie, the server will use your stored NanoGPT key or the server `NANOGPT_API_KEY`.
 - To pass a NanoGPT key directly, send it via `x-api-key` or `Authorization: Bearer <nanogpt_key>` (non-`nc_`).
 
 **Request Body**:
+
 ```json
 {
-  "text": "string",
-  "model": "string (optional, default: 'tts-1')",
-  "voice": "string (optional, default: 'alloy')",
-  "speed": "number (optional, default: 1.0)"
+	"text": "string",
+	"model": "string (optional, default: 'tts-1')",
+	"voice": "string (optional, default: 'alloy')",
+	"speed": "number (optional, default: 1.0)"
 }
 ```
 
 **Response**:
+
 - Content-Type: `audio/mpeg`
 - Body: Binary audio data
 
 **CURL Example**:
+
 ```bash
 curl -X POST "http://localhost:3432/api/tts" \
   -H "Content-Type: application/json" \
@@ -248,15 +273,18 @@ curl -X POST "http://localhost:3432/api/tts" \
 ```
 
 #### GET `/api/tts/status`
+
 Polls the status of an asynchronous TTS request.
 
 **Authentication**: Session or API Key
 
 Notes:
+
 - If you authenticate with a NanoChat API key (`Authorization: Bearer nc_...`) or a session cookie, the server will use your stored NanoGPT key or the server `NANOGPT_API_KEY`.
 - To pass a NanoGPT key directly, send it via `x-api-key` or `Authorization: Bearer <nanogpt_key>` (non-`nc_`).
 
 **Query Parameters**:
+
 - `runId`: (Required) The run ID returned by `/api/tts`.
 - `model`: (Required) The TTS model ID.
 - `cost`: (Optional) Estimated cost from the submit response.
@@ -264,6 +292,7 @@ Notes:
 - `isApiRequest`: (Optional) Whether the request was an API request.
 
 **Response**:
+
 ```json
 {
   "status": "pending" | "completed" | "error",
@@ -275,6 +304,7 @@ Notes:
 ```
 
 **CURL Example**:
+
 ```bash
 curl "http://localhost:3432/api/tts/status?runId=RUN_ID&model=Elevenlabs-Turbo-V2.5" \
   -H "Authorization: Bearer your_api_key"
@@ -285,20 +315,24 @@ curl "http://localhost:3432/api/tts/status?runId=RUN_ID&model=Elevenlabs-Turbo-V
 ### Speech-to-Text
 
 #### POST `/api/stt`
+
 Proxies audio files to NanoGPT STT API for transcription.
 
 **Authentication**: Session or API Key
 
 Notes:
+
 - If you authenticate with a NanoChat API key (`Authorization: Bearer nc_...`) or a session cookie, the server will use your stored NanoGPT key or the server `NANOGPT_API_KEY`.
 - To pass a NanoGPT key directly, send it via `x-api-key` or `Authorization: Bearer <nanogpt_key>` (non-`nc_`).
 
 **Request Body** (FormData):
+
 - `audio`: Binary audio file (webm, mp4, etc).
 - `model`: "string (optional, default: 'Whisper-Large-V3')"
 - `language`: "string (optional, default: 'auto')"
 
 **Response**:
+
 ```json
 {
   "transcription": "string",
@@ -311,6 +345,7 @@ Notes:
 ```
 
 **CURL Example**:
+
 ```bash
 curl -X POST "http://localhost:3432/api/stt" \
   -b "session_cookie=your_session" \
@@ -321,50 +356,57 @@ curl -X POST "http://localhost:3432/api/stt" \
 ---
 
 ### Video Generation
- 
+
 #### POST `/api/video/generate`
+
 Proxies requests to NanoGPT Video Generation API.
- 
+
 **Authentication**: Session
 
 **Note**: You may also supply a direct NanoGPT key via `x-api-key` or `Authorization: Bearer <nanogpt_key>`. The server key is not used for unauthenticated requests.
- 
+
 **Request Body**:
+
 ```json
 {
-  "model": "string",
-  "prompt": "string",
-  // Additional parameters depending on the model (e.g., duration, aspect_ratio)
+	"model": "string",
+	"prompt": "string"
+	// Additional parameters depending on the model (e.g., duration, aspect_ratio)
 }
 ```
- 
+
 **Response**:
+
 ```json
 {
-  "runId": "string"
+	"runId": "string"
 }
 ```
 
 **CURL Example**:
+
 ```bash
 curl -X POST "http://localhost:3432/api/video/generate" \
   -H "Content-Type: application/json" \
   -b "session_cookie=your_session" \
   -d '{"model": "runway-gen3", "prompt": "A beautiful sunset over the ocean"}'
 ```
- 
+
 #### GET `/api/video/status`
+
 Check the status of a video generation task.
- 
+
 **Authentication**: Session
 
 **Note**: You may also supply a direct NanoGPT key via `x-api-key` or `Authorization: Bearer <nanogpt_key>`. The server key is not used for unauthenticated requests.
- 
+
 **Query Parameters**:
+
 - `runId`: (Required) The run ID returned by the generate endpoint.
 - `model`: (Optional) The model ID used for generation.
- 
+
 **Response**:
+
 ```json
 {
   "data": {
@@ -379,6 +421,7 @@ Check the status of a video generation task.
 ```
 
 **CURL Example**:
+
 ```bash
 curl -X GET "http://localhost:3432/api/video/status?runId=abc123&model=runway-gen3" \
   -b "session_cookie=your_session"
@@ -389,53 +432,60 @@ curl -X GET "http://localhost:3432/api/video/status?runId=abc123&model=runway-ge
 ### MCP (Model Context Protocol)
 
 #### GET `/api/mcp`
+
 Check MCP status for the current user.
 
 **Authentication**: Session or API Key
 
 **Response**:
+
 ```json
 {
-  "enabled": "boolean",
-  "available": "boolean",
-  "reason": "string (only if not available)"
+	"enabled": "boolean",
+	"available": "boolean",
+	"reason": "string (only if not available)"
 }
 ```
 
 **Note**: MCP is not available when using the server API key with `SUBSCRIPTION_MODELS_ONLY=true`.
 
 **CURL Example**:
+
 ```bash
 curl -X GET "http://localhost:3432/api/mcp" \
   -H "Authorization: Bearer your_api_key"
 ```
 
 #### POST `/api/mcp`
+
 Execute an MCP tool call.
 
 **Authentication**: Session or API Key
 
 **Request Body**:
+
 ```json
 {
-  "tool": "string (required)",
-  "args": "object (optional)"
+	"tool": "string (required)",
+	"args": "object (optional)"
 }
 ```
 
 **Response**:
+
 ```json
 {
-  "ok": true,
-  "message": "string",
-  "tool": "string",
-  "args": "object"
+	"ok": true,
+	"message": "string",
+	"tool": "string",
+	"args": "object"
 }
 ```
 
 **Note**: MCP must be enabled in Account Settings and is not available when using the server API key with `SUBSCRIPTION_MODELS_ONLY=true`.
 
 **CURL Example**:
+
 ```bash
 curl -X POST "http://localhost:3432/api/mcp" \
   -H "Content-Type: application/json" \
@@ -444,61 +494,70 @@ curl -X POST "http://localhost:3432/api/mcp" \
 ```
 
 ---
- 
+
 ### API Keys
 
 #### GET `/api/api-keys`
+
 List active API keys for the current user.
 
 **Authentication**: Session or API Key
 
 **Response**:
+
 ```json
 {
-  "keys": [
-    {
-      "id": "string",
-      "name": "string",
-      "lastUsedAt": "date",
-      "createdAt": "date"
-    }
-  ]
+	"keys": [
+		{
+			"id": "string",
+			"name": "string",
+			"lastUsedAt": "date",
+			"createdAt": "date"
+		}
+	]
 }
 ```
+
 **Note**: The actual key value is never returned in list responses.
 Responses include `Cache-Control: private, no-store` so key metadata is not cached by browsers or intermediaries.
 
 **CURL Example**:
+
 ```bash
 curl -X GET "http://localhost:3432/api/api-keys" \
   -b "session_cookie=your_session"
 ```
 
 #### POST `/api/api-keys`
+
 Create a new API key.
 
 **Authentication**: Session or API Key
 
 **Request Body**:
+
 ```json
 {
-  "name": "string (1-100 chars)"
+	"name": "string (1-100 chars)"
 }
 ```
 
 **Response**:
+
 ```json
 {
-  "id": "string",
-  "key": "string (The actual API key, shown only once)",
-  "name": "string",
-  "createdAt": "date"
+	"id": "string",
+	"key": "string (The actual API key, shown only once)",
+	"name": "string",
+	"createdAt": "date"
 }
 ```
+
 **Note**: The key is returned only during creation. Save it securely - it cannot be retrieved again. Keys are stored encrypted in the database using AES-256-GCM and indexed by a non-reversible lookup hash. This endpoint returns `503` until `ENCRYPTION_KEY` is configured and the database schema has been updated with `npx drizzle-kit push`.
 The response is marked `Cache-Control: private, no-store`.
 
 **CURL Example**:
+
 ```bash
 curl -X POST "http://localhost:3432/api/api-keys" \
   -H "Content-Type: application/json" \
@@ -507,26 +566,31 @@ curl -X POST "http://localhost:3432/api/api-keys" \
 ```
 
 #### DELETE `/api/api-keys`
+
 Revoke an API key.
 
 **Authentication**: Session or API Key
 
 **Request Body**:
+
 ```json
 {
-  "id": "string"
+	"id": "string"
 }
 ```
 
 **Response**:
+
 ```json
 {
-  "success": true
+	"success": true
 }
 ```
+
 Responses include `Cache-Control: private, no-store`.
 
 **CURL Example**:
+
 ```bash
 curl -X DELETE "http://localhost:3432/api/api-keys" \
   -H "Content-Type: application/json" \
@@ -539,59 +603,65 @@ curl -X DELETE "http://localhost:3432/api/api-keys" \
 ### Assistants
 
 #### GET `/api/assistants`
+
 List all assistants for the user. If no assistants exist, a default one is created and returned.
 
 **Authentication**: Session or API Key
 
 **Response**:
+
 ```json
 [
-  {
-    "id": "string",
-    "name": "string",
-    "description": "string | null",
-    "systemPrompt": "string",
-    "isDefault": "boolean",
-    "defaultModelId": "string | null",
-    "defaultWebSearchMode": "string | null",
-    "defaultWebSearchProvider": "string | null",
-    "defaultWebSearchExaDepth": "string | null",
-    "defaultWebSearchContextSize": "string | null",
-    "defaultWebSearchKagiSource": "string | null",
-    "defaultWebSearchValyuSearchType": "string | null",
-    "createdAt": "date",
-    "updatedAt": "date"
-  }
+	{
+		"id": "string",
+		"name": "string",
+		"description": "string | null",
+		"systemPrompt": "string",
+		"isDefault": "boolean",
+		"defaultModelId": "string | null",
+		"defaultWebSearchMode": "string | null",
+		"defaultWebSearchProvider": "string | null",
+		"defaultWebSearchExaDepth": "string | null",
+		"defaultWebSearchContextSize": "string | null",
+		"defaultWebSearchKagiSource": "string | null",
+		"defaultWebSearchValyuSearchType": "string | null",
+		"createdAt": "date",
+		"updatedAt": "date"
+	}
 ]
 ```
 
 **CURL Example**:
+
 ```bash
 curl -X GET "http://localhost:3432/api/assistants" \
   -b "session_cookie=your_session"
 ```
 
 #### POST `/api/assistants`
+
 Create a new assistant.
 
 **Authentication**: Session or API Key
 
 **Request Body**:
+
 ```json
 {
-  "name": "string (1-100 chars)",
-  "systemPrompt": "string (max 10000 chars)",
-  "defaultModelId": "string (optional)",
-  "defaultWebSearchMode": "enum: 'off' | 'standard' | 'deep' (optional)",
-  "defaultWebSearchProvider": "enum: 'linkup' | 'tavily' | 'exa' | 'kagi' | 'perplexity' | 'valyu' | 'brave' | 'brave-pro' | 'brave-research' (optional)",
-  "defaultWebSearchExaDepth": "enum: 'fast' | 'auto' | 'neural' | 'deep' (optional)",
-  "defaultWebSearchContextSize": "enum: 'low' | 'medium' | 'high' (optional)",
-  "defaultWebSearchKagiSource": "enum: 'web' | 'news' | 'search' (optional)",
-  "defaultWebSearchValyuSearchType": "enum: 'all' | 'web' (optional)"
+	"name": "string (1-100 chars)",
+	"systemPrompt": "string (max 10000 chars)",
+	"defaultModelId": "string (optional)",
+	"defaultWebSearchMode": "enum: 'off' | 'standard' | 'deep' (optional)",
+	"defaultWebSearchProvider": "enum: 'linkup' | 'tavily' | 'exa' | 'kagi' | 'perplexity' | 'valyu' | 'brave' | 'brave-pro' | 'brave-research' (optional)",
+	"defaultWebSearchExaDepth": "enum: 'fast' | 'auto' | 'neural' | 'deep' (optional)",
+	"defaultWebSearchContextSize": "enum: 'low' | 'medium' | 'high' (optional)",
+	"defaultWebSearchKagiSource": "enum: 'web' | 'news' | 'search' (optional)",
+	"defaultWebSearchValyuSearchType": "enum: 'all' | 'web' (optional)"
 }
 ```
 
 **Response**:
+
 ```json
 {
   "id": "string",
@@ -602,6 +672,7 @@ Create a new assistant.
 ```
 
 **CURL Example**:
+
 ```bash
 curl -X POST "http://localhost:3432/api/assistants" \
   -H "Content-Type: application/json" \
@@ -610,26 +681,29 @@ curl -X POST "http://localhost:3432/api/assistants" \
 ```
 
 #### PATCH `/api/assistants/[id]`
+
 Update an assistant.
 
 **Authentication**: Session or API Key
 
 **Request Body**:
+
 ```json
 {
-  "name": "string (optional)",
-  "systemPrompt": "string (optional)",
-  "defaultModelId": "string | null (optional)",
-  "defaultWebSearchMode": "enum: 'off' | 'standard' | 'deep' | null (optional)",
-  "defaultWebSearchProvider": "enum: 'linkup' | 'tavily' | 'exa' | 'kagi' | 'perplexity' | 'valyu' | 'brave' | 'brave-pro' | 'brave-research' | null (optional)",
-  "defaultWebSearchExaDepth": "enum: 'fast' | 'auto' | 'neural' | 'deep' | null (optional)",
-  "defaultWebSearchContextSize": "enum: 'low' | 'medium' | 'high' | null (optional)",
-  "defaultWebSearchKagiSource": "enum: 'web' | 'news' | 'search' | null (optional)",
-  "defaultWebSearchValyuSearchType": "enum: 'all' | 'web' | null (optional)"
+	"name": "string (optional)",
+	"systemPrompt": "string (optional)",
+	"defaultModelId": "string | null (optional)",
+	"defaultWebSearchMode": "enum: 'off' | 'standard' | 'deep' | null (optional)",
+	"defaultWebSearchProvider": "enum: 'linkup' | 'tavily' | 'exa' | 'kagi' | 'perplexity' | 'valyu' | 'brave' | 'brave-pro' | 'brave-research' | null (optional)",
+	"defaultWebSearchExaDepth": "enum: 'fast' | 'auto' | 'neural' | 'deep' | null (optional)",
+	"defaultWebSearchContextSize": "enum: 'low' | 'medium' | 'high' | null (optional)",
+	"defaultWebSearchKagiSource": "enum: 'web' | 'news' | 'search' | null (optional)",
+	"defaultWebSearchValyuSearchType": "enum: 'all' | 'web' | null (optional)"
 }
 ```
 
 **CURL Example**:
+
 ```bash
 curl -X PATCH "http://localhost:3432/api/assistants/asst_abc123" \
   -H "Content-Type: application/json" \
@@ -638,29 +712,34 @@ curl -X PATCH "http://localhost:3432/api/assistants/asst_abc123" \
 ```
 
 #### DELETE `/api/assistants/[id]`
+
 Delete an assistant.
 
 **Authentication**: Session or API Key
 
 **CURL Example**:
+
 ```bash
 curl -X DELETE "http://localhost:3432/api/assistants/asst_abc123" \
   -b "session_cookie=your_session"
 ```
 
 #### POST `/api/assistants/[id]`
+
 Set assistant as default.
 
 **Authentication**: Session or API Key
 
 **Request Body**:
+
 ```json
 {
-  "action": "setDefault"
+	"action": "setDefault"
 }
 ```
 
 **CURL Example**:
+
 ```bash
 curl -X POST "http://localhost:3432/api/assistants/asst_abc123" \
   -H "Content-Type: application/json" \
@@ -675,67 +754,73 @@ curl -X POST "http://localhost:3432/api/assistants/asst_abc123" \
 Prompts are reusable prompt templates with user-defined variables that can be quickly applied in chat.
 
 #### GET `/api/prompts`
+
 List all prompts for the user.
 
 **Authentication**: Session or API Key
 
 **Response**:
+
 ```json
 [
-  {
-    "id": "string",
-    "name": "string",
-    "content": "string",
-    "description": "string | null",
-    "variables": [
-      {
-        "name": "string",
-        "defaultValue": "string (optional)",
-        "description": "string (optional)"
-      }
-    ],
-    "defaultModelId": "string | null",
-    "defaultWebSearchMode": "off | standard | deep | null",
-    "defaultWebSearchProvider": "linkup | tavily | exa | kagi | perplexity | valyu | brave | brave-pro | brave-research | null",
-    "appendMode": "replace | append | prepend",
-    "createdAt": "date",
-    "updatedAt": "date"
-  }
+	{
+		"id": "string",
+		"name": "string",
+		"content": "string",
+		"description": "string | null",
+		"variables": [
+			{
+				"name": "string",
+				"defaultValue": "string (optional)",
+				"description": "string (optional)"
+			}
+		],
+		"defaultModelId": "string | null",
+		"defaultWebSearchMode": "off | standard | deep | null",
+		"defaultWebSearchProvider": "linkup | tavily | exa | kagi | perplexity | valyu | brave | brave-pro | brave-research | null",
+		"appendMode": "replace | append | prepend",
+		"createdAt": "date",
+		"updatedAt": "date"
+	}
 ]
 ```
 
 **CURL Example**:
+
 ```bash
 curl -X GET "http://localhost:3432/api/prompts" \
   -H "Authorization: Bearer your_api_key"
 ```
 
 #### POST `/api/prompts`
+
 Create a new prompt.
 
 **Authentication**: Session or API Key
 
 **Request Body**:
+
 ```json
 {
-  "name": "string (1-100 chars, required)",
-  "content": "string (1-50000 chars, required)",
-  "description": "string (max 500 chars, optional)",
-  "variables": [
-    {
-      "name": "string (1-50 chars)",
-      "defaultValue": "string (max 1000 chars, optional)",
-      "description": "string (max 200 chars, optional)"
-    }
-  ],
-  "defaultModelId": "string (optional)",
-  "defaultWebSearchMode": "off | standard | deep (optional)",
-  "defaultWebSearchProvider": "linkup | tavily | exa | kagi | perplexity | valyu | brave | brave-pro | brave-research (optional)",
-  "appendMode": "replace | append | prepend (optional, default: replace)"
+	"name": "string (1-100 chars, required)",
+	"content": "string (1-50000 chars, required)",
+	"description": "string (max 500 chars, optional)",
+	"variables": [
+		{
+			"name": "string (1-50 chars)",
+			"defaultValue": "string (max 1000 chars, optional)",
+			"description": "string (max 200 chars, optional)"
+		}
+	],
+	"defaultModelId": "string (optional)",
+	"defaultWebSearchMode": "off | standard | deep (optional)",
+	"defaultWebSearchProvider": "linkup | tavily | exa | kagi | perplexity | valyu | brave | brave-pro | brave-research (optional)",
+	"appendMode": "replace | append | prepend (optional, default: replace)"
 }
 ```
 
 **Response**:
+
 ```json
 {
   "id": "string",
@@ -746,6 +831,7 @@ Create a new prompt.
 ```
 
 **CURL Example**:
+
 ```bash
 curl -X POST "http://localhost:3432/api/prompts" \
   -H "Content-Type: application/json" \
@@ -761,11 +847,13 @@ curl -X POST "http://localhost:3432/api/prompts" \
 ```
 
 #### GET `/api/prompts/[id]`
+
 Get a single prompt by ID.
 
 **Authentication**: Session or API Key
 
 **Response**:
+
 ```json
 {
   "id": "string",
@@ -776,31 +864,35 @@ Get a single prompt by ID.
 ```
 
 **CURL Example**:
+
 ```bash
 curl -X GET "http://localhost:3432/api/prompts/prompt_abc123" \
   -H "Authorization: Bearer your_api_key"
 ```
 
 #### PATCH `/api/prompts/[id]`
+
 Update a prompt.
 
 **Authentication**: Session or API Key
 
 **Request Body**:
+
 ```json
 {
-  "name": "string (optional)",
-  "content": "string (optional)",
-  "description": "string | null (optional)",
-  "variables": "array | null (optional)",
-  "defaultModelId": "string | null (optional)",
-  "defaultWebSearchMode": "off | standard | deep | null (optional)",
-  "defaultWebSearchProvider": "linkup | tavily | exa | kagi | perplexity | valyu | brave | brave-pro | brave-research | null (optional)",
-  "appendMode": "replace | append | prepend (optional)"
+	"name": "string (optional)",
+	"content": "string (optional)",
+	"description": "string | null (optional)",
+	"variables": "array | null (optional)",
+	"defaultModelId": "string | null (optional)",
+	"defaultWebSearchMode": "off | standard | deep | null (optional)",
+	"defaultWebSearchProvider": "linkup | tavily | exa | kagi | perplexity | valyu | brave | brave-pro | brave-research | null (optional)",
+	"appendMode": "replace | append | prepend (optional)"
 }
 ```
 
 **CURL Example**:
+
 ```bash
 curl -X PATCH "http://localhost:3432/api/prompts/prompt_abc123" \
   -H "Content-Type: application/json" \
@@ -809,18 +901,21 @@ curl -X PATCH "http://localhost:3432/api/prompts/prompt_abc123" \
 ```
 
 #### DELETE `/api/prompts/[id]`
+
 Delete a prompt.
 
 **Authentication**: Session or API Key
 
 **Response**:
+
 ```json
 {
-  "success": true
+	"success": true
 }
 ```
 
 **CURL Example**:
+
 ```bash
 curl -X DELETE "http://localhost:3432/api/prompts/prompt_abc123" \
   -H "Authorization: Bearer your_api_key"
@@ -833,81 +928,88 @@ curl -X DELETE "http://localhost:3432/api/prompts/prompt_abc123" \
 Scheduled tasks run prompts on a cron, interval, or one-time schedule. All times use the user's timezone setting.
 
 #### GET `/api/scheduled-tasks`
+
 List all scheduled tasks for the user.
 
 **Authentication**: Session or API Key
 
 **Response**:
+
 ```json
 [
-  {
-    "id": "string",
-    "name": "string",
-    "description": "string | null",
-    "enabled": "boolean",
-    "scheduleType": "cron | interval | once",
-    "cronExpression": "string | null",
-    "intervalSeconds": "number | null",
-    "runAt": "date | null",
-    "payload": "object",
-    "nextRunAt": "date | null",
-    "lastRunAt": "date | null",
-    "lastRunStatus": "queued | error | null",
-    "lastRunError": "string | null",
-    "createdAt": "date",
-    "updatedAt": "date"
-  }
+	{
+		"id": "string",
+		"name": "string",
+		"description": "string | null",
+		"enabled": "boolean",
+		"scheduleType": "cron | interval | once",
+		"cronExpression": "string | null",
+		"intervalSeconds": "number | null",
+		"runAt": "date | null",
+		"payload": "object",
+		"nextRunAt": "date | null",
+		"lastRunAt": "date | null",
+		"lastRunStatus": "queued | error | null",
+		"lastRunError": "string | null",
+		"createdAt": "date",
+		"updatedAt": "date"
+	}
 ]
 ```
 
 **CURL Example**:
+
 ```bash
 curl -X GET "http://localhost:3432/api/scheduled-tasks" \
   -H "Authorization: Bearer your_api_key"
 ```
 
 #### POST `/api/scheduled-tasks`
+
 Create a scheduled task.
 
 **Authentication**: Session or API Key
 
 **Request Body**:
+
 ```json
 {
-  "name": "string (required)",
-  "description": "string (optional)",
-  "enabled": "boolean (optional, default true)",
-  "schedule": {
-    "type": "cron | interval | once",
-    "cron": "string (required if type=cron)",
-    "intervalSeconds": "number (required if type=interval)",
-    "runAt": "string (ISO date, required if type=once)"
-  },
-  "payload": {
-    "message": "string (required if conversation_id not provided)",
-    "model_id": "string (required)",
-    "assistant_id": "string (optional)",
-    "project_id": "string (optional)",
-    "conversation_id": "string (optional)",
-    "web_search_mode": "off | standard | deep (optional)",
-    "web_search_provider": "linkup | tavily | exa | kagi | perplexity | valyu | brave | brave-pro | brave-research (optional)",
-    "reasoning_effort": "low | medium | high (optional)"
-  }
+	"name": "string (required)",
+	"description": "string (optional)",
+	"enabled": "boolean (optional, default true)",
+	"schedule": {
+		"type": "cron | interval | once",
+		"cron": "string (required if type=cron)",
+		"intervalSeconds": "number (required if type=interval)",
+		"runAt": "string (ISO date, required if type=once)"
+	},
+	"payload": {
+		"message": "string (required if conversation_id not provided)",
+		"model_id": "string (required)",
+		"assistant_id": "string (optional)",
+		"project_id": "string (optional)",
+		"conversation_id": "string (optional)",
+		"web_search_mode": "off | standard | deep (optional)",
+		"web_search_provider": "linkup | tavily | exa | kagi | perplexity | valyu | brave | brave-pro | brave-research (optional)",
+		"reasoning_effort": "low | medium | high (optional)"
+	}
 }
 ```
 
 **Response**:
+
 ```json
 {
-  "id": "string",
-  "name": "string",
-  "scheduleType": "cron | interval | once",
-  "nextRunAt": "date | null",
-  "...": "other task fields"
+	"id": "string",
+	"name": "string",
+	"scheduleType": "cron | interval | once",
+	"nextRunAt": "date | null",
+	"...": "other task fields"
 }
 ```
 
 **CURL Example**:
+
 ```bash
 curl -X POST "http://localhost:3432/api/scheduled-tasks" \
   -H "Content-Type: application/json" \
@@ -920,22 +1022,25 @@ curl -X POST "http://localhost:3432/api/scheduled-tasks" \
 ```
 
 #### PATCH `/api/scheduled-tasks/[id]`
+
 Update a scheduled task.
 
 **Authentication**: Session or API Key
 
 **Request Body**:
+
 ```json
 {
-  "name": "string (optional)",
-  "description": "string | null (optional)",
-  "enabled": "boolean (optional)",
-  "schedule": "schedule object (optional)",
-  "payload": "payload object (optional)"
+	"name": "string (optional)",
+	"description": "string | null (optional)",
+	"enabled": "boolean (optional)",
+	"schedule": "schedule object (optional)",
+	"payload": "payload object (optional)"
 }
 ```
 
 **CURL Example**:
+
 ```bash
 curl -X PATCH "http://localhost:3432/api/scheduled-tasks/task_abc123" \
   -H "Content-Type: application/json" \
@@ -944,41 +1049,47 @@ curl -X PATCH "http://localhost:3432/api/scheduled-tasks/task_abc123" \
 ```
 
 #### DELETE `/api/scheduled-tasks/[id]`
+
 Delete a scheduled task.
 
 **Authentication**: Session or API Key
 
 **Response**:
+
 ```json
 {
-  "ok": true
+	"ok": true
 }
 ```
 
 **CURL Example**:
+
 ```bash
 curl -X DELETE "http://localhost:3432/api/scheduled-tasks/task_abc123" \
   -H "Authorization: Bearer your_api_key"
 ```
 
 #### POST `/api/scheduled-tasks/[id]/run`
+
 Run a scheduled task immediately.
 
 **Authentication**: Session or API Key
 
 **Response**:
+
 ```json
 {
-  "status": "queued | error",
-  "error": "string (optional)",
-  "result": {
-    "ok": true,
-    "conversation_id": "string"
-  }
+	"status": "queued | error",
+	"error": "string (optional)",
+	"result": {
+		"ok": true,
+		"conversation_id": "string"
+	}
 }
 ```
 
 **CURL Example**:
+
 ```bash
 curl -X POST "http://localhost:3432/api/scheduled-tasks/task_abc123/run" \
   -H "Authorization: Bearer your_api_key"
@@ -989,11 +1100,13 @@ curl -X POST "http://localhost:3432/api/scheduled-tasks/task_abc123/run" \
 ### Projects
 
 #### GET `/api/projects`
+
 List all projects the user owns or is a member of.
 
 **Authentication**: Session or API Key
 
 **Response**:
+
 ```json
 [
   {
@@ -1008,27 +1121,31 @@ List all projects the user owns or is a member of.
 ```
 
 **CURL Example**:
+
 ```bash
 curl -X GET "http://localhost:3432/api/projects" \
   -b "session_cookie=your_session"
 ```
 
 #### POST `/api/projects`
+
 Create a new project.
 
 **Authentication**: Session or API Key
 
 **Request Body**:
+
 ```json
 {
-  "name": "string (1-100 chars)",
-  "description": "string (optional, max 1000 chars)",
-  "systemPrompt": "string (optional, max 10000 chars)",
-  "color": "string (optional, max 20 chars)"
+	"name": "string (1-100 chars)",
+	"description": "string (optional, max 1000 chars)",
+	"systemPrompt": "string (optional, max 10000 chars)",
+	"color": "string (optional, max 20 chars)"
 }
 ```
 
 **Response**:
+
 ```json
 {
   "id": "string",
@@ -1038,6 +1155,7 @@ Create a new project.
 ```
 
 **CURL Example**:
+
 ```bash
 curl -X POST "http://localhost:3432/api/projects" \
   -H "Content-Type: application/json" \
@@ -1046,11 +1164,13 @@ curl -X POST "http://localhost:3432/api/projects" \
 ```
 
 #### GET `/api/projects/[id]`
+
 Get a single project with all details.
 
 **Authentication**: Session or API Key
 
 **Response**:
+
 ```json
 {
   "id": "string",
@@ -1063,27 +1183,31 @@ Get a single project with all details.
 ```
 
 **CURL Example**:
+
 ```bash
 curl -X GET "http://localhost:3432/api/projects/proj_abc123" \
   -b "session_cookie=your_session"
 ```
 
 #### PATCH `/api/projects/[id]`
+
 Update a project.
 
 **Authentication**: Session or API Key (owner or editor)
 
 **Request Body**:
+
 ```json
 {
-  "name": "string (optional)",
-  "description": "string (optional)",
-  "systemPrompt": "string (optional)",
-  "color": "string (optional)"
+	"name": "string (optional)",
+	"description": "string (optional)",
+	"systemPrompt": "string (optional)",
+	"color": "string (optional)"
 }
 ```
 
 **CURL Example**:
+
 ```bash
 curl -X PATCH "http://localhost:3432/api/projects/proj_abc123" \
   -H "Content-Type: application/json" \
@@ -1092,11 +1216,13 @@ curl -X PATCH "http://localhost:3432/api/projects/proj_abc123" \
 ```
 
 #### DELETE `/api/projects/[id]`
+
 Delete a project.
 
 **Authentication**: Session or API Key (owner only)
 
 **CURL Example**:
+
 ```bash
 curl -X DELETE "http://localhost:3432/api/projects/proj_abc123" \
   -b "session_cookie=your_session"
@@ -1107,59 +1233,67 @@ curl -X DELETE "http://localhost:3432/api/projects/proj_abc123" \
 ### Project Files
 
 #### GET `/api/projects/[id]/files`
+
 List all files in a project.
 
 **Authentication**: Session or API Key (owner, editor, or viewer)
 
 **Response**:
+
 ```json
 [
-  {
-    "id": "string",
-    "projectId": "string",
-    "storageId": "string",
-    "fileName": "string",
-    "fileType": "pdf | markdown | text | epub",
-    "createdAt": "date",
-    "storage": {
-      "id": "string",
-      "url": "string"
-    }
-  }
+	{
+		"id": "string",
+		"projectId": "string",
+		"storageId": "string",
+		"fileName": "string",
+		"fileType": "pdf | markdown | text | epub",
+		"createdAt": "date",
+		"storage": {
+			"id": "string",
+			"url": "string"
+		}
+	}
 ]
 ```
 
 **CURL Example**:
+
 ```bash
 curl -X GET "http://localhost:3432/api/projects/proj_abc123/files" \
   -b "session_cookie=your_session"
 ```
 
 #### POST `/api/projects/[id]/files`
+
 Upload a file to a project. Supports PDF, Markdown, Text, and EPUB files.
 
 **Authentication**: Session or API Key (owner or editor)
 
 **Request Body** (FormData):
+
 - `file`: Binary file (PDF, Markdown, Text, or EPUB)
 
 **Limits**:
+
 - Max file size: 100MB
 
 **Response**:
+
 ```json
 {
-  "id": "string",
-  "projectId": "string",
-  "storageId": "string",
-  "fileName": "string",
-  "fileType": "pdf | markdown | text | epub",
-  "extractedContent": "string | null",
-  "createdAt": "date"
+	"id": "string",
+	"projectId": "string",
+	"storageId": "string",
+	"fileName": "string",
+	"fileType": "pdf | markdown | text | epub",
+	"extractedContent": "string | null",
+	"createdAt": "date"
 }
 ```
 
 **CURL Example**:
+
 ```bash
 curl -X POST "http://localhost:3432/api/projects/proj_abc123/files" \
   -b "session_cookie=your_session" \
@@ -1167,21 +1301,25 @@ curl -X POST "http://localhost:3432/api/projects/proj_abc123/files" \
 ```
 
 #### DELETE `/api/projects/[id]/files`
+
 Delete a file from a project.
 
 **Authentication**: Session or API Key (owner or editor)
 
 **Query Parameters**:
+
 - `fileId`: (Required) The file ID to delete.
 
 **Response**:
+
 ```json
 {
-  "success": true
+	"success": true
 }
 ```
 
 **CURL Example**:
+
 ```bash
 curl -X DELETE "http://localhost:3432/api/projects/proj_abc123/files?fileId=file_xyz" \
   -b "session_cookie=your_session"
@@ -1192,63 +1330,70 @@ curl -X DELETE "http://localhost:3432/api/projects/proj_abc123/files?fileId=file
 ### Project Members
 
 #### GET `/api/projects/[id]/members`
+
 List all members of a project, including the owner.
 
 **Authentication**: Session or API Key (owner or member)
 
 **Response**:
+
 ```json
 [
-  {
-    "id": "string",
-    "userId": "string",
-    "role": "owner | editor | viewer",
-    "user": {
-      "id": "string",
-      "name": "string",
-      "email": "string",
-      "image": "string | null"
-    }
-  }
+	{
+		"id": "string",
+		"userId": "string",
+		"role": "owner | editor | viewer",
+		"user": {
+			"id": "string",
+			"name": "string",
+			"email": "string",
+			"image": "string | null"
+		}
+	}
 ]
 ```
 
 **CURL Example**:
+
 ```bash
 curl -X GET "http://localhost:3432/api/projects/proj_abc123/members" \
   -b "session_cookie=your_session"
 ```
 
 #### POST `/api/projects/[id]/members`
+
 Add a member to a project by email.
 
 **Authentication**: Session or API Key (owner only)
 
 **Request Body**:
+
 ```json
 {
-  "email": "string (valid email)",
-  "role": "editor | viewer (default: viewer)"
+	"email": "string (valid email)",
+	"role": "editor | viewer (default: viewer)"
 }
 ```
 
 **Response**:
+
 ```json
 {
-  "id": "string",
-  "projectId": "string",
-  "userId": "string",
-  "role": "string",
-  "user": {
-    "id": "string",
-    "name": "string",
-    "email": "string",
-    "image": "string | null"
-  }
+	"id": "string",
+	"projectId": "string",
+	"userId": "string",
+	"role": "string",
+	"user": {
+		"id": "string",
+		"name": "string",
+		"email": "string",
+		"image": "string | null"
+	}
 }
 ```
 
 **CURL Example**:
+
 ```bash
 curl -X POST "http://localhost:3432/api/projects/proj_abc123/members" \
   -H "Content-Type: application/json" \
@@ -1257,21 +1402,25 @@ curl -X POST "http://localhost:3432/api/projects/proj_abc123/members" \
 ```
 
 #### DELETE `/api/projects/[id]/members`
+
 Remove a member from a project.
 
 **Authentication**: Session or API Key (owner, or self-removal)
 
 **Query Parameters**:
+
 - `userId`: (Required) The user ID to remove.
 
 **Response**:
+
 ```json
 {
-  "success": true
+	"success": true
 }
 ```
 
 **CURL Example**:
+
 ```bash
 curl -X DELETE "http://localhost:3432/api/projects/proj_abc123/members?userId=user_xyz" \
   -b "session_cookie=your_session"
@@ -1280,31 +1429,37 @@ curl -X DELETE "http://localhost:3432/api/projects/proj_abc123/members?userId=us
 ---
 
 ### Storage
+
 Files are private by default. Access is granted to the uploader, project members when the file is attached to a project, and anyone when the file is attached to a public conversation.
 
 #### POST `/api/storage`
+
 Upload a file.
 
 **Authentication**: Session or API Key
 
 **Headers**:
+
 - `Content-Type`: Mime type of the file.
 - `x-filename`: (Optional) Original filename.
 
 **Limits**:
+
 - Max file size: 100MB
 
 **Request Body**: Binary file content.
 
 **Response**:
+
 ```json
 {
-  "storageId": "string",
-  "url": "string"
+	"storageId": "string",
+	"url": "string"
 }
 ```
 
 **CURL Example**:
+
 ```bash
 curl -X POST "http://localhost:3432/api/storage" \
   -H "Content-Type: image/png" \
@@ -1314,50 +1469,57 @@ curl -X POST "http://localhost:3432/api/storage" \
 ```
 
 #### GET `/api/storage`
+
 Get file metadata/URL by ID.
 
 **Authentication**: Session or API Key (owner or project member). Public if attached to a public conversation.
 
 **Query Parameters**:
+
 - `id`: Storage ID.
 
 **Response**:
+
 ```json
 {
-  "url": "/api/storage/..."
+	"url": "/api/storage/..."
 }
 ```
 
 **CURL Example**:
+
 ```bash
 curl -X GET "http://localhost:3432/api/storage?id=store_abc123"
 ```
 
 #### GET `/api/storage/gallery`
+
 List user-scoped files for the gallery view.
 
 **Authentication**: Session or API Key
 
 **Response**:
+
 ```json
 [
-  {
-    "id": "string",
-    "filename": "string",
-    "mimeType": "string",
-    "size": 12345,
-    "createdAt": "2025-12-15T12:00:00.000Z",
-    "url": "/api/storage/store_abc123",
-    "source": "generated_image | message_document | project_file | unlinked",
-    "conversationId": "conv_abc123",
-    "conversationTitle": "Project ideas",
-    "projectId": "proj_abc123",
-    "projectName": "Design Project"
-  }
+	{
+		"id": "string",
+		"filename": "string",
+		"mimeType": "string",
+		"size": 12345,
+		"createdAt": "2025-12-15T12:00:00.000Z",
+		"url": "/api/storage/store_abc123",
+		"source": "generated_image | message_document | project_file | unlinked",
+		"conversationId": "conv_abc123",
+		"conversationTitle": "Project ideas",
+		"projectId": "proj_abc123",
+		"projectName": "Design Project"
+	}
 ]
 ```
 
 Notes:
+
 - Files are filtered to the authenticated user and exclude avatar files.
 - `source` indicates how the file is referenced:
   - `generated_image`: Used in a chat message `images` array.
@@ -1366,12 +1528,14 @@ Notes:
   - `unlinked`: Not currently referenced by a conversation/project message.
 
 **CURL Example**:
+
 ```bash
 curl -X GET "http://localhost:3432/api/storage/gallery" \
   -b "session_cookie=your_session"
 ```
 
 #### GET `/api/storage/[id]`
+
 Serve the raw file content.
 
 **Authentication**: Session or API Key (owner or project member). Public if attached to a public conversation.
@@ -1379,26 +1543,31 @@ Serve the raw file content.
 **Response**: Raw file content with appropriate Content-Type.
 
 **CURL Example**:
+
 ```bash
 curl -X GET "http://localhost:3432/api/storage/store_abc123" --output file.png
 ```
 
 #### DELETE `/api/storage`
+
 Delete a file.
 
 **Authentication**: Session or API Key (User must own the file)
 
 **Query Parameters**:
+
 - `id`: Storage ID.
 
 **Response**:
+
 ```json
 {
-  "ok": true
+	"ok": true
 }
 ```
 
 **CURL Example**:
+
 ```bash
 curl -X DELETE "http://localhost:3432/api/storage?id=store_abc123" \
   -b "session_cookie=your_session"
@@ -1409,19 +1578,22 @@ curl -X DELETE "http://localhost:3432/api/storage?id=store_abc123" \
 ### Utilities
 
 #### POST `/api/cancel-generation`
+
 Cancel an active message generation.
 
 **Authentication**: Session or API Key (must own conversation)
 
 **Request Body**:
+
 ```json
 {
-  "conversation_id": "string",
-  "session_token": "string"
+	"conversation_id": "string",
+	"session_token": "string"
 }
 ```
 
 **Response**:
+
 ```json
 {
   "ok": true,
@@ -1430,6 +1602,7 @@ Cancel an active message generation.
 ```
 
 **CURL Example**:
+
 ```bash
 curl -X POST "http://localhost:3432/api/cancel-generation" \
   -H "Content-Type: application/json" \
@@ -1438,26 +1611,30 @@ curl -X POST "http://localhost:3432/api/cancel-generation" \
 ```
 
 #### POST `/api/enhance-prompt`
+
 Enhance a prompt using an LLM to make it better for generation.
 
 **Authentication**: Session or API Key
 
 **Request Body**:
+
 ```json
 {
-  "prompt": "string"
+	"prompt": "string"
 }
 ```
 
 **Response**:
+
 ```json
 {
-  "ok": true,
-  "enhanced_prompt": "string"
+	"ok": true,
+	"enhanced_prompt": "string"
 }
 ```
 
 **CURL Example**:
+
 ```bash
 curl -X POST "http://localhost:3432/api/enhance-prompt" \
   -H "Content-Type: application/json" \
@@ -1466,18 +1643,21 @@ curl -X POST "http://localhost:3432/api/enhance-prompt" \
 ```
 
 #### POST `/api/cleanup-temp-conversations`
+
 Cleanup temporary conversations from previous sessions.
 
 **Authentication**: Session or API Key
 
 **Response**:
+
 ```json
 {
-  "ok": true
+	"ok": true
 }
 ```
 
 **CURL Example**:
+
 ```bash
 curl -X POST "http://localhost:3432/api/cleanup-temp-conversations" \
   -b "session_cookie=your_session"
@@ -1488,34 +1668,38 @@ curl -X POST "http://localhost:3432/api/cleanup-temp-conversations" \
 ### Conversations
 
 #### GET `/api/db/conversations`
+
 List all conversations for the user, or get a specific conversation by ID.
 
 **Authentication**: Session or API Key (or Public for shared conversations)
 
 **Query Parameters**:
+
 - `id`: (Optional) Conversation ID to fetch a specific conversation.
 - `projectId`: (Optional) Filter by project. Use `"null"` for non-project conversations.
 - `search`: (Optional) Search term for conversation search.
 - `mode`: (Optional) Search mode: `'exact'`, `'words'`, or `'fuzzy'`.
 
 **Response** (list):
+
 ```json
 [
-  {
-    "id": "string",
-    "title": "string",
-    "userId": "string",
-    "projectId": "string | null",
-    "pinned": "boolean",
-    "generating": "boolean",
-    "costUsd": "number | null",
-    "createdAt": "date",
-    "updatedAt": "date"
-  }
+	{
+		"id": "string",
+		"title": "string",
+		"userId": "string",
+		"projectId": "string | null",
+		"pinned": "boolean",
+		"generating": "boolean",
+		"costUsd": "number | null",
+		"createdAt": "date",
+		"updatedAt": "date"
+	}
 ]
 ```
 
 **CURL Example**:
+
 ```bash
 curl -X GET "http://localhost:3432/api/db/conversations" \
   -b "session_cookie=your_session"
@@ -1526,11 +1710,13 @@ curl -X GET "http://localhost:3432/api/db/conversations?search=python&mode=fuzzy
 ```
 
 #### POST `/api/db/conversations`
+
 Create or update conversations.
 
 **Authentication**: Session or API Key
 
 **Request Body**:
+
 ```json
 {
   "action": "create" | "createWithMessage" | "branch" | "updateTitle" | "setProject" | "updateGenerating" | "updateCost" | "setPublic" | "togglePin",
@@ -1539,6 +1725,7 @@ Create or update conversations.
 ```
 
 **Actions**:
+
 - `create`: Create new conversation. Fields: `title`, `projectId`.
 - `createWithMessage`: Create conversation with first message. Fields: `content`, `contentHtml`, `role`, `images`, `webSearchEnabled`, `projectId`.
 - `branch`: Branch from existing message. Fields: `conversationId`, `fromMessageId`.
@@ -1547,7 +1734,13 @@ Create or update conversations.
 - `setPublic`: Make conversation public. Fields: `conversationId`, `public`.
 - `togglePin`: Toggle pin status. Fields: `conversationId`.
 
+**Security Notes**:
+
+- Any supplied `contentHtml` is sanitized server-side before storage.
+- `branch`, `updateTitle`, `setProject`, `updateGenerating`, `updateCost`, `setPublic`, and `togglePin` only operate on conversations the authenticated caller owns.
+
 **CURL Example**:
+
 ```bash
 curl -X POST "http://localhost:3432/api/db/conversations" \
   -H "Content-Type: application/json" \
@@ -1556,15 +1749,18 @@ curl -X POST "http://localhost:3432/api/db/conversations" \
 ```
 
 #### DELETE `/api/db/conversations`
+
 Delete a conversation or all conversations.
 
 **Authentication**: Session or API Key
 
 **Query Parameters**:
+
 - `id`: Conversation ID to delete.
 - `all`: Set to `"true"` to delete all conversations.
 
 **CURL Example**:
+
 ```bash
 curl -X DELETE "http://localhost:3432/api/db/conversations?id=conv_abc123" \
   -b "session_cookie=your_session"
@@ -1575,15 +1771,18 @@ curl -X DELETE "http://localhost:3432/api/db/conversations?id=conv_abc123" \
 ### Messages
 
 #### GET `/api/db/messages`
+
 Get messages for a conversation.
 
 **Authentication**: Session or API Key (or Public for public conversations)
 
 **Query Parameters**:
+
 - `conversationId`: (Required) Conversation ID.
 - `public`: Set to `"true"` for public conversations.
 
 **Response**:
+
 ```json
 [
   {
@@ -1603,17 +1802,20 @@ Get messages for a conversation.
 ```
 
 **CURL Example**:
+
 ```bash
 curl -X GET "http://localhost:3432/api/db/messages?conversationId=conv_abc123" \
   -b "session_cookie=your_session"
 ```
 
 #### POST `/api/db/messages`
+
 Create or update messages.
 
 **Authentication**: Session or API Key
 
 **Request Body**:
+
 ```json
 {
   "action": "create" | "updateContent" | "update" | "updateError" | "delete" | "setStarred",
@@ -1621,16 +1823,23 @@ Create or update messages.
 }
 ```
 
+**Security Notes**:
+
+- Any supplied `contentHtml` is sanitized server-side before storage.
+- `updateContent`, `update`, `updateError`, `delete`, and `setStarred` only operate on messages inside conversations owned by the authenticated caller.
+
 **Action: `setStarred`**
+
 ```json
 {
-  "action": "setStarred",
-  "messageId": "string",
-  "starred": true
+	"action": "setStarred",
+	"messageId": "string",
+	"starred": true
 }
 ```
 
 **CURL Example**:
+
 ```bash
 curl -X POST "http://localhost:3432/api/db/messages" \
   -H "Content-Type: application/json" \
@@ -1639,6 +1848,7 @@ curl -X POST "http://localhost:3432/api/db/messages" \
 ```
 
 **CURL Example (`setStarred`)**:
+
 ```bash
 curl -X POST "http://localhost:3432/api/db/messages" \
   -H "Content-Type: application/json" \
@@ -1647,11 +1857,13 @@ curl -X POST "http://localhost:3432/api/db/messages" \
 ```
 
 #### GET `/api/starred-messages`
+
 Get all starred messages for the current user.
 
 **Authentication**: Session or API Key
 
 **Response**:
+
 ```json
 [
   {
@@ -1671,6 +1883,7 @@ Get all starred messages for the current user.
 ```
 
 **CURL Example**:
+
 ```bash
 curl -X GET "http://localhost:3432/api/starred-messages" \
   -b "session_cookie=your_session"
@@ -1681,35 +1894,39 @@ curl -X GET "http://localhost:3432/api/starred-messages" \
 ### Message Interactions
 
 #### POST `/api/db/message-interactions`
+
 Log a user interaction with a message (regenerate, edit, copy, share).
 
 **Authentication**: Session or API Key
 
 **Request Body**:
+
 ```json
 {
-  "messageId": "string (required)",
-  "action": "regenerate | edit | copy | share",
-  "metadata": "object (optional)"
+	"messageId": "string (required)",
+	"action": "regenerate | edit | copy | share",
+	"metadata": "object (optional)"
 }
 ```
 
 **Response**:
+
 ```json
 {
-  "success": true,
-  "interaction": {
-    "id": "string",
-    "messageId": "string",
-    "userId": "string",
-    "action": "string",
-    "metadata": "object | null",
-    "createdAt": "date"
-  }
+	"success": true,
+	"interaction": {
+		"id": "string",
+		"messageId": "string",
+		"userId": "string",
+		"action": "string",
+		"metadata": "object | null",
+		"createdAt": "date"
+	}
 }
 ```
 
 **CURL Example**:
+
 ```bash
 curl -X POST "http://localhost:3432/api/db/message-interactions" \
   -H "Content-Type: application/json" \
@@ -1722,39 +1939,43 @@ curl -X POST "http://localhost:3432/api/db/message-interactions" \
 ### Message Ratings
 
 #### POST `/api/db/message-ratings`
+
 Rate a message (thumbs up/down, star rating, feedback).
 
 **Authentication**: Session or API Key
 
 **Request Body**:
+
 ```json
 {
-  "messageId": "string (required)",
-  "thumbs": "up | down (optional)",
-  "rating": "number 1-5 (optional)",
-  "categories": "array of strings (optional)",
-  "feedback": "string (optional)"
+	"messageId": "string (required)",
+	"thumbs": "up | down (optional)",
+	"rating": "number 1-5 (optional)",
+	"categories": "array of strings (optional)",
+	"feedback": "string (optional)"
 }
 ```
 
 **Response**:
+
 ```json
 {
-  "success": true,
-  "rating": {
-    "id": "string",
-    "messageId": "string",
-    "userId": "string",
-    "thumbs": "string | null",
-    "rating": "number | null",
-    "categories": "array | null",
-    "feedback": "string | null",
-    "createdAt": "date"
-  }
+	"success": true,
+	"rating": {
+		"id": "string",
+		"messageId": "string",
+		"userId": "string",
+		"thumbs": "string | null",
+		"rating": "number | null",
+		"categories": "array | null",
+		"feedback": "string | null",
+		"createdAt": "date"
+	}
 }
 ```
 
 **CURL Example**:
+
 ```bash
 curl -X POST "http://localhost:3432/api/db/message-ratings" \
   -H "Content-Type: application/json" \
@@ -1767,14 +1988,17 @@ curl -X POST "http://localhost:3432/api/db/message-ratings" \
 ### Model Performance
 
 #### GET `/api/db/model-performance`
+
 Get model performance statistics for the user.
 
 **Authentication**: Session or API Key
 
 **Query Parameters**:
+
 - `recalculate`: Set to `"true"` to recalculate stats from scratch.
 
 **Response**:
+
 ```json
 {
   "success": true,
@@ -1791,6 +2015,7 @@ Get model performance statistics for the user.
 ```
 
 **CURL Example**:
+
 ```bash
 curl -X GET "http://localhost:3432/api/db/model-performance" \
   -b "session_cookie=your_session"
@@ -1805,51 +2030,55 @@ curl -X GET "http://localhost:3432/api/db/model-performance?recalculate=true" \
 ### Analytics
 
 #### GET `/api/analytics`
+
 Get model analytics for the user (stats + insights).
 
 **Authentication**: Session or API Key
 
 **Query Parameters**:
+
 - `recalculate`: Set to `"false"` to use cached stats. Defaults to `"true"`.
 
 **Response**:
+
 ```json
 {
-  "success": true,
-  "stats": [
-    {
-      "id": "string",
-      "modelId": "string",
-      "provider": "string",
-      "totalMessages": "number",
-      "avgRating": "number | null",
-      "thumbsUpCount": "number",
-      "thumbsDownCount": "number",
-      "regenerateCount": "number",
-      "avgResponseTime": "number | null",
-      "avgTokens": "number | null",
-      "totalCost": "number",
-      "errorCount": "number",
-      "accurateCount": "number",
-      "helpfulCount": "number",
-      "creativeCount": "number",
-      "fastCount": "number",
-      "costEffectiveCount": "number"
-    }
-  ],
-  "insights": {
-    "totalMessages": "number",
-    "totalCost": "number",
-    "avgRating": "number | null",
-    "mostUsedModel": "ModelPerformanceStat | null",
-    "bestRatedModel": "ModelPerformanceStat | null",
-    "mostCostEffective": "ModelPerformanceStat | null",
-    "fastestModel": "ModelPerformanceStat | null"
-  }
+	"success": true,
+	"stats": [
+		{
+			"id": "string",
+			"modelId": "string",
+			"provider": "string",
+			"totalMessages": "number",
+			"avgRating": "number | null",
+			"thumbsUpCount": "number",
+			"thumbsDownCount": "number",
+			"regenerateCount": "number",
+			"avgResponseTime": "number | null",
+			"avgTokens": "number | null",
+			"totalCost": "number",
+			"errorCount": "number",
+			"accurateCount": "number",
+			"helpfulCount": "number",
+			"creativeCount": "number",
+			"fastCount": "number",
+			"costEffectiveCount": "number"
+		}
+	],
+	"insights": {
+		"totalMessages": "number",
+		"totalCost": "number",
+		"avgRating": "number | null",
+		"mostUsedModel": "ModelPerformanceStat | null",
+		"bestRatedModel": "ModelPerformanceStat | null",
+		"mostCostEffective": "ModelPerformanceStat | null",
+		"fastestModel": "ModelPerformanceStat | null"
+	}
 }
 ```
 
 **CURL Example**:
+
 ```bash
 curl -X GET "http://localhost:3432/api/analytics" \
   -b "session_cookie=your_session"
@@ -1864,11 +2093,13 @@ curl -X GET "http://localhost:3432/api/analytics?recalculate=false" \
 ### User Settings
 
 #### GET `/api/db/user-settings`
+
 Get user settings.
 
 **Authentication**: Session or API Key
 
 **Response**:
+
 ```json
 {
   "userId": "string",
@@ -1885,21 +2116,25 @@ Get user settings.
   ...
 }
 ```
+
 **Note**: Secret values such as `karakeepApiKey` are never returned by this endpoint.
 Responses include `Cache-Control: private, no-store`.
 
 **CURL Example**:
+
 ```bash
 curl -X GET "http://localhost:3432/api/db/user-settings" \
   -b "session_cookie=your_session"
 ```
 
 #### POST `/api/db/user-settings`
+
 Update user settings.
 
 **Authentication**: Session or API Key
 
 **Request Body**:
+
 ```json
 {
   "action": "update",
@@ -1915,11 +2150,13 @@ Update user settings.
   ...
 }
 ```
+
 **Response**: Same as `GET /api/db/user-settings`. Secret values are omitted from responses.
 **Note**: Writing `karakeepApiKey` requires `ENCRYPTION_KEY` to be configured; otherwise the endpoint returns `503`.
 Responses include `Cache-Control: private, no-store`.
 
 **CURL Example**:
+
 ```bash
 curl -X POST "http://localhost:3432/api/db/user-settings" \
   -H "Content-Type: application/json" \
@@ -1932,14 +2169,17 @@ curl -X POST "http://localhost:3432/api/db/user-settings" \
 ### User Provider Keys
 
 #### GET `/api/db/user-keys`
+
 Get provider key status for the current user without returning the underlying secret.
 
 **Authentication**: Session or API Key
 
 **Query Parameters**:
+
 - `provider`: (Optional) Get status for a specific provider (e.g., "nanogpt", "openai").
 
 **Response**:
+
 ```json
 // Single provider
 {
@@ -1959,10 +2199,12 @@ Get provider key status for the current user without returning the underlying se
   }
 }
 ```
+
 **Note**: This endpoint never returns raw or encrypted provider keys.
 Responses include `Cache-Control: private, no-store`.
 
 **CURL Example**:
+
 ```bash
 curl -X GET "http://localhost:3432/api/db/user-keys" \
   -b "session_cookie=your_session"
@@ -1973,31 +2215,36 @@ curl -X GET "http://localhost:3432/api/db/user-keys?provider=nanogpt" \
 ```
 
 #### POST `/api/db/user-keys`
+
 Set an API key for a provider.
 
 **Authentication**: Session or API Key
 
 **Request Body**:
+
 ```json
 {
-  "provider": "string (required)",
-  "key": "string (required)"
+	"provider": "string (required)",
+	"key": "string (required)"
 }
 ```
 
 **Response**:
+
 ```json
 {
-  "ok": true,
-  "provider": "string",
-  "createdAt": "date",
-  "updatedAt": "date"
+	"ok": true,
+	"provider": "string",
+	"createdAt": "date",
+	"updatedAt": "date"
 }
 ```
+
 **Note**: Writing provider keys requires `ENCRYPTION_KEY` to be configured; otherwise the endpoint returns `503`.
 Responses include `Cache-Control: private, no-store`.
 
 **CURL Example**:
+
 ```bash
 curl -X POST "http://localhost:3432/api/db/user-keys" \
   -H "Content-Type: application/json" \
@@ -2006,22 +2253,27 @@ curl -X POST "http://localhost:3432/api/db/user-keys" \
 ```
 
 #### DELETE `/api/db/user-keys`
+
 Delete an API key for a provider.
 
 **Authentication**: Session or API Key
 
 **Query Parameters**:
+
 - `provider`: (Required) Provider name to delete key for.
 
 **Response**:
+
 ```json
 {
-  "ok": true
+	"ok": true
 }
 ```
+
 Responses include `Cache-Control: private, no-store`.
 
 **CURL Example**:
+
 ```bash
 curl -X DELETE "http://localhost:3432/api/db/user-keys?provider=nanogpt" \
   -b "session_cookie=your_session"
@@ -2032,54 +2284,60 @@ curl -X DELETE "http://localhost:3432/api/db/user-keys?provider=nanogpt" \
 ### User Rules
 
 #### GET `/api/db/user-rules`
+
 Get all custom rules for the user.
 
 **Authentication**: Session or API Key
 
 **Response**:
+
 ```json
 [
-  {
-    "id": "string",
-    "name": "string",
-    "attach": "boolean",
-    "rule": "string",
-    "createdAt": "date",
-    "updatedAt": "date"
-  }
+	{
+		"id": "string",
+		"name": "string",
+		"attach": "boolean",
+		"rule": "string",
+		"createdAt": "date",
+		"updatedAt": "date"
+	}
 ]
 ```
 
 **CURL Example**:
+
 ```bash
 curl -X GET "http://localhost:3432/api/db/user-rules" \
   -b "session_cookie=your_session"
 ```
 
 #### POST `/api/db/user-rules`
+
 Create, update, or rename a rule.
 
 **Authentication**: Session or API Key
 
 **Request Body**:
+
 ```json
 {
-  "action": "create | update | rename",
-  // For create:
-  "name": "string",
-  "attach": "boolean",
-  "rule": "string",
-  // For update:
-  "ruleId": "string",
-  "attach": "boolean",
-  "rule": "string",
-  // For rename:
-  "ruleId": "string",
-  "name": "string"
+	"action": "create | update | rename",
+	// For create:
+	"name": "string",
+	"attach": "boolean",
+	"rule": "string",
+	// For update:
+	"ruleId": "string",
+	"attach": "boolean",
+	"rule": "string",
+	// For rename:
+	"ruleId": "string",
+	"name": "string"
 }
 ```
 
 **Response**:
+
 ```json
 {
   "id": "string",
@@ -2091,6 +2349,7 @@ Create, update, or rename a rule.
 ```
 
 **CURL Example**:
+
 ```bash
 curl -X POST "http://localhost:3432/api/db/user-rules" \
   -H "Content-Type: application/json" \
@@ -2099,21 +2358,25 @@ curl -X POST "http://localhost:3432/api/db/user-rules" \
 ```
 
 #### DELETE `/api/db/user-rules`
+
 Delete a rule.
 
 **Authentication**: Session or API Key
 
 **Query Parameters**:
+
 - `id`: (Required) Rule ID to delete.
 
 **Response**:
+
 ```json
 {
-  "ok": true
+	"ok": true
 }
 ```
 
 **CURL Example**:
+
 ```bash
 curl -X DELETE "http://localhost:3432/api/db/user-rules?id=rule_abc123" \
   -b "session_cookie=your_session"
@@ -2124,38 +2387,44 @@ curl -X DELETE "http://localhost:3432/api/db/user-rules?id=rule_abc123" \
 ### User Models
 
 #### GET `/api/db/user-models`
+
 Get enabled models for the user.
 
 **Authentication**: Session or API Key
 
 **Query Parameters**:
+
 - `provider`: (Optional) Filter by provider.
 - `modelId`: (Optional) Get specific model.
 
 **Response**:
+
 ```json
 [
-  {
-    "modelId": "string",
-    "provider": "string",
-    "enabled": "boolean",
-    "pinned": "boolean"
-  }
+	{
+		"modelId": "string",
+		"provider": "string",
+		"enabled": "boolean",
+		"pinned": "boolean"
+	}
 ]
 ```
 
 **CURL Example**:
+
 ```bash
 curl -X GET "http://localhost:3432/api/db/user-models" \
   -b "session_cookie=your_session"
 ```
 
 #### POST `/api/db/user-models`
+
 Enable/disable models or toggle pinned status.
 
 **Authentication**: Session or API Key
 
 **Request Body**:
+
 ```json
 {
   "action": "set" | "togglePinned" | "enableInitial" | "setAll",
@@ -2171,6 +2440,7 @@ When `SUBSCRIPTION_MODELS_ONLY=true` and the user uses the server NanoGPT key, o
 `subscription.included === true` are enabled.
 
 **CURL Example**:
+
 ```bash
 curl -X POST "http://localhost:3432/api/db/user-models" \
   -H "Content-Type: application/json" \
@@ -2186,65 +2456,68 @@ curl -X POST "http://localhost:3432/api/db/user-models" \
 ```
 
 #### GET `/api/models`
+
 Get all available models with capabilities and user's enabled/pinned status.
 
 **Authentication**: Session or API Key
 
 **Response**:
+
 ```json
 [
-  {
-    "id": "string",
-    "name": "string",
-    "description": "string",
-    "enabled": "boolean",
-    "pinned": "boolean",
-    "capabilities": {
-      "vision": "boolean",
-      "reasoning": "boolean",
-      "images": "boolean",
-      "video": "boolean"
-    },
-    "pricing": {
-      "prompt": "string",
-      "completion": "string",
-      "image": "string",
-      "request": "string"
-    },
-    "subscription": {
-      "included": "boolean",
-      "note": "string"
-    },
-    "resolutions": [
-        {
-            "value": "string",
-            "comment": "string"
-        }
-    ],
-    "additionalParams": {
-        "key": {
-            "type": "string",
-            "label": "string",
-            "description": "string",
-            "default": "any",
-            "options": [
-                {
-                    "label": "string",
-                    "value": "any"
-                }
-            ]
-        }
-    },
-    "maxImages": "number (optional)",
-    "defaultSettings": {
-        "resolution": "string (optional)",
-        "nImages": "number (optional)"
-    }
-  }
+	{
+		"id": "string",
+		"name": "string",
+		"description": "string",
+		"enabled": "boolean",
+		"pinned": "boolean",
+		"capabilities": {
+			"vision": "boolean",
+			"reasoning": "boolean",
+			"images": "boolean",
+			"video": "boolean"
+		},
+		"pricing": {
+			"prompt": "string",
+			"completion": "string",
+			"image": "string",
+			"request": "string"
+		},
+		"subscription": {
+			"included": "boolean",
+			"note": "string"
+		},
+		"resolutions": [
+			{
+				"value": "string",
+				"comment": "string"
+			}
+		],
+		"additionalParams": {
+			"key": {
+				"type": "string",
+				"label": "string",
+				"description": "string",
+				"default": "any",
+				"options": [
+					{
+						"label": "string",
+						"value": "any"
+					}
+				]
+			}
+		},
+		"maxImages": "number (optional)",
+		"defaultSettings": {
+			"resolution": "string (optional)",
+			"nImages": "number (optional)"
+		}
+	}
 ]
 ```
 
 **CURL Example**:
+
 ```bash
 curl -X GET "http://localhost:3432/api/models" \
   -b "session_cookie=your_session"
@@ -2253,71 +2526,76 @@ curl -X GET "http://localhost:3432/api/models" \
 ---
 
 #### GET `/api/models/[modelId]/info`
+
 Get detailed model info (including benchmarks) for a single model. Intended to be called on-demand when the user requests more details.
 
 **Authentication**: Session or API Key
 
 **Path Parameters**:
+
 - `modelId`: (Required) Model ID.
 
 **Response**:
+
 ```json
 {
-  "model": {
-    "id": "string",
-    "name": "string",
-    "description": "string",
-    "icon_url": "string",
-    "owned_by": "string",
-    "context_length": "number",
-    "max_output_tokens": "number",
-    "created": "number",
-    "pricing": {
-      "prompt": "string",
-      "completion": "string",
-      "image": "string",
-      "request": "string"
-    },
-    "cost_estimate": "number",
-    "subscription": {
-      "included": "boolean",
-      "note": "string"
-    },
-    "capabilities": {
-      "vision": "boolean",
-      "reasoning": "boolean",
-      "images": "boolean",
-      "video": "boolean"
-    }
-  },
-  "benchmarks": {
-    "available": "boolean",
-    "stale": "boolean",
-    "source": "string",
-    "source_url": "string",
-    "llm": {
-      "name": "string",
-      "slug": "string",
-      "intelligence": "number",
-      "coding": "number",
-      "math": "number",
-      "speed_tokens_per_second": "number"
-    },
-    "image": {
-      "name": "string",
-      "slug": "string",
-      "elo": "number",
-      "rank": "number"
-    }
-  }
+	"model": {
+		"id": "string",
+		"name": "string",
+		"description": "string",
+		"icon_url": "string",
+		"owned_by": "string",
+		"context_length": "number",
+		"max_output_tokens": "number",
+		"created": "number",
+		"pricing": {
+			"prompt": "string",
+			"completion": "string",
+			"image": "string",
+			"request": "string"
+		},
+		"cost_estimate": "number",
+		"subscription": {
+			"included": "boolean",
+			"note": "string"
+		},
+		"capabilities": {
+			"vision": "boolean",
+			"reasoning": "boolean",
+			"images": "boolean",
+			"video": "boolean"
+		}
+	},
+	"benchmarks": {
+		"available": "boolean",
+		"stale": "boolean",
+		"source": "string",
+		"source_url": "string",
+		"llm": {
+			"name": "string",
+			"slug": "string",
+			"intelligence": "number",
+			"coding": "number",
+			"math": "number",
+			"speed_tokens_per_second": "number"
+		},
+		"image": {
+			"name": "string",
+			"slug": "string",
+			"elo": "number",
+			"rank": "number"
+		}
+	}
 }
 ```
 
 **Notes**:
+
 - Uses cached Artificial Analysis data (1 hour TTL). `available` will be `false` if `ARTIFICIAL_ANALYSIS_API_KEY` is not configured.
 - `llm`/`image` benchmark blocks are omitted when no match is found.
 
 **CURL Example**:
+
 ```bash
 curl -X GET "http://localhost:3432/api/models/gpt-4/info" \
   -b "session_cookie=your_session"
@@ -2328,24 +2606,28 @@ curl -X GET "http://localhost:3432/api/models/gpt-4/info" \
 ### Model Providers
 
 #### GET `/api/model-providers`
+
 Get available providers for a model.
 
 **Authentication**: Session or API Key
 
 **Query Parameters**:
+
 - `modelId`: (Required) Model ID.
 
 **Response**:
+
 ```json
 {
-  "canonicalId": "string",
-  "displayName": "string",
-  "supportsProviderSelection": "boolean",
-  "providers": []
+	"canonicalId": "string",
+	"displayName": "string",
+	"supportsProviderSelection": "boolean",
+	"providers": []
 }
 ```
 
 **CURL Example**:
+
 ```bash
 curl -X GET "http://localhost:3432/api/model-providers?modelId=gpt-4" \
   -b "session_cookie=your_session"
@@ -2356,54 +2638,60 @@ curl -X GET "http://localhost:3432/api/model-providers?modelId=gpt-4" \
 ### NanoGPT Account
 
 #### POST `/api/nano-gpt/balance`
+
 Get the NanoGPT account balance.
 
 **Authentication**: Session or API Key
 Requires the authenticated user to have their own stored NanoGPT API key. The shared server key is never used for this endpoint.
 
 **Response**:
+
 ```json
 {
-  "usd_balance": "string",
-  "nano_balance": "string",
-  "nanoDepositAddress": "string | null"
+	"usd_balance": "string",
+	"nano_balance": "string",
+	"nanoDepositAddress": "string | null"
 }
 ```
 
 **CURL Example**:
+
 ```bash
 curl -X POST "http://localhost:3432/api/nano-gpt/balance" \
   -b "session_cookie=your_session"
 ```
 
 #### GET `/api/nano-gpt/subscription-usage`
+
 Get the NanoGPT subscription usage statistics.
 
 **Authentication**: Session or API Key
 Requires the authenticated user to have their own stored NanoGPT API key. The shared server key is never used for this endpoint.
 
 **Response**:
+
 ```json
 {
-  "active": "boolean",
-  "daily": {
-    "used": "number",
-    "remaining": "number",
-    "resetAt": "number"
-  },
-  "monthly": {
-    "used": "number",
-    "remaining": "number",
-    "resetAt": "number"
-  },
-  "limits": {
-    "daily": "number",
-    "monthly": "number"
-  }
+	"active": "boolean",
+	"daily": {
+		"used": "number",
+		"remaining": "number",
+		"resetAt": "number"
+	},
+	"monthly": {
+		"used": "number",
+		"remaining": "number",
+		"resetAt": "number"
+	},
+	"limits": {
+		"daily": "number",
+		"monthly": "number"
+	}
 }
 ```
 
 **CURL Example**:
+
 ```bash
 curl -X GET "http://localhost:3432/api/nano-gpt/subscription-usage" \
   -b "session_cookie=your_session"
@@ -2414,43 +2702,47 @@ curl -X GET "http://localhost:3432/api/nano-gpt/subscription-usage" \
 ### Artificial Analysis Benchmarks
 
 #### GET `/api/artificial-analysis/benchmarks`
+
 Get cached benchmark data from Artificial Analysis for LLM and image models.
 
 **Authentication**: Session
 
 **Response**:
+
 ```json
 {
-  "available": true,
-  "llms": [
-    {
-      "name": "Claude 3.5 Sonnet",
-      "slug": "claude-35-sonnet",
-      "evaluations": {
-        "intelligence_index": 64.2,
-        "coding_index": 72.1,
-        "math_index": 68.5
-      },
-      "median_output_tokens_per_second": 92.5
-    }
-  ],
-  "imageModels": [
-    {
-      "name": "DALL-E 3",
-      "slug": "dalle-3",
-      "elo": 1180,
-      "rank": 5
-    }
-  ]
+	"available": true,
+	"llms": [
+		{
+			"name": "Claude 3.5 Sonnet",
+			"slug": "claude-35-sonnet",
+			"evaluations": {
+				"intelligence_index": 64.2,
+				"coding_index": 72.1,
+				"math_index": 68.5
+			},
+			"median_output_tokens_per_second": 92.5
+		}
+	],
+	"imageModels": [
+		{
+			"name": "DALL-E 3",
+			"slug": "dalle-3",
+			"elo": 1180,
+			"rank": 5
+		}
+	]
 }
 ```
 
 **Notes**:
+
 - Returns `{ "available": false }` if `ARTIFICIAL_ANALYSIS_API_KEY` is not configured
 - Data is cached server-side for 1 hour to minimize API calls
 - Used by the model info panel to display performance benchmarks
 
 **CURL Example**:
+
 ```bash
 curl -X GET "http://localhost:3432/api/artificial-analysis/benchmarks" \
   -b "session_cookie=your_session"
@@ -2461,32 +2753,37 @@ curl -X GET "http://localhost:3432/api/artificial-analysis/benchmarks" \
 ### Provider Preferences
 
 #### GET `/api/provider-preferences`
+
 Get user's provider preferences.
 
 **Authentication**: Session or API Key
 
 **Response**:
+
 ```json
 {
-  "preferredProviders": ["openai", "anthropic"],
-  "excludedProviders": [],
-  "enableFallback": true,
-  "modelOverrides": {}
+	"preferredProviders": ["openai", "anthropic"],
+	"excludedProviders": [],
+	"enableFallback": true,
+	"modelOverrides": {}
 }
 ```
 
 **CURL Example**:
+
 ```bash
 curl -X GET "http://localhost:3432/api/provider-preferences" \
   -b "session_cookie=your_session"
 ```
 
 #### PATCH `/api/provider-preferences`
+
 Update user's provider preferences.
 
 **Authentication**: Session or API Key
 
 **Request Body**:
+
 ```json
 {
   "preferredProviders": ["string"],
@@ -2502,6 +2799,7 @@ Update user's provider preferences.
 ```
 
 **CURL Example**:
+
 ```bash
 curl -X PATCH "http://localhost:3432/api/provider-preferences" \
   -H "Content-Type: application/json" \
@@ -2510,11 +2808,13 @@ curl -X PATCH "http://localhost:3432/api/provider-preferences" \
 ```
 
 #### DELETE `/api/provider-preferences`
+
 Reset provider preferences.
 
 **Authentication**: Session or API Key
 
 **CURL Example**:
+
 ```bash
 curl -X DELETE "http://localhost:3432/api/provider-preferences" \
   -b "session_cookie=your_session"
@@ -2525,27 +2825,31 @@ curl -X DELETE "http://localhost:3432/api/provider-preferences" \
 ### Follow-up Questions
 
 #### POST `/api/generate-follow-up-questions`
+
 Generate follow-up questions for a message.
 
 **Authentication**: Session or API Key
 
 **Request Body**:
+
 ```json
 {
-  "conversationId": "string",
-  "messageId": "string"
+	"conversationId": "string",
+	"messageId": "string"
 }
 ```
 
 **Response**:
+
 ```json
 {
-  "ok": true,
-  "suggestions": ["string"]
+	"ok": true,
+	"suggestions": ["string"]
 }
 ```
 
 **CURL Example**:
+
 ```bash
 curl -X POST "http://localhost:3432/api/generate-follow-up-questions" \
   -H "Content-Type: application/json" \
@@ -2558,22 +2862,26 @@ curl -X POST "http://localhost:3432/api/generate-follow-up-questions" \
 ### User Profile
 
 #### POST `/api/user/upload-avatar`
+
 Upload an avatar image for the current user.
 
 **Authentication**: Session or API Key
 
 **Request Body** (FormData):
+
 - `file`: Image file (JPEG, PNG, GIF, or WebP, max 5MB)
 
 **Response**:
+
 ```json
 {
-  "success": true,
-  "imageUrl": "/api/storage/..."
+	"success": true,
+	"imageUrl": "/api/storage/..."
 }
 ```
 
 **CURL Example**:
+
 ```bash
 curl -X POST "http://localhost:3432/api/user/upload-avatar" \
   -b "session_cookie=your_session" \
@@ -2585,27 +2893,31 @@ curl -X POST "http://localhost:3432/api/user/upload-avatar" \
 ### KaraKeep
 
 #### POST `/api/karakeep/save-chat`
+
 Save a conversation to KaraKeep.
 
 **Authentication**: Session or API Key
 
 **Request Body**:
+
 ```json
 {
-  "conversationId": "string"
+	"conversationId": "string"
 }
 ```
 
 **Response**:
+
 ```json
 {
-  "success": true,
-  "bookmarkId": "string",
-  "message": "string"
+	"success": true,
+	"bookmarkId": "string",
+	"message": "string"
 }
 ```
 
 **CURL Example**:
+
 ```bash
 curl -X POST "http://localhost:3432/api/karakeep/save-chat" \
   -H "Content-Type: application/json" \
@@ -2618,6 +2930,7 @@ curl -X POST "http://localhost:3432/api/karakeep/save-chat" \
 ### Authentication (Better Auth)
 
 The `/api/auth/[...auth]` endpoints are handled by Better Auth and provide standard authentication flows including:
+
 - Session management
 - OAuth providers
 - Email/password authentication

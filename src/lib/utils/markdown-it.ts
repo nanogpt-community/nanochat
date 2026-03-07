@@ -2,6 +2,7 @@ import { fromAsyncCodeToHtml } from '@shikijs/markdown-it/async';
 import { h } from 'hastscript';
 import MarkdownItAsync from 'markdown-it-async';
 import { codeToHtml } from 'shiki';
+import { sanitizeHtml } from './html-sanitizer';
 
 const md = MarkdownItAsync({
 	linkify: true,
@@ -59,12 +60,9 @@ md.use(
 							'button',
 							{
 								class: 'copy',
+								type: 'button',
 								'data-code': this.source,
-								onclick: `
-          navigator.clipboard.writeText(this.dataset.code);
-          this.classList.add('copied');
-          setTimeout(() => this.classList.remove('copied'), ${3000})
-        `,
+								'data-copy-button': 'true',
 							},
 							[
 								h('span', { class: 'ready', style: 'background-color: transparent !important;' }, [
@@ -87,11 +85,19 @@ md.use(
 );
 
 // Make external links open in new tab
-const defaultLinkOpen = md.renderer.rules.link_open || function (tokens: any[], idx: number, options: any, _env: any, self: any) {
-	return self.renderToken(tokens, idx, options);
-};
+const defaultLinkOpen =
+	md.renderer.rules.link_open ||
+	function (tokens: any[], idx: number, options: any, _env: any, self: any) {
+		return self.renderToken(tokens, idx, options);
+	};
 
-md.renderer.rules.link_open = function (tokens: any[], idx: number, options: any, env: any, self: any) {
+md.renderer.rules.link_open = function (
+	tokens: any[],
+	idx: number,
+	options: any,
+	env: any,
+	self: any
+) {
 	const href = tokens[idx].attrGet('href');
 	if (href && (href.startsWith('http://') || href.startsWith('https://'))) {
 		tokens[idx].attrPush(['target', '_blank']);
@@ -99,9 +105,5 @@ md.renderer.rules.link_open = function (tokens: any[], idx: number, options: any
 	}
 	return defaultLinkOpen(tokens, idx, options, env, self);
 };
-
-function sanitizeHtml(html: string) {
-	return html;
-}
 
 export { md, sanitizeHtml };

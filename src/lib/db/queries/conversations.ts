@@ -3,6 +3,7 @@ import { conversations, messages, type Conversation, type Message } from '../sch
 import { eq, desc, and, or, isNull } from 'drizzle-orm';
 import enhancedSearch from '$lib/utils/fuzzy-search';
 import { getFirstSentence } from '$lib/utils/strings';
+import { sanitizeHtml } from '$lib/utils/html-sanitizer';
 
 export async function getUserConversations(
 	userId: string,
@@ -89,6 +90,8 @@ export async function createConversationWithMessage(
 	const now = new Date();
 	const conversationId = generateId();
 	const messageId = generateId();
+	const contentHtml =
+		messageData.contentHtml === undefined ? undefined : sanitizeHtml(messageData.contentHtml);
 
 	// Create conversation
 	await db.insert(conversations).values({
@@ -107,7 +110,7 @@ export async function createConversationWithMessage(
 		conversationId,
 		role: messageData.role,
 		content: messageData.content,
-		contentHtml: messageData.contentHtml,
+		contentHtml,
 		images: messageData.images,
 		webSearchEnabled: messageData.webSearchEnabled,
 		createdAt: now,
@@ -146,12 +149,13 @@ export async function createBranchedConversation(
 
 	// Copy messages one at a time to avoid batching issues
 	for (const msg of messagesToCopy) {
+		const contentHtml = msg.contentHtml === null ? null : sanitizeHtml(msg.contentHtml);
 		await db.insert(messages).values({
 			id: generateId(),
 			conversationId: newConversationId,
 			role: msg.role,
 			content: msg.content,
-			contentHtml: msg.contentHtml,
+			contentHtml,
 			reasoning: msg.reasoning,
 			modelId: msg.modelId,
 			provider: msg.provider,
