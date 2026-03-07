@@ -7,6 +7,7 @@ import { eq, and, sql } from 'drizzle-orm';
 import { tryGetAuthenticatedUserId } from '$lib/backend/auth-utils';
 import { getUserKey } from '$lib/db/queries';
 import { nanoGptUrl } from '$lib/backend/nano-gpt-url.server';
+import { readRedactedResponseText, redactSecrets } from '$lib/backend/secret-redaction';
 
 const COST_PER_MINUTE: Record<string, number> = {
 	'Whisper-Large-V3': 0.01,
@@ -54,7 +55,7 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 	try {
 		const formData = await request.formData();
 		const audio = formData.get('audio');
-		let model = (formData.get('model') as string) || 'Whisper-Large-V3';
+		const model = (formData.get('model') as string) || 'Whisper-Large-V3';
 		const language = (formData.get('language') as string) || 'auto';
 
 		if (!audio) {
@@ -92,14 +93,14 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 		});
 
 		if (!response.ok) {
-			const errorText = await response.text();
+			const errorText = await readRedactedResponseText(response);
 			console.error('[STT] API Error:', errorText);
 			try {
 				const jsonError = JSON.parse(errorText);
 				return json({ error: jsonError.error || 'NanoGPT API Error' }, { status: response.status });
 			} catch {
 				return json(
-					{ error: `NanoGPT API Error: ${response.statusText}`, details: errorText },
+					{ error: `NanoGPT API Error: ${response.statusText}` },
 					{ status: response.status }
 				);
 			}
@@ -205,7 +206,10 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 
 		return json(data);
 	} catch (error) {
-		console.error('[STT] Server Error:', error);
+		console.error(
+			'[STT] Server Error:',
+			error instanceof Error ? redactSecrets(error.message) : 'unknown error'
+		);
 		return json({ error: 'Internal Server Error' }, { status: 500 });
 	}
 };

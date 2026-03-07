@@ -1,10 +1,11 @@
-import { json, error, type RequestHandler } from '@sveltejs/kit';
+import { json, type RequestHandler } from '@sveltejs/kit';
 import { db } from '$lib/db';
 import { userKeys } from '$lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { decryptApiKey, isEncrypted } from '$lib/encryption';
 import { getAuthenticatedUserId } from '$lib/backend/auth-utils';
 import { nanoGptUrl } from '$lib/backend/nano-gpt-url.server';
+import { readRedactedResponseText, redactSecrets } from '$lib/backend/secret-redaction';
 
 /**
  * GET /api/model-providers?modelId=xxx
@@ -65,7 +66,7 @@ export const GET: RequestHandler = async ({ url, request }) => {
                 });
             }
 
-            const errorText = await response.text();
+            const errorText = await readRedactedResponseText(response);
             console.error('NanoGPT providers API error:', response.status, errorText);
             return json({
                 canonicalId: modelId,
@@ -78,7 +79,10 @@ export const GET: RequestHandler = async ({ url, request }) => {
         const data = await response.json();
         return json(data);
     } catch (error) {
-        console.error('Error fetching model providers:', error);
+        console.error(
+            'Error fetching model providers:',
+            error instanceof Error ? redactSecrets(error.message) : 'unknown error'
+        );
         return json({
             canonicalId: modelId,
             displayName: modelId,

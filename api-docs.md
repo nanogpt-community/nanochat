@@ -466,6 +466,7 @@ List active API keys for the current user.
 }
 ```
 **Note**: The actual key value is never returned in list responses.
+Responses include `Cache-Control: private, no-store` so key metadata is not cached by browsers or intermediaries.
 
 **CURL Example**:
 ```bash
@@ -495,6 +496,7 @@ Create a new API key.
 }
 ```
 **Note**: The key is returned only during creation. Save it securely - it cannot be retrieved again. Keys are stored encrypted in the database using AES-256-GCM and indexed by a non-reversible lookup hash. This endpoint returns `503` until `ENCRYPTION_KEY` is configured and the database schema has been updated with `npx drizzle-kit push`.
+The response is marked `Cache-Control: private, no-store`.
 
 **CURL Example**:
 ```bash
@@ -522,6 +524,7 @@ Revoke an API key.
   "success": true
 }
 ```
+Responses include `Cache-Control: private, no-store`.
 
 **CURL Example**:
 ```bash
@@ -1883,6 +1886,7 @@ Get user settings.
 }
 ```
 **Note**: Secret values such as `karakeepApiKey` are never returned by this endpoint.
+Responses include `Cache-Control: private, no-store`.
 
 **CURL Example**:
 ```bash
@@ -1913,6 +1917,7 @@ Update user settings.
 ```
 **Response**: Same as `GET /api/db/user-settings`. Secret values are omitted from responses.
 **Note**: Writing `karakeepApiKey` requires `ENCRYPTION_KEY` to be configured; otherwise the endpoint returns `503`.
+Responses include `Cache-Control: private, no-store`.
 
 **CURL Example**:
 ```bash
@@ -1955,6 +1960,7 @@ Get provider key status for the current user without returning the underlying se
 }
 ```
 **Note**: This endpoint never returns raw or encrypted provider keys.
+Responses include `Cache-Control: private, no-store`.
 
 **CURL Example**:
 ```bash
@@ -1989,6 +1995,7 @@ Set an API key for a provider.
 }
 ```
 **Note**: Writing provider keys requires `ENCRYPTION_KEY` to be configured; otherwise the endpoint returns `503`.
+Responses include `Cache-Control: private, no-store`.
 
 **CURL Example**:
 ```bash
@@ -2012,6 +2019,7 @@ Delete an API key for a provider.
   "ok": true
 }
 ```
+Responses include `Cache-Control: private, no-store`.
 
 **CURL Example**:
 ```bash
@@ -2351,12 +2359,14 @@ curl -X GET "http://localhost:3432/api/model-providers?modelId=gpt-4" \
 Get the NanoGPT account balance.
 
 **Authentication**: Session or API Key
+Requires the authenticated user to have their own stored NanoGPT API key. The shared server key is never used for this endpoint.
 
 **Response**:
 ```json
 {
-  "balance": "number",
-  "currency": "string"
+  "usd_balance": "string",
+  "nano_balance": "string",
+  "nanoDepositAddress": "string | null"
 }
 ```
 
@@ -2370,13 +2380,26 @@ curl -X POST "http://localhost:3432/api/nano-gpt/balance" \
 Get the NanoGPT subscription usage statistics.
 
 **Authentication**: Session or API Key
+Requires the authenticated user to have their own stored NanoGPT API key. The shared server key is never used for this endpoint.
 
 **Response**:
 ```json
 {
-  "used": "number",
-  "limit": "number",
-  "resetDate": "date"
+  "active": "boolean",
+  "daily": {
+    "used": "number",
+    "remaining": "number",
+    "resetAt": "number"
+  },
+  "monthly": {
+    "used": "number",
+    "remaining": "number",
+    "resetAt": "number"
+  },
+  "limits": {
+    "daily": "number",
+    "monthly": "number"
+  }
 }
 ```
 

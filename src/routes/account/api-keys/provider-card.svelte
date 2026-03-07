@@ -69,9 +69,12 @@
 	}
 
 	const apiKeyInfoResource = resource(
-		() => keyQuery.data?.hasKey ?? false,
-		async (hasKey) => {
-			if (!hasKey) return null;
+		() => ({
+			hasKey: keyQuery.data?.hasKey ?? false,
+			source: keyQuery.data?.source ?? null,
+		}),
+		async ({ hasKey, source }) => {
+			if (!hasKey || source !== 'user') return null;
 
 			if (provider === Provider.NanoGPT) {
 				return (await providers.NanoGPT.getApiKey()).unwrapOr(null);
@@ -191,11 +194,17 @@
 						</span>
 					{/if}
 				{:else}
-					<span
-						class="flex h-6 w-fit place-items-center rounded-lg bg-red-500/50 px-2 text-xs text-red-500"
-					>
-						We encountered an error while trying to check your usage. Please try again later.
-					</span>
+					{#if keyQuery.data?.source === 'server'}
+						<span class="text-muted-foreground flex h-6 place-items-center text-xs">
+							Server-managed NanoGPT keys do not expose balance or subscription details.
+						</span>
+					{:else}
+						<span
+							class="flex h-6 w-fit place-items-center rounded-lg bg-red-500/50 px-2 text-xs text-red-500"
+						>
+							We encountered an error while trying to check your usage. Please try again later.
+						</span>
+					{/if}
 				{/if}
 				<span class="text-muted-foreground text-xs">
 					{#if keyQuery.data.source === 'server'}

@@ -7,6 +7,7 @@ import { eq, and, sql } from 'drizzle-orm';
 import { tryGetAuthenticatedUserId } from '$lib/backend/auth-utils';
 import { getUserKey } from '$lib/db/queries';
 import { nanoGptUrl } from '$lib/backend/nano-gpt-url.server';
+import { readRedactedResponseText, redactSecrets } from '$lib/backend/secret-redaction';
 
 const COST_PER_1K_CHARS: Record<string, number> = {
 	'gpt-4o-mini-tts': 0.0125,
@@ -48,13 +49,11 @@ const resolveNanoGPTKey = async (request: Request, userId?: string): Promise<str
 
 export const POST: RequestHandler = async ({ request, fetch }) => {
 	let textStr = '';
-	let modelId = 'tts-1';
 
 	try {
 		const body = await request.json();
 		const { text, model = 'tts-1', voice = 'alloy', speed = 1.0 } = body;
 		textStr = text || '';
-		modelId = model;
 
 		if (!text) {
 			return json({ error: 'Text is required' }, { status: 400 });
@@ -83,8 +82,8 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 		});
 
 		if (!response.ok) {
-			const error = await response.text();
-			console.error('[TTS] API Error:', error);
+			const errorText = await readRedactedResponseText(response);
+			console.error('[TTS] API Error:', errorText);
 			return json(
 				{ error: `NanoGPT API Error: ${response.statusText}` },
 				{ status: response.status }
@@ -198,7 +197,10 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 			},
 		});
 	} catch (error) {
-		console.error('[TTS] Server Error:', error);
+		console.error(
+			'[TTS] Server Error:',
+			error instanceof Error ? redactSecrets(error.message) : 'unknown error'
+		);
 		return json({ error: 'Internal Server Error' }, { status: 500 });
 	}
 };

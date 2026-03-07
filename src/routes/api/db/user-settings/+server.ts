@@ -1,4 +1,4 @@
-import { json, error } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { and, eq } from 'drizzle-orm';
 import {
@@ -13,6 +13,7 @@ import { db } from '$lib/db';
 import { scheduledTasks } from '$lib/db/schema';
 import { computeNextRunAt } from '$lib/backend/scheduler';
 import { assertEncryptionEnabled } from '$lib/encryption';
+import { jsonNoStore } from '$lib/backend/http-security';
 
 function normalizeTimezone(value: unknown): string | undefined {
 	if (typeof value !== 'string') return undefined;
@@ -39,7 +40,7 @@ function normalizeOptionalString(value: unknown): string | null | undefined {
 export const GET: RequestHandler = async ({ request }) => {
 	const userId = await getAuthenticatedUserId(request);
 	const settings = await getOrCreateUserSettings(userId);
-	return json(toPublicUserSettings(settings));
+	return jsonNoStore(toPublicUserSettings(settings));
 };
 
 // POST - update user settings
@@ -119,12 +120,12 @@ export const POST: RequestHandler = async ({ request }) => {
 				);
 			}
 
-			return json(settings ? toPublicUserSettings(settings) : null);
+			return jsonNoStore(settings ? toPublicUserSettings(settings) : null);
 		}
 
 		case 'incrementFreeMessages': {
 			await incrementFreeMessageCount(userId);
-			return json({ ok: true });
+			return jsonNoStore({ ok: true });
 		}
 
 		default:

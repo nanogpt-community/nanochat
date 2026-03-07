@@ -1,4 +1,4 @@
-import { json, error } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import {
 	getAllUserKeyStatuses,
@@ -9,6 +9,7 @@ import {
 import { enableDefaultModelsOnKeyAdd } from '$lib/db/queries/user-enabled-models';
 import { getAuthenticatedUserId } from '$lib/backend/auth-utils';
 import { assertEncryptionEnabled } from '$lib/encryption';
+import { jsonNoStore } from '$lib/backend/http-security';
 
 // GET - get user keys
 export const GET: RequestHandler = async ({ request, url }) => {
@@ -16,10 +17,10 @@ export const GET: RequestHandler = async ({ request, url }) => {
 	const provider = url.searchParams.get('provider');
 
 	if (provider) {
-		return json(await getUserKeyStatus(userId, provider));
+		return jsonNoStore(await getUserKeyStatus(userId, provider));
 	}
 
-	return json(await getAllUserKeyStatuses(userId));
+	return jsonNoStore(await getAllUserKeyStatuses(userId));
 };
 
 // POST - set user key
@@ -45,7 +46,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		await enableDefaultModelsOnKeyAdd(userId);
 	}
 
-	return json({
+	return jsonNoStore({
 		ok: true,
 		provider: result.provider,
 		createdAt: result.createdAt,
@@ -63,5 +64,5 @@ export const DELETE: RequestHandler = async ({ request, url }) => {
 	}
 
 	await deleteUserKey(userId, provider);
-	return json({ ok: true });
+	return jsonNoStore({ ok: true });
 };

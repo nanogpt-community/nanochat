@@ -6,6 +6,7 @@ import { z } from 'zod/v4';
 import { decryptApiKey, isEncrypted } from '$lib/encryption';
 import { getAuthenticatedUserId } from '$lib/backend/auth-utils';
 import { nanoGptUrl } from '$lib/backend/nano-gpt-url.server';
+import { readRedactedResponseText, redactSecrets } from '$lib/backend/secret-redaction';
 
 // Schema for provider preferences
 const providerPreferencesSchema = z.object({
@@ -68,7 +69,7 @@ export const GET: RequestHandler = async ({ request }) => {
                 });
             }
 
-            const errorText = await response.text();
+            const errorText = await readRedactedResponseText(response);
             console.error('NanoGPT provider preferences GET error:', response.status, errorText);
             return json({ error: 'Failed to fetch provider preferences' }, { status: response.status });
         }
@@ -76,7 +77,10 @@ export const GET: RequestHandler = async ({ request }) => {
         const data = await response.json();
         return json(data);
     } catch (error) {
-        console.error('Error fetching provider preferences:', error);
+        console.error(
+            'Error fetching provider preferences:',
+            error instanceof Error ? redactSecrets(error.message) : 'unknown error'
+        );
         return json({ error: 'Internal server error' }, { status: 500 });
     }
 };
@@ -118,18 +122,20 @@ export const PATCH: RequestHandler = async ({ request }) => {
         });
 
         if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            console.error('NanoGPT provider preferences PATCH error:', response.status, errorData);
+            const errorText = await readRedactedResponseText(response);
+            console.error('NanoGPT provider preferences PATCH error:', response.status, errorText);
             return json({
-                error: errorData.message || 'Failed to update provider preferences',
-                code: errorData.code,
+                error: 'Failed to update provider preferences',
             }, { status: response.status });
         }
 
         const data = await response.json();
         return json(data);
     } catch (error) {
-        console.error('Error updating provider preferences:', error);
+        console.error(
+            'Error updating provider preferences:',
+            error instanceof Error ? redactSecrets(error.message) : 'unknown error'
+        );
         return json({ error: 'Internal server error' }, { status: 500 });
     }
 };
@@ -156,14 +162,17 @@ export const DELETE: RequestHandler = async ({ request }) => {
         });
 
         if (!response.ok) {
-            const errorText = await response.text();
+            const errorText = await readRedactedResponseText(response);
             console.error('NanoGPT provider preferences DELETE error:', response.status, errorText);
             return json({ error: 'Failed to delete provider preferences' }, { status: response.status });
         }
 
         return json({ success: true });
     } catch (error) {
-        console.error('Error deleting provider preferences:', error);
+        console.error(
+            'Error deleting provider preferences:',
+            error instanceof Error ? redactSecrets(error.message) : 'unknown error'
+        );
         return json({ error: 'Internal server error' }, { status: 500 });
     }
 };

@@ -1,4 +1,4 @@
-import { json, error } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { db, generateId } from '$lib/db';
 import { apiKeys } from '$lib/db/schema';
@@ -8,6 +8,7 @@ import { randomUUID } from 'crypto';
 import { getAuthenticatedUserId } from '$lib/backend/auth-utils';
 import { encryptApiKey } from '$lib/encryption';
 import { assertSecureSecretStorageReady, hashDeveloperApiKey } from '$lib/backend/api-key-security';
+import { jsonNoStore } from '$lib/backend/http-security';
 
 // GET - List API keys (excluding the actual key value for security)
 export const GET: RequestHandler = async ({ request }) => {
@@ -24,7 +25,7 @@ export const GET: RequestHandler = async ({ request }) => {
 		},
 	});
 
-	return json({ keys });
+	return jsonNoStore({ keys });
 };
 
 // POST - Create new API key
@@ -64,7 +65,7 @@ export const POST: RequestHandler = async ({ request }) => {
 	});
 
 	// Return the key value ONLY on creation (unencrypted)
-	return json({
+	return jsonNoStore({
 		id: keyId,
 		key: keyValue,
 		name: parsed.data.name,
@@ -97,5 +98,5 @@ export const DELETE: RequestHandler = async ({ request }) => {
 
 	await db.delete(apiKeys).where(eq(apiKeys.id, parsed.data.id));
 
-	return json({ success: true });
+	return jsonNoStore({ success: true });
 };

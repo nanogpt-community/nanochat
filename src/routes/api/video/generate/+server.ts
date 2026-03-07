@@ -4,6 +4,7 @@ import type { RequestHandler } from './$types';
 import { tryGetAuthenticatedUserId } from '$lib/backend/auth-utils';
 import { getUserKey } from '$lib/db/queries';
 import { nanoGptUrl } from '$lib/backend/nano-gpt-url.server';
+import { readRedactedResponseText, redactSecrets } from '$lib/backend/secret-redaction';
 
 const getExplicitNanoGPTKey = (request: Request): string | null => {
 	const headerKey = request.headers.get('x-api-key');
@@ -52,14 +53,17 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
         });
 
         if (!response.ok) {
-            const errText = await response.text();
+            const errText = await readRedactedResponseText(response);
             return json({ error: `NanoGPT API Error: ${errText || response.statusText}` }, { status: response.status });
         }
 
         const data = await response.json();
         return json(data);
     } catch (error) {
-        console.error('[Video Generate] Server Error:', error);
+        console.error(
+            '[Video Generate] Server Error:',
+            error instanceof Error ? redactSecrets(error.message) : 'unknown error'
+        );
         return json({ error: 'Internal Server Error' }, { status: 500 });
     }
 };
