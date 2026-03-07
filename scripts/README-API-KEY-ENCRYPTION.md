@@ -57,6 +57,26 @@ The script will:
 - Skip keys that are already encrypted
 - Show a summary when complete
 
+### Backfill Developer API Key Lookup Hashes
+
+If you want to upgrade all existing developer API keys to the current PBKDF2-based lookup hash immediately, run:
+
+```bash
+npm run db:backfill-api-key-hashes
+```
+
+To preview what would change without writing to the database:
+
+```bash
+bun run scripts/backfill-api-key-hashes.ts --dry-run
+```
+
+This script:
+- Finds rows in `api_keys` with a missing or legacy `key_hash`
+- Decrypts the stored key when needed
+- Recomputes the current versioned lookup hash
+- Updates the database in place
+
 ### Option 2: Let New Keys Be Encrypted (No Migration)
 
 If you prefer not to encrypt existing keys:

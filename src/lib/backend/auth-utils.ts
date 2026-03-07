@@ -7,44 +7,40 @@ import { error } from '@sveltejs/kit';
 import { Result, ok, err } from 'neverthrow';
 import { db } from '$lib/db';
 import { apiKeys } from '$lib/db/schema';
-import { eq, isNull } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { auth } from '$lib/auth';
 import { decryptApiKey, isEncrypted } from '$lib/encryption';
 import {
 	apiKeysEqual,
+	CURRENT_DEVELOPER_API_KEY_HASH_PREFIX,
 	developerApiKeysUseHashedLookup,
 	hashDeveloperApiKey,
+	isCurrentDeveloperApiKeyHash,
 } from '$lib/backend/api-key-security';
 
 function getStoredApiKeyValue(storedKey: string): string {
 	return isEncrypted(storedKey) ? decryptApiKey(storedKey) : storedKey;
 }
 
-async function backfillMissingApiKeyHashes(): Promise<void> {
-	if (!developerApiKeysUseHashedLookup()) {
-		return;
-	}
+type ApiKeyAuthRecord = {
+	id: string;
+	userId: string;
+	key: string;
+	keyHash: string | null;
+};
 
-	const unhashedKeys = await db.query.apiKeys.findMany({
-		where: isNull(apiKeys.keyHash),
+async function findApiKeyByStoredValue(legacyOnly = false): Promise<ApiKeyAuthRecord[]> {
+	return db.query.apiKeys.findMany({
+		where: legacyOnly
+			? sql`${apiKeys.keyHash} is null or ${apiKeys.keyHash} not like ${`${CURRENT_DEVELOPER_API_KEY_HASH_PREFIX}%`}`
+			: undefined,
 		columns: {
 			id: true,
+			userId: true,
 			key: true,
+			keyHash: true,
 		},
 	});
-
-	for (const record of unhashedKeys) {
-		try {
-			const plaintextKey = getStoredApiKeyValue(record.key);
-			await db
-				.update(apiKeys)
-				.set({ keyHash: hashDeveloperApiKey(plaintextKey) })
-				.where(eq(apiKeys.id, record.id));
-		} catch {
-			// Skip corrupted legacy rows so one bad record does not block all API key auth.
-			continue;
-		}
-	}
 }
 
 /**
@@ -78,18 +74,11 @@ export async function getUserIdFromApiKey(
 	}
 
 	try {
-		let apiKeyRecord:
-			| {
-					id: string;
-					userId: string;
-					key: string;
-					keyHash: string | null;
-			  }
-			| undefined;
+		let apiKeyRecord: ApiKeyAuthRecord | undefined;
+		const hashedLookupEnabled = developerApiKeysUseHashedLookup();
+		const keyHash = hashedLookupEnabled ? hashDeveloperApiKey(keyValue) : undefined;
 
-		if (developerApiKeysUseHashedLookup()) {
-			const keyHash = hashDeveloperApiKey(keyValue);
-
+		if (hashedLookupEnabled && keyHash) {
 			apiKeyRecord = await db.query.apiKeys.findFirst({
 				where: eq(apiKeys.keyHash, keyHash),
 				columns: {
@@ -101,27 +90,17 @@ export async function getUserIdFromApiKey(
 			});
 
 			if (!apiKeyRecord) {
-				await backfillMissingApiKeyHashes();
-				apiKeyRecord = await db.query.apiKeys.findFirst({
-					where: eq(apiKeys.keyHash, keyHash),
-					columns: {
-						id: true,
-						userId: true,
-						key: true,
-						keyHash: true,
-					},
+				const legacyApiKeys = await findApiKeyByStoredValue(true);
+				apiKeyRecord = legacyApiKeys.find((record) => {
+					try {
+						return apiKeysEqual(getStoredApiKeyValue(record.key), keyValue);
+					} catch {
+						return false;
+					}
 				});
 			}
 		} else {
-			const allApiKeys = await db.query.apiKeys.findMany({
-				columns: {
-					id: true,
-					userId: true,
-					key: true,
-					keyHash: true,
-				},
-			});
-
+			const allApiKeys = await findApiKeyByStoredValue();
 			apiKeyRecord = allApiKeys.find((record) => {
 				try {
 					return apiKeysEqual(getStoredApiKeyValue(record.key), keyValue);
@@ -140,10 +119,10 @@ export async function getUserIdFromApiKey(
 			return err('API key not found or has been revoked. Generate a new key at /account/developer');
 		}
 
-		if (developerApiKeysUseHashedLookup() && !apiKeyRecord.keyHash) {
+		if (hashedLookupEnabled && keyHash && !isCurrentDeveloperApiKeyHash(apiKeyRecord.keyHash)) {
 			await db
 				.update(apiKeys)
-				.set({ keyHash: hashDeveloperApiKey(storedKeyValue) })
+				.set({ keyHash })
 				.where(eq(apiKeys.id, apiKeyRecord.id));
 		}
 

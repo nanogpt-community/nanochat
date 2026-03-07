@@ -556,7 +556,7 @@ Create a new API key.
 }
 ```
 
-**Note**: The key is returned only during creation. Save it securely - it cannot be retrieved again. Keys are stored encrypted in the database using AES-256-GCM and indexed by a non-reversible lookup hash. This endpoint returns `503` until `ENCRYPTION_KEY` is configured and the database schema has been updated with `npx drizzle-kit push`.
+**Note**: The key is returned only during creation. Save it securely - it cannot be retrieved again. Keys are stored encrypted in the database using AES-256-GCM and indexed by a versioned PBKDF2-based lookup hash. Legacy lookup hashes are upgraded automatically after a successful key use. This endpoint returns `503` until `ENCRYPTION_KEY` is configured and the database schema has been updated with `npx drizzle-kit push`.
 The response is marked `Cache-Control: private, no-store`.
 
 **CURL Example**:
