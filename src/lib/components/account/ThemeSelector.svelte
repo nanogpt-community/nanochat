@@ -12,7 +12,7 @@
 		primaryColor = $bindable(),
 		accentColor = $bindable(),
 	}: {
-	currentTheme: string | null | undefined;
+		currentTheme: string | null | undefined;
 		primaryColor: string | null | undefined;
 		accentColor: string | null | undefined;
 	} = $props();
@@ -20,16 +20,16 @@
 	let saving = $state(false);
 	const hexColorRegex = /^#([0-9a-f]{6})$/i;
 
-	const currentThemeData = $derived(currentTheme ? getTheme(currentTheme) ?? null : null);
+	const currentThemeData = $derived(currentTheme ? (getTheme(currentTheme) ?? null) : null);
 	const primarySwatch = $derived(
 		primaryColor && hexColorRegex.test(primaryColor)
 			? primaryColor.toLowerCase()
-			: currentThemeData?.colors.primary ?? getComputedThemeColor('--primary') ?? '#0f172a'
+			: (currentThemeData?.colors.primary ?? getComputedThemeColor('--primary') ?? '#0f172a')
 	);
 	const accentSwatch = $derived(
 		accentColor && hexColorRegex.test(accentColor)
 			? accentColor.toLowerCase()
-			: currentThemeData?.colors.accent ?? getComputedThemeColor('--accent') ?? '#0f172a'
+			: (currentThemeData?.colors.accent ?? getComputedThemeColor('--accent') ?? '#0f172a')
 	);
 
 	function normalizeHex(color: string | null | undefined): string | null {
@@ -40,14 +40,21 @@
 
 	function getComputedThemeColor(variable: '--primary' | '--accent'): string | null {
 		if (typeof document === 'undefined') return null;
-		const style = getComputedStyle(document.documentElement).getPropertyValue(variable).trim().toLowerCase();
+		const style = getComputedStyle(document.documentElement)
+			.getPropertyValue(variable)
+			.trim()
+			.toLowerCase();
 		return /^#([0-9a-f]{6})$/.test(style) ? style : null;
 	}
 
-	async function saveTheme(themeId: string | null, nextPrimaryColor: string | null, nextAccentColor: string | null) {
+	async function saveTheme(
+		themeId: string | null,
+		nextPrimaryColor: string | null,
+		nextAccentColor: string | null
+	) {
 		if (!session.current?.user.id) return;
 
-		const theme = themeId ? getTheme(themeId) ?? null : null;
+		const theme = themeId ? (getTheme(themeId) ?? null) : null;
 		const previousTheme = currentTheme;
 		const previousPrimaryColor = normalizeHex(primaryColor);
 		const previousAccentColor = normalizeHex(accentColor);
@@ -82,7 +89,7 @@
 			currentTheme = previousTheme;
 			primaryColor = previousPrimaryColor;
 			accentColor = previousAccentColor;
-			const previousThemeData = previousTheme ? getTheme(previousTheme) ?? null : null;
+			const previousThemeData = previousTheme ? (getTheme(previousTheme) ?? null) : null;
 			applyTheme(previousThemeData, {
 				primaryColor: previousPrimaryColor,
 				accentColor: previousAccentColor,
@@ -118,7 +125,6 @@
 			void saveTheme(currentTheme ?? null, normalizeHex(primaryColor), null);
 		}
 	}
-
 </script>
 
 <div class="flex flex-col gap-4">
@@ -167,7 +173,8 @@
 				<div class="mt-2 flex gap-1">
 					<div
 						class="h-8 w-8 rounded border"
-						style="background-color: {theme.colors.background}; border-color: {theme.colors.border};"
+						style="background-color: {theme.colors.background}; border-color: {theme.colors
+							.border};"
 					></div>
 					<div
 						class="h-8 w-8 rounded border"
@@ -187,14 +194,15 @@
 	</div>
 
 	{#if currentThemeData || currentTheme === null}
-		<div class="space-y-3 rounded-lg border border-border p-3">
+		<div class="border-border space-y-3 rounded-lg border p-3">
 			<p class="text-muted-foreground text-sm">Customize this theme&apos;s key accents.</p>
 
 			<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
 				<div class="flex flex-col gap-2">
-					<label class="text-sm font-medium">Primary</label>
+					<label for="theme-primary-color" class="text-sm font-medium">Primary</label>
 					<div class="flex items-center gap-2">
 						<input
+							id="theme-primary-color"
 							type="color"
 							value={primarySwatch}
 							onchange={handlePrimaryColorChange}
@@ -214,9 +222,10 @@
 					</div>
 				</div>
 				<div class="flex flex-col gap-2">
-					<label class="text-sm font-medium">Accent</label>
+					<label for="theme-accent-color" class="text-sm font-medium">Accent</label>
 					<div class="flex items-center gap-2">
 						<input
+							id="theme-accent-color"
 							type="color"
 							value={accentSwatch}
 							onchange={handleAccentColorChange}

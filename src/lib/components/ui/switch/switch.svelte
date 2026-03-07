@@ -6,13 +6,13 @@
 	let {
 		class: className,
 		value = $bindable(false),
-		...rest
+		disabled,
 	}: ComponentProps<ToggleProps> & { class?: string } = $props();
 
 	const toggle = new Toggle({
 		value: () => value ?? false,
+		disabled: () => disabled,
 		onValueChange: (v) => (value = v),
-		...rest,
 	});
 </script>
 

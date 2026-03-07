@@ -81,6 +81,8 @@
 	}
 
 	function handleKeydown(event: KeyboardEvent) {
+		if (!open) return;
+
 		if (step === 'variables') {
 			if (event.key === 'Escape') {
 				event.preventDefault();
@@ -137,10 +139,13 @@
 	}
 </script>
 
-<svelte:window use:shortcut={getKeybindOptions('openPromptPicker', () => (open = true))} />
+<svelte:window
+	use:shortcut={getKeybindOptions('openPromptPicker', () => (open = true))}
+	onkeydown={handleKeydown}
+/>
 
 <Modal bind:open>
-	<div class="space-y-4" onkeydown={handleKeydown}>
+	<div class="space-y-4">
 		{#if step === 'select'}
 			<h2 class="text-lg font-semibold">Insert Prompt</h2>
 
@@ -186,7 +191,9 @@
 								<div class="flex items-center gap-2">
 									<div class="truncate font-medium">{prompt.name}</div>
 									{#if prompt.variables && prompt.variables.length > 0}
-										<span class="bg-primary/10 text-primary flex items-center gap-1 rounded-full px-1.5 py-0.5 text-xs">
+										<span
+											class="bg-primary/10 text-primary flex items-center gap-1 rounded-full px-1.5 py-0.5 text-xs"
+										>
 											<Variable class="size-3" />
 											{prompt.variables.length}
 										</span>
@@ -267,9 +274,7 @@
 				</Button>
 			</div>
 
-			<p class="text-muted-foreground text-center text-xs">
-				Press Enter to apply, Esc to go back
-			</p>
+			<p class="text-muted-foreground text-center text-xs">Press Enter to apply, Esc to go back</p>
 		{/if}
 	</div>
 </Modal>

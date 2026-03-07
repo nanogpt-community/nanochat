@@ -31,7 +31,7 @@
 	const userSettings = useCachedQuery<UserSettings>(
 		api.user_settings.get,
 		{},
-		{ enabled: shouldFetchSettings }
+		{ enabled: () => shouldFetchSettings }
 	);
 
 	const resolvedTheme = $derived(providedSettings?.theme ?? userSettings.data?.theme);

@@ -134,7 +134,7 @@
 					haystack: enrichedEnabledModels,
 					needle: search,
 					property: 'modelId',
-			  })
+				})
 			: enrichedEnabledModels;
 
 		return models
@@ -153,13 +153,18 @@
 			});
 	});
 
-	const currentModel = $derived(settings.modelId ? enabledModelById.get(settings.modelId) : undefined);
+	const currentModel = $derived(
+		settings.modelId ? enabledModelById.get(settings.modelId) : undefined
+	);
 
 	$effect(() => {
 		if (enabledModelsQuery.isLoading) return;
 		const selectedModelId = settings.modelId;
 
-		if ((selectedModelId == null || !enabledModelById.has(selectedModelId)) && enabledArr.length > 0) {
+		if (
+			(selectedModelId == null || !enabledModelById.has(selectedModelId)) &&
+			enabledArr.length > 0
+		) {
 			settings.modelId = enabledArr[0]!.modelId;
 		}
 	});
@@ -325,7 +330,7 @@
 				'border-border bg-muted/30 flex gap-1 p-2',
 				isMobile.current
 					? 'flex-row overflow-x-auto border-b'
-					: 'flex-col border-r min-h-0 overflow-y-auto'
+					: 'min-h-0 flex-col overflow-y-auto border-r'
 			)}
 		>
 			<!-- Favorites/All button -->
@@ -680,6 +685,10 @@
 		></div>
 		<div
 			class="bg-background fixed inset-x-0 bottom-0 z-50 h-[85vh] touch-none rounded-t-xl border-t shadow-xl"
+			role="dialog"
+			aria-modal="true"
+			aria-label="Model picker"
+			tabindex="-1"
 			style="transform: translateY({drawerTranslateY}px);"
 			transition:fly={{ y: 100, duration: 200 }}
 			ontouchstart={(e) => {

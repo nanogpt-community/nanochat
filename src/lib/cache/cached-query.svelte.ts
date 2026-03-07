@@ -10,7 +10,7 @@ export interface CachedQueryOptions {
 	cacheKey?: string;
 	ttl?: number;
 	staleWhileRevalidate?: boolean;
-	enabled?: boolean;
+	enabled?: boolean | (() => boolean);
 }
 
 export interface QueryResult<T> {
@@ -78,13 +78,15 @@ export function useCachedQuery<TResult>(
 
 	const getArgs = () => (typeof queryArgs === 'function' ? queryArgs() : queryArgs);
 	const getCacheKey = () => cacheKey || `${queryConfig.url}:${JSON.stringify(getArgs())}`;
+	const isEnabled = () => (typeof enabled === 'function' ? enabled() : enabled);
 
 	async function fetchData() {
-		if (!enabled) {
+		if (!isEnabled()) {
 			isLoading = false;
 			return;
 		}
 
+		isLoading = true;
 		const key = getCacheKey();
 
 		// Check cache first
@@ -147,7 +149,8 @@ export function useCachedQuery<TResult>(
 
 	// Watch for argument changes and match cache keys
 	$effect(() => {
-		const _ = extract(queryArgs);
+		extract(queryArgs);
+		isEnabled();
 		fetchData();
 	});
 

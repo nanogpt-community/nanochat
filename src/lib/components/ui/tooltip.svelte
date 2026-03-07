@@ -1,11 +1,14 @@
 <script lang="ts">
-	import { getters, type ComponentProps, type Extracted } from 'melt';
+	import { type ComponentProps, type Extracted } from 'melt';
 	import { Tooltip, type TooltipProps } from 'melt/builders';
 	import type { Snippet } from 'svelte';
 
 	type FloatingConfig = NonNullable<Extracted<TooltipProps['floatingConfig']>>;
 
-	interface Props extends Omit<ComponentProps<TooltipProps>, 'floatingConfig'> {
+	interface Props extends Omit<
+		ComponentProps<TooltipProps>,
+		'floatingConfig' | 'open' | 'onOpenChange'
+	> {
 		children: Snippet;
 		trigger: Snippet<[Tooltip]>;
 		placement?: NonNullable<FloatingConfig['computePosition']>['placement'];
@@ -18,12 +21,14 @@
 		placement = 'bottom',
 		openDelay = 250,
 		disabled,
-		...rest
+		closeDelay,
+		closeOnPointerDown,
+		forceVisible = true,
+		disableHoverableContent = true,
 	}: Props = $props();
 
 	let open = $state(false);
 	const tooltip = new Tooltip({
-		forceVisible: true,
 		floatingConfig: () => ({
 			computePosition: { placement },
 			flip: {
@@ -31,14 +36,16 @@
 				padding: 10,
 			},
 		}),
+		closeDelay: () => closeDelay,
+		closeOnPointerDown: () => closeOnPointerDown,
+		forceVisible: () => forceVisible,
 		open: () => open,
 		onOpenChange(v) {
 			if (disabled) open = false;
 			else open = v;
 		},
 		openDelay: () => openDelay,
-		disableHoverableContent: true,
-		...getters(rest),
+		disableHoverableContent: () => disableHoverableContent,
 	});
 </script>
 
