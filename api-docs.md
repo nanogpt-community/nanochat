@@ -2675,20 +2675,25 @@ Requires the authenticated user to have their own stored NanoGPT API key. The sh
 ```json
 {
 	"active": "boolean",
-	"daily": {
-		"used": "number",
-		"remaining": "number",
-		"resetAt": "number"
-	},
-	"monthly": {
-		"used": "number",
-		"remaining": "number",
-		"resetAt": "number"
-	},
 	"limits": {
-		"daily": "number",
-		"monthly": "number"
-	}
+		"weeklyInputTokens": "number",
+		"dailyInputTokens": "number | null",
+		"dailyImages": "number"
+	},
+	"weeklyInputTokens": {
+		"used": "number",
+		"remaining": "number",
+		"percentUsed": "number",
+		"resetAt": "number (ms epoch)"
+	},
+	"dailyImages": {
+		"used": "number",
+		"remaining": "number",
+		"percentUsed": "number",
+		"resetAt": "number (ms epoch)"
+	},
+	"state": "string (active | grace | inactive)",
+	"graceUntil": "string | null (ISO timestamp)"
 }
 ```
 

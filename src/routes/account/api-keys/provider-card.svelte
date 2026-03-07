@@ -84,6 +84,28 @@
 		}
 	);
 
+	function formatTokenPair(used: number, limit: number): { used: string; limit: string } {
+		if (limit >= 1_000_000) {
+			return {
+				used: `${(used / 1_000_000).toFixed(1)}M`,
+				limit: `${(limit / 1_000_000).toFixed(0)}M`
+			};
+		}
+		if (limit >= 1_000) {
+			return {
+				used: `${(used / 1_000).toFixed(1)}K`,
+				limit: `${(limit / 1_000).toFixed(0)}K`
+			};
+		}
+		return { used: used.toString(), limit: limit.toString() };
+	}
+
+	const tokenDisplay = $derived.by(() => {
+		const sub = apiKeyInfoResource.current?.subscription;
+		if (!sub) return null;
+		return formatTokenPair(sub.weeklyInputTokens.used, sub.weeklyInputTokens.limit);
+	});
+
 	// Get restrictions for showing daily limit instead of NanoGPT usage
 	const restrictions = $derived(page.data?.restrictions);
 	const usingServerKeyWithRestrictions = $derived(
@@ -162,36 +184,30 @@
 
 								<div class="grid grid-cols-2 gap-x-4 gap-y-2">
 									<div class="flex flex-col">
-										<span class="text-muted-foreground">Daily Usage</span>
+										<span class="text-muted-foreground">Weekly Input Tokens</span>
 										<div class="flex items-end gap-1">
 											<span class="font-medium"
-												>{apiKeyInfoResource.current.subscription.daily.used}</span
+												>{tokenDisplay?.used}</span
 											>
 											<span class="text-muted-foreground mb-px"
-												>/ {apiKeyInfoResource.current.subscription.daily.limit}</span
+												>/ {tokenDisplay?.limit}</span
 											>
 										</div>
 									</div>
 									<div class="flex flex-col">
-										<span class="text-muted-foreground">Monthly Usage</span>
+										<span class="text-muted-foreground">Daily Images</span>
 										<div class="flex items-end gap-1">
 											<span class="font-medium"
-												>{apiKeyInfoResource.current.subscription.monthly.used}</span
+												>{apiKeyInfoResource.current.subscription.dailyImages.used}</span
 											>
 											<span class="text-muted-foreground mb-px"
-												>/ {apiKeyInfoResource.current.subscription.monthly.limit}</span
+												>/ {apiKeyInfoResource.current.subscription.dailyImages.limit}</span
 											>
 										</div>
 									</div>
 								</div>
 							</div>
 						{/if}
-					{:else}
-						<span class="text-muted-foreground flex h-6 place-items-center text-xs">
-							${(apiKeyInfoResource.current?.usage ?? 0).toFixed(3)} used ・ ${(
-								apiKeyInfoResource.current?.limit_remaining ?? 0
-							).toFixed(3)} remaining
-						</span>
 					{/if}
 				{:else}
 					{#if keyQuery.data?.source === 'server'}

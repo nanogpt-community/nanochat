@@ -9,22 +9,19 @@ export type NanoGPTConnectionData = {
 	};
 	subscription: {
 		active: boolean;
-		daily: {
+		weeklyInputTokens: {
 			used: number;
 			remaining: number;
 			limit: number;
 			resetAt: number;
 		};
-		monthly: {
+		dailyImages: {
 			used: number;
 			remaining: number;
 			limit: number;
 			resetAt: number;
 		};
 	};
-	/* Legacy fields for compatibility if needed, though we'll update the UI */
-	usage?: number;
-	limit_remaining?: number;
 };
 
 export const NanoGPT = {
@@ -51,22 +48,19 @@ export const NanoGPT = {
 					},
 					subscription: {
 						active: usageData.active,
-						daily: {
-							used: usageData.daily?.used ?? 0,
-							remaining: usageData.daily?.remaining ?? 0,
-							limit: usageData.limits?.daily ?? 0,
-							resetAt: usageData.daily?.resetAt
+						weeklyInputTokens: {
+							used: usageData.weeklyInputTokens?.used ?? 0,
+							remaining: usageData.weeklyInputTokens?.remaining ?? 0,
+							limit: usageData.limits?.weeklyInputTokens ?? 60_000_000,
+							resetAt: usageData.weeklyInputTokens?.resetAt
 						},
-						monthly: {
-							used: usageData.monthly?.used ?? 0,
-							remaining: usageData.monthly?.remaining ?? 0,
-							limit: usageData.limits?.monthly ?? 0,
-							resetAt: usageData.monthly?.resetAt
+						dailyImages: {
+							used: usageData.dailyImages?.used ?? 0,
+							remaining: usageData.dailyImages?.remaining ?? 0,
+							limit: usageData.limits?.dailyImages ?? 100,
+							resetAt: usageData.dailyImages?.resetAt
 						}
-					},
-					// Map to 'usage' roughly as currently used daily? Or maybe just ignore legacy fields
-					usage: usageData.daily?.used ?? 0,
-					limit_remaining: usageData.daily?.remaining ?? 0
+					}
 				} as NanoGPTConnectionData;
 			})(),
 			(e) => `Failed to get API key info: ${e}`
