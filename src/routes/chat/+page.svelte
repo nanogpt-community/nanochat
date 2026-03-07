@@ -9,7 +9,7 @@
 	import { scale } from 'svelte/transition';
 	import { useCachedQuery, api } from '$lib/cache/cached-query.svelte';
 	import { Provider } from '$lib/types';
-	import type { UserSettings } from '$lib/api';
+	import type { UserKeyStatus, UserSettings } from '$lib/api';
 	import { untrack } from 'svelte';
 	import { page } from '$app/state';
 	import { settings } from '$lib/state/settings.svelte.js';
@@ -66,7 +66,7 @@
 
 	let selectedCategory = $state<string | null>(null);
 
-	const nanoGPTKeyQuery = useCachedQuery(api.user_keys.get, {
+	const nanoGPTKeyQuery = useCachedQuery<UserKeyStatus>(api.user_keys.get, {
 		provider: Provider.NanoGPT,
 		session_token: session.current?.session.token ?? '',
 	});
@@ -75,9 +75,13 @@
 
 	const suggestedPromptsEnabled = $derived(userSettingsQuery.data?.suggestedPromptsEnabled ?? true);
 	const showSuggestedPrompts = $derived(
-		prompt.current.length === 0 && nanoGPTKeyQuery.data && suggestedPromptsEnabled
+		prompt.current.length === 0 &&
+			(nanoGPTKeyQuery.data?.hasKey ?? false) &&
+			suggestedPromptsEnabled
 	);
-	const showNoKeyState = $derived(!nanoGPTKeyQuery.data && !nanoGPTKeyQuery.isLoading);
+	const showNoKeyState = $derived(
+		!(nanoGPTKeyQuery.data?.hasKey ?? false) && !nanoGPTKeyQuery.isLoading
+	);
 
 	// Handle URL parameter for initial query
 	$effect(() => {

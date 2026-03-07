@@ -13,7 +13,7 @@
 	import { ResultAsync } from 'neverthrow';
 	import { resource } from 'runed';
 	import * as providers from '$lib/utils/providers';
-	import type { UserSettings } from '$lib/api';
+	import type { UserKeyStatus, UserSettings } from '$lib/api';
 
 	type Props = {
 		provider: Provider;
@@ -23,28 +23,29 @@
 	let { provider, meta }: Props = $props();
 	const id = $props.id();
 
-	const keyQuery = useCachedQuery<string>(api.user_keys.get, () => ({
+	const keyQuery = useCachedQuery<UserKeyStatus>(api.user_keys.get, () => ({
 		provider,
 	}));
 
+	let keyInput = $state('');
 	let loading = $state(false);
 	const toasts = new LocalToasts({ id });
 
 	async function submit(e: SubmitEvent) {
-		loading = true;
-
 		e.preventDefault();
 		const form = e.target as HTMLFormElement;
 		const formData = new FormData(form);
-		const key = formData.get('key');
-		if (key === null || !session.current?.user.id) return;
+		const key = `${formData.get('key') ?? ''}`.trim();
+		if (!key || !session.current?.user.id) return;
+
+		loading = true;
 
 		const res = await ResultAsync.fromPromise(
 			mutate(
 				api.user_keys.set.url,
 				{
 					provider,
-					key: `${key}`,
+					key,
 				},
 				{
 					invalidatePatterns: [api.user_keys.get.url, api.user_enabled_models.get_enabled.url],
@@ -60,16 +61,20 @@
 			},
 		});
 
+		if (res.isOk()) {
+			keyInput = '';
+		}
+
 		loading = false;
 	}
 
 	const apiKeyInfoResource = resource(
-		() => keyQuery.data,
-		async (key) => {
-			if (!key) return null;
+		() => keyQuery.data?.hasKey ?? false,
+		async (hasKey) => {
+			if (!hasKey) return null;
 
 			if (provider === Provider.NanoGPT) {
-				return (await providers.NanoGPT.getApiKey(key)).unwrapOr(null);
+				return (await providers.NanoGPT.getApiKey()).unwrapOr(null);
 			}
 
 			return null;
@@ -103,13 +108,19 @@
 			{:else}
 				<Input
 					type="password"
-					placeholder={meta.placeholder ?? ''}
+					placeholder={
+						keyQuery.data?.source === 'server'
+							? 'Using the server-managed NanoGPT key'
+							: keyQuery.data?.hasKey
+								? 'Saved key on file. Enter a new key to replace it.'
+								: meta.placeholder ?? ''
+					}
 					autocomplete="off"
 					name="key"
-					value={keyQuery.data!}
+					bind:value={keyInput}
 				/>
 			{/if}
-			{#if keyQuery.data}
+			{#if keyQuery.data?.hasKey}
 				{#if apiKeyInfoResource.loading}
 					<div class="bg-input h-6 w-[200px] animate-pulse rounded-md"></div>
 				{:else if apiKeyInfoResource.current}
@@ -186,6 +197,13 @@
 						We encountered an error while trying to check your usage. Please try again later.
 					</span>
 				{/if}
+				<span class="text-muted-foreground text-xs">
+					{#if keyQuery.data.source === 'server'}
+						Using the server key. Enter your own key to override it.
+					{:else}
+						A key is stored securely. Leave this blank to keep it unchanged.
+					{/if}
+				</span>
 			{:else}
 				<span class="text-muted-foreground text-xs">
 					Get your API key from

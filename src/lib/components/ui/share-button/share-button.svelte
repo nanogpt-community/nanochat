@@ -39,7 +39,7 @@
 	let karakeepMessage = $state('');
 
 	const hasKarakeepConfig = $derived(
-		Boolean(settingsQuery.data?.karakeepUrl && settingsQuery.data?.karakeepApiKey)
+		Boolean(settingsQuery.data?.karakeepUrl && settingsQuery.data?.hasKarakeepApiKey)
 	);
 
 	const popover = new Popover({

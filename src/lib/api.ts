@@ -4,9 +4,10 @@
  * using local SQLite + Drizzle backend via SvelteKit API routes
  */
 
+import type { Provider } from '$lib/types';
+
 // Re-export types from database schema
 export type {
-	UserSettings,
 	UserKey,
 	UserEnabledModel,
 	UserRule,
@@ -23,13 +24,26 @@ export type {
 	ProjectMember,
 } from '$lib/db/schema';
 
+type DbUserSettings = import('$lib/db/schema').UserSettings;
+
+export type UserSettings = Omit<DbUserSettings, 'karakeepApiKey'> & {
+	hasKarakeepApiKey: boolean;
+};
+
+export type UserKeyStatus = {
+	hasKey: boolean;
+	source: 'user' | 'server' | null;
+};
+
+export type UserKeysByProvider = Record<Provider, UserKeyStatus>;
+
 // Type aliases for backwards compatibility with Convex patterns
 export type Doc<T extends keyof DocTypes> = DocTypes[T];
 export type Id<T extends keyof DocTypes> = string;
 
 interface DocTypes {
-	user_settings: import('$lib/db/schema').UserSettings;
-	user_keys: import('$lib/db/schema').UserKey;
+	user_settings: UserSettings;
+	user_keys: UserKeyStatus;
 	user_enabled_models: import('$lib/db/schema').UserEnabledModel;
 	user_rules: import('$lib/db/schema').UserRule;
 	conversations: import('$lib/db/schema').Conversation;

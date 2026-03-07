@@ -7,6 +7,7 @@ import {
 	incrementFreeMessageCount,
 	getOrCreateUserSettings,
 } from '$lib/db/queries';
+import { toPublicUserSettings } from '$lib/db/queries/user-settings';
 import { getAuthenticatedUserId } from '$lib/backend/auth-utils';
 import { db } from '$lib/db';
 import { scheduledTasks } from '$lib/db/schema';
@@ -24,11 +25,20 @@ function normalizeTimezone(value: unknown): string | undefined {
 	}
 }
 
+function normalizeOptionalString(value: unknown): string | null | undefined {
+	if (value === undefined) return undefined;
+	if (value === null) return null;
+	if (typeof value !== 'string') return undefined;
+
+	const trimmed = value.trim();
+	return trimmed.length === 0 ? null : trimmed;
+}
+
 // GET - get user settings
 export const GET: RequestHandler = async ({ request }) => {
 	const userId = await getAuthenticatedUserId(request);
 	const settings = await getOrCreateUserSettings(userId);
-	return json(settings);
+	return json(toPublicUserSettings(settings));
 };
 
 // POST - update user settings
@@ -51,8 +61,8 @@ export const POST: RequestHandler = async ({ request }) => {
 				suggestedPromptsEnabled: body.suggestedPromptsEnabled,
 				webScrapingEnabled: body.webScrapingEnabled,
 				mcpEnabled: body.mcpEnabled,
-				karakeepUrl: body.karakeepUrl,
-				karakeepApiKey: body.karakeepApiKey,
+				karakeepUrl: normalizeOptionalString(body.karakeepUrl),
+				karakeepApiKey: normalizeOptionalString(body.karakeepApiKey),
 				theme: body.theme,
 				themePrimaryColor: body.themePrimaryColor,
 				themeAccentColor: body.themeAccentColor,
@@ -100,7 +110,7 @@ export const POST: RequestHandler = async ({ request }) => {
 				);
 			}
 
-			return json(settings);
+			return json(settings ? toPublicUserSettings(settings) : null);
 		}
 
 		case 'incrementFreeMessages': {

@@ -326,6 +326,8 @@ curl -X POST "http://localhost:3432/api/stt" \
 Proxies requests to NanoGPT Video Generation API.
  
 **Authentication**: Session
+
+**Note**: You may also supply a direct NanoGPT key via `x-api-key` or `Authorization: Bearer <nanogpt_key>`. The server key is not used for unauthenticated requests.
  
 **Request Body**:
 ```json
@@ -355,6 +357,8 @@ curl -X POST "http://localhost:3432/api/video/generate" \
 Check the status of a video generation task.
  
 **Authentication**: Session
+
+**Note**: You may also supply a direct NanoGPT key via `x-api-key` or `Authorization: Bearer <nanogpt_key>`. The server key is not used for unauthenticated requests.
  
 **Query Parameters**:
 - `runId`: (Required) The run ID returned by the generate endpoint.
@@ -1873,9 +1877,12 @@ Get user settings.
   "theme": "string | null",
   "themePrimaryColor": "string | null",
   "themeAccentColor": "string | null",
+  "karakeepUrl": "string | null",
+  "hasKarakeepApiKey": "boolean",
   ...
 }
 ```
+**Note**: Secret values such as `karakeepApiKey` are never returned by this endpoint.
 
 **CURL Example**:
 ```bash
@@ -1895,6 +1902,8 @@ Update user settings.
   "timezone": "string (optional, IANA timezone)",
   "privacyMode": "boolean (optional)",
   "contextMemoryEnabled": "boolean (optional)",
+  "karakeepUrl": "string | null (optional)",
+  "karakeepApiKey": "string | null (optional, write-only)",
   "theme": "string (optional, theme id or null)",
   "suggestedPromptsEnabled": "boolean (optional)",
   "themePrimaryColor": "string (optional, #RRGGBB)",
@@ -1902,6 +1911,7 @@ Update user settings.
   ...
 }
 ```
+**Response**: Same as `GET /api/db/user-settings`. Secret values are omitted from responses.
 
 **CURL Example**:
 ```bash
@@ -1916,24 +1926,34 @@ curl -X POST "http://localhost:3432/api/db/user-settings" \
 ### User Provider Keys
 
 #### GET `/api/db/user-keys`
-Get API keys configured by the user for different providers.
+Get provider key status for the current user without returning the underlying secret.
 
 **Authentication**: Session or API Key
 
 **Query Parameters**:
-- `provider`: (Optional) Get key for a specific provider (e.g., "nanogpt", "openai").
+- `provider`: (Optional) Get status for a specific provider (e.g., "nanogpt", "openai").
 
 **Response**:
 ```json
 // Single provider
-"sk-..." 
+{
+  "hasKey": true,
+  "source": "user"
+}
 
 // All providers
 {
-  "nanogpt": "sk-...",
-  "openai": "sk-..."
+  "nanogpt": {
+    "hasKey": true,
+    "source": "server"
+  },
+  "openai": {
+    "hasKey": false,
+    "source": null
+  }
 }
 ```
+**Note**: This endpoint never returns raw or encrypted provider keys.
 
 **CURL Example**:
 ```bash
@@ -1961,9 +1981,10 @@ Set an API key for a provider.
 **Response**:
 ```json
 {
-  "userId": "string",
+  "ok": true,
   "provider": "string",
-  "createdAt": "date"
+  "createdAt": "date",
+  "updatedAt": "date"
 }
 ```
 

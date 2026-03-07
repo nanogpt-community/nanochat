@@ -15,14 +15,15 @@
 	import TicketIcon from '~icons/lucide/ticket';
 	import ImageIcon from '~icons/lucide/image';
 	import VideoIcon from '~icons/lucide/video';
+	import type { UserKeyStatus } from '$lib/api';
 	import ModelCard from './model-card.svelte';
 	import { supportsImages, supportsReasoning, supportsVideo } from '$lib/utils/model-capabilities';
 
-	const nanoGPTKeyQuery = useCachedQuery(api.user_keys.get, {
+	const nanoGPTKeyQuery = useCachedQuery<UserKeyStatus>(api.user_keys.get, {
 		provider: Provider.NanoGPT,
 	});
 
-	const hasNanoGPTKey = $derived(nanoGPTKeyQuery.data !== undefined && nanoGPTKeyQuery.data !== '');
+	const hasNanoGPTKey = $derived(nanoGPTKeyQuery.data?.hasKey ?? false);
 
 	let search = $state('');
 

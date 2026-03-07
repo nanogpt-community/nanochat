@@ -234,7 +234,7 @@
 	}
 
 	let karakeepUrl = $state(settings.data?.karakeepUrl ?? '');
-	let karakeepApiKey = $state(settings.data?.karakeepApiKey ?? '');
+	let karakeepApiKey = $state('');
 	let karakeepSaving = $state(false);
 	let karakeepTestStatus = $state<'idle' | 'testing' | 'success' | 'error'>('idle');
 	let karakeepTestMessage = $state('');
@@ -243,10 +243,10 @@
 	let deleteAllChatsDeleting = $state(false);
 	let clearUploadsExpanded = $state(false);
 	let clearUploadsClearing = $state(false);
+	const hasSavedKarakeepApiKey = $derived(settings.data?.hasKarakeepApiKey ?? false);
 
 	$effect(() => {
-		if (settings.data?.karakeepUrl) karakeepUrl = settings.data.karakeepUrl;
-		if (settings.data?.karakeepApiKey) karakeepApiKey = settings.data.karakeepApiKey;
+		if (settings.data?.karakeepUrl !== undefined) karakeepUrl = settings.data.karakeepUrl ?? '';
 	});
 
 	async function togglePrivacyMode(v: boolean) {
@@ -448,14 +448,19 @@
 		if (!session.current?.user.id) return;
 
 		karakeepSaving = true;
+		const payload: Record<string, unknown> = {
+			action: 'update',
+			karakeepUrl,
+		};
+
+		if (karakeepApiKey.trim().length > 0) {
+			payload.karakeepApiKey = karakeepApiKey.trim();
+		}
+
 		const res = await ResultAsync.fromPromise(
 			mutate(
 				api.user_settings.set.url,
-				{
-					action: 'update',
-					karakeepUrl,
-					karakeepApiKey,
-				},
+				payload,
 				{
 					invalidatePatterns: [api.user_settings.get.url],
 				}
@@ -466,7 +471,41 @@
 		karakeepSaving = false;
 		if (res.isErr()) {
 			console.error('Failed to save Karakeep settings:', res.error);
+			return;
 		}
+
+		karakeepApiKey = '';
+		karakeepTestStatus = 'idle';
+		karakeepTestMessage = '';
+	}
+
+	async function clearKarakeepApiKey() {
+		if (!session.current?.user.id) return;
+
+		karakeepSaving = true;
+		const res = await ResultAsync.fromPromise(
+			mutate(
+				api.user_settings.set.url,
+				{
+					action: 'update',
+					karakeepApiKey: null,
+				},
+				{
+					invalidatePatterns: [api.user_settings.get.url],
+				}
+			),
+			(e) => e
+		);
+
+		karakeepSaving = false;
+		if (res.isErr()) {
+			console.error('Failed to clear Karakeep API key:', res.error);
+			return;
+		}
+
+		karakeepApiKey = '';
+		karakeepTestStatus = 'idle';
+		karakeepTestMessage = '';
 	}
 
 	async function testKarakeepConnection() {
@@ -1110,10 +1149,20 @@
 					<Input
 						id="karakeep-api-key"
 						type="password"
-						placeholder="Enter your Karakeep API key"
+						placeholder={
+							hasSavedKarakeepApiKey
+								? 'Saved key on file. Enter a new key to replace it.'
+								: 'Enter your Karakeep API key'
+						}
 						bind:value={karakeepApiKey}
 					/>
-					<span class="text-muted-foreground text-xs">Your Karakeep API authentication key</span>
+					<span class="text-muted-foreground text-xs">
+						{#if hasSavedKarakeepApiKey}
+							A key is already stored securely. Leave this blank to keep it unchanged.
+						{:else}
+							Your Karakeep API authentication key
+						{/if}
+					</span>
 				</div>
 
 				<div class="flex gap-2">
@@ -1127,6 +1176,11 @@
 					>
 						{karakeepTestStatus === 'testing' ? 'Testing...' : 'Test Connection'}
 					</Button>
+					{#if hasSavedKarakeepApiKey}
+						<Button variant="outline" onclick={clearKarakeepApiKey} disabled={karakeepSaving}>
+							Clear Saved Key
+						</Button>
+					{/if}
 				</div>
 
 				{#if karakeepTestStatus !== 'idle' && karakeepTestMessage}

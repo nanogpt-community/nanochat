@@ -1,27 +1,24 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { getAllUserKeys, getUserKey, setUserKey, deleteUserKey } from '$lib/db/queries';
+import {
+	getAllUserKeyStatuses,
+	getUserKeyStatus,
+	setUserKey,
+	deleteUserKey,
+} from '$lib/db/queries';
 import { enableDefaultModelsOnKeyAdd } from '$lib/db/queries/user-enabled-models';
 import { getAuthenticatedUserId } from '$lib/backend/auth-utils';
 
 // GET - get user keys
 export const GET: RequestHandler = async ({ request, url }) => {
-    const userId = await getAuthenticatedUserId(request);
-    const provider = url.searchParams.get('provider');
+	const userId = await getAuthenticatedUserId(request);
+	const provider = url.searchParams.get('provider');
 
-    if (provider) {
-        const key = await getUserKey(userId, provider);
+	if (provider) {
+		return json(await getUserKeyStatus(userId, provider));
+	}
 
-        // Return masked global key if no user key but env var exists
-        if (!key && provider === 'nanogpt' && process.env.NANOGPT_API_KEY) {
-            return json('sk-antigravity...global');
-        }
-
-        return json(key);
-    }
-
-    const allKeys = await getAllUserKeys(userId);
-    return json(allKeys);
+	return json(await getAllUserKeyStatuses(userId));
 };
 
 // POST - set user key
@@ -41,7 +38,12 @@ export const POST: RequestHandler = async ({ request }) => {
         await enableDefaultModelsOnKeyAdd(userId);
     }
 
-    return json(result);
+    return json({
+        ok: true,
+        provider: result.provider,
+        createdAt: result.createdAt,
+        updatedAt: result.updatedAt,
+    });
 };
 
 // DELETE - delete user key

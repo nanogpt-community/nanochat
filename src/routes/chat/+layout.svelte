@@ -4,7 +4,7 @@
 	import { useCachedQuery, api, invalidateQueryPattern } from '$lib/cache/cached-query.svelte.js';
 	import { extractUrlsByType } from '$lib/backend/url-scraper';
 	import type { Doc, Id } from '$lib/db/types';
-	import type { Assistant, Conversation, UserSettings, Message, UserRule } from '$lib/api';
+	import type { Assistant, Conversation, UserKeyStatus, UserSettings, Message, UserRule } from '$lib/api';
 	import { apiCall } from '$lib/api';
 	import AppSidebar from '$lib/components/app-sidebar.svelte';
 	import { Button } from '$lib/components/ui/button';
@@ -241,7 +241,7 @@
 		error: userSettings.error,
 	});
 	const transcriptsEnabled = $derived(userSettings.data?.youtubeTranscriptsEnabled ?? false);
-	const nanoGPTKeyQuery = useCachedQuery(api.user_keys.get, {
+	const nanoGPTKeyQuery = useCachedQuery<UserKeyStatus>(api.user_keys.get, {
 		provider: Provider.NanoGPT,
 		session_token: session.current?.session.token ?? '',
 	});
@@ -249,7 +249,7 @@
 	const centerPromptInput = $derived(
 		page.url.pathname === '/chat' &&
 			!page.params.id &&
-			nanoGPTKeyQuery.data &&
+			(nanoGPTKeyQuery.data?.hasKey ?? false) &&
 			!nanoGPTKeyQuery.isLoading &&
 			!suggestedPromptsEnabled
 	);

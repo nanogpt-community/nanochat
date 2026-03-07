@@ -28,7 +28,7 @@ export type NanoGPTConnectionData = {
 };
 
 export const NanoGPT = {
-	getApiKey: async (_key: string): Promise<Result<NanoGPTConnectionData, string>> => {
+	getApiKey: async (): Promise<Result<NanoGPTConnectionData, string>> => {
 		return await ResultAsync.fromPromise(
 			(async () => {
 				const [balanceRes, usageRes] = await Promise.all([
