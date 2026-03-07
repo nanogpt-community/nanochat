@@ -2,12 +2,22 @@ const SECRET_PATTERNS: Array<[RegExp, string]> = [
 	[/Authorization:\s*Bearer\s+[^\s"',}]+/gi, 'Authorization: Bearer [REDACTED]'],
 	[/Bearer\s+(nc_[A-Za-z0-9_-]+)/g, 'Bearer [REDACTED]'],
 	[/Bearer\s+(sk-[A-Za-z0-9_-]+)/g, 'Bearer [REDACTED]'],
+	[/Bearer\s+(hf_[A-Za-z0-9_-]+)/g, 'Bearer [REDACTED]'],
+	[/Bearer\s+(sk-ant-[A-Za-z0-9_-]+)/g, 'Bearer [REDACTED]'],
 	[/("x-api-key"\s*:\s*")[^"]+(")/gi, '$1[REDACTED]$2'],
 	[/(x-api-key\s*[:=]\s*)[^\s"',}]+/gi, '$1[REDACTED]'],
 	[/("apiKey"\s*:\s*")[^"]+(")/gi, '$1[REDACTED]$2'],
+	[/("api_key"\s*:\s*")[^"]+(")/gi, '$1[REDACTED]$2'],
+	[
+		/("(?:accessToken|access_token|refreshToken|refresh_token|token|secret|password)"\s*:\s*")[^"]+(")/gi,
+		'$1[REDACTED]$2',
+	],
 	[/("key"\s*:\s*")(nc_[^"]+)(")/g, '$1[REDACTED]$3'],
 	[/(nc_[A-Za-z0-9]{16,})/g, '[REDACTED]'],
 	[/(sk-[A-Za-z0-9_-]{16,})/g, '[REDACTED]'],
+	[/(hf_[A-Za-z0-9_-]{16,})/g, '[REDACTED]'],
+	[/(sk-ant-[A-Za-z0-9_-]{16,})/g, '[REDACTED]'],
+	[/((?:api[_-]?key|access[_-]?token|refresh[_-]?token|token|secret)=)[^&\s]+/gi, '$1[REDACTED]'],
 ];
 
 const MAX_LOG_TEXT_LENGTH = 500;

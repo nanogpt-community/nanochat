@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Modal } from '$lib/components/ui/modal';
 	import { Button } from '$lib/components/ui/button';
+	import { toSafeResourceUrl } from '$lib/utils/html-sanitizer';
 	import DownloadIcon from '~icons/lucide/download';
 	import ExternalLinkIcon from '~icons/lucide/external-link';
 	import XIcon from '~icons/lucide/x';
@@ -13,9 +14,11 @@
 	};
 
 	let { open = $bindable(false), imageUrl, fileName = 'image' }: Props = $props();
+	const safeImageUrl = $derived(toSafeResourceUrl(imageUrl));
 
 	function openInNewTab() {
-		window.open(imageUrl, '_blank');
+		if (!safeImageUrl) return;
+		window.open(safeImageUrl, '_blank', 'noopener,noreferrer');
 	}
 </script>
 
@@ -29,7 +32,7 @@
 						size="iconSm"
 						variant="outline"
 						download={fileName}
-						href={imageUrl}
+						href={safeImageUrl ?? undefined}
 						{...tooltip.trigger}
 					>
 						<DownloadIcon class="size-4" />
@@ -62,6 +65,12 @@
 	</div>
 
 	<div class="mt-2 flex items-center justify-center">
-		<img src={imageUrl} alt={fileName} class="max-h-[60vh] max-w-full rounded-lg object-contain" />
+		{#if safeImageUrl}
+			<img
+				src={safeImageUrl}
+				alt={fileName}
+				class="max-h-[60vh] max-w-full rounded-lg object-contain"
+			/>
+		{/if}
 	</div>
 </Modal>

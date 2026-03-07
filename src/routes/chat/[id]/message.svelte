@@ -7,7 +7,7 @@
 	import MarkdownRenderer from './markdown-renderer.svelte';
 	import { ImageModal } from '$lib/components/ui/image-modal';
 	import { sanitizeHtml } from '$lib/utils/markdown-it';
-	import { toSafeHttpUrl } from '$lib/utils/html-sanitizer';
+	import { toSafeHttpUrl, toSafeResourceUrl } from '$lib/utils/html-sanitizer';
 	import { on } from 'svelte/events';
 	import { isHtmlElement } from '$lib/utils/is';
 	import { Button } from '$lib/components/ui/button';
@@ -63,7 +63,11 @@
 	const safeImages = $derived.by(() =>
 		Array.isArray(message.images)
 			? message.images.filter(
-					(image) => image && typeof image.url === 'string' && typeof image.storage_id === 'string'
+					(image) =>
+						image &&
+						typeof image.url === 'string' &&
+						typeof image.storage_id === 'string' &&
+						toSafeResourceUrl(image.url) !== null
 				)
 			: []
 	);
@@ -81,9 +85,12 @@
 	let renderedContentContainer: HTMLDivElement | null = $state(null);
 
 	function openImageModal(imageUrl: string, fileName: string) {
+		const safeImageUrl = toSafeResourceUrl(imageUrl);
+		if (!safeImageUrl) return;
+
 		imageModal = {
 			open: true,
-			imageUrl,
+			imageUrl: safeImageUrl,
 			fileName,
 		};
 	}
@@ -176,7 +183,7 @@
 	const videoUrl = $derived.by(() => {
 		if (!safeContent) return null;
 		const match = safeContent.match(/\[Video Result\]\((.*?)\)/);
-		return match ? match[1] : null;
+		return match ? toSafeResourceUrl(match[1]) : null;
 	});
 
 	let showReasoning = $state(false);
@@ -399,17 +406,20 @@
 		{#if safeImages.length > 0}
 			<div class="mb-2 flex flex-wrap gap-2">
 				{#each safeImages as image (image.storage_id)}
-					<button
-						type="button"
-						onclick={() => openImageModal(image.url, image.fileName || 'image')}
-						class="rounded-lg"
-					>
-						<img
-							src={image.url}
-							alt={image.fileName || 'Uploaded'}
-							class="max-w-[160px] rounded-lg transition-opacity hover:opacity-80 md:max-w-xs"
-						/>
-					</button>
+					{@const safeImageUrl = toSafeResourceUrl(image.url)}
+					{#if safeImageUrl}
+						<button
+							type="button"
+							onclick={() => openImageModal(safeImageUrl, image.fileName || 'image')}
+							class="rounded-lg"
+						>
+							<img
+								src={safeImageUrl}
+								alt={image.fileName || 'Uploaded'}
+								class="max-w-[160px] rounded-lg transition-opacity hover:opacity-80 md:max-w-xs"
+							/>
+						</button>
+					{/if}
 				{/each}
 			</div>
 		{/if}

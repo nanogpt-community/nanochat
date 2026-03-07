@@ -7,6 +7,7 @@
 		isImageOnlyModel,
 		supportsVideo,
 	} from '$lib/utils/model-capabilities';
+	import { toSafeResourceUrl } from '$lib/utils/html-sanitizer';
 	import { cn } from '$lib/utils/utils';
 	import { useCachedQuery, api } from '$lib/cache/cached-query.svelte';
 	import EyeIcon from '~icons/lucide/eye';
@@ -26,6 +27,7 @@
 	};
 
 	let { model, iconUrl, onClose }: Props = $props();
+	const safeIconUrl = $derived(toSafeResourceUrl(iconUrl));
 
 	// Fetch benchmark data
 	const benchmarks = useCachedQuery<AABenchmarkData & { available: boolean }>(
@@ -276,8 +278,8 @@
 <div class="bg-popover border-border flex h-full w-[320px] flex-col overflow-hidden border-l">
 	<!-- Header -->
 	<div class="border-border flex items-start gap-3 border-b p-4">
-		{#if iconUrl}
-			<img src={iconUrl} alt="" class="size-10 flex-shrink-0 object-contain" />
+		{#if safeIconUrl}
+			<img src={safeIconUrl} alt="" class="size-10 flex-shrink-0 object-contain" />
 		{:else}
 			<div class="bg-muted text-muted-foreground flex size-10 items-center justify-center rounded">
 				?

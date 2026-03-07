@@ -39,6 +39,10 @@ curl -X GET "http://localhost:3432/api/assistants" \
   -b "session_cookie_name=session_cookie_value"
 ```
 
+### Response Caching
+
+For security, responses tied to a session cookie, developer API key, or upstream `x-api-key` are served with private no-store semantics by default. These responses also vary on `Authorization`, `Cookie`, and `x-api-key` so shared caches do not mix data across users.
+
 ---
 
 ## Endpoints

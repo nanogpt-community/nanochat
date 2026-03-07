@@ -1,27 +1,43 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
 	import { Button } from '$lib/components/ui/button';
+	import { toSafeResourceUrl } from '$lib/utils/html-sanitizer';
 	import XIcon from '~icons/lucide/x';
 	import DownloadIcon from '~icons/lucide/download';
 	import ExternalLinkIcon from '~icons/lucide/external-link';
 
-	export let open = false;
-	export let documentUrl = '';
-	export let fileName = '';
-	export let fileType: 'pdf' | 'markdown' | 'text' | 'epub' = 'pdf';
-	export let content = '';
+	type Props = {
+		open?: boolean;
+		documentUrl: string;
+		fileName?: string;
+		fileType?: 'pdf' | 'markdown' | 'text' | 'epub';
+		content?: string;
+	};
+
+	let {
+		open = $bindable(false),
+		documentUrl,
+		fileName = '',
+		fileType = 'pdf',
+		content = '',
+	}: Props = $props();
 
 	const dispatch = createEventDispatcher();
+	const safeDocumentUrl = $derived(
+		documentUrl.startsWith('/api/storage/') ? toSafeResourceUrl(documentUrl) : null
+	);
 
 	function handleDownload() {
+		if (!safeDocumentUrl) return;
 		const link = document.createElement('a');
-		link.href = documentUrl;
+		link.href = safeDocumentUrl;
 		link.download = fileName;
 		link.click();
 	}
 
 	function handleOpenInNewTab() {
-		window.open(documentUrl, '_blank');
+		if (!safeDocumentUrl) return;
+		window.open(safeDocumentUrl, '_blank', 'noopener,noreferrer');
 	}
 
 	function handleClose() {
@@ -77,8 +93,8 @@
 
 			<!-- Content -->
 			<div class="flex-1 overflow-auto p-4">
-				{#if fileType === 'pdf'}
-					<iframe src={documentUrl} class="h-[70vh] w-full rounded-lg border" title={fileName}
+				{#if fileType === 'pdf' && safeDocumentUrl}
+					<iframe src={safeDocumentUrl} class="h-[70vh] w-full rounded-lg border" title={fileName}
 					></iframe>
 				{:else if fileType === 'markdown' || fileType === 'text'}
 					<div class="bg-muted rounded-lg border p-4">

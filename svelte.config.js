@@ -14,7 +14,7 @@ const config = {
 				'object-src': ['none'],
 				'script-src': ['self', 'unsafe-eval', 'https://static.cloudflareinsights.com'],
 				'style-src': ['self', 'unsafe-inline'],
-				'img-src': ['self', 'https:', 'data:', 'blob:'],
+				'img-src': ['self', 'https:', 'blob:'],
 				'font-src': ['self', 'data:'],
 				'media-src': ['self', 'https:', 'blob:'],
 				'connect-src': [

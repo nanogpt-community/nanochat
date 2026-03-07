@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { sanitizeHtml, toSafeHttpUrl } from './html-sanitizer';
+import { sanitizeHtml, toSafeHttpUrl, toSafeResourceUrl } from './html-sanitizer';
 
 describe('sanitizeHtml', () => {
 	it('removes executable script content and event handlers', () => {
@@ -36,5 +36,21 @@ describe('toSafeHttpUrl', () => {
 	it('rejects non-http protocols', () => {
 		expect(toSafeHttpUrl('javascript:alert(1)')).toBeNull();
 		expect(toSafeHttpUrl('data:text/html,hi')).toBeNull();
+	});
+});
+
+describe('toSafeResourceUrl', () => {
+	it('allows safe resource URLs', () => {
+		expect(toSafeResourceUrl('https://example.com/video.mp4')).toBe(
+			'https://example.com/video.mp4'
+		);
+		expect(toSafeResourceUrl('/api/storage/file123')).toBe('/api/storage/file123');
+		expect(toSafeResourceUrl('blob:https://example.com/123')).toBe('blob:https://example.com/123');
+	});
+
+	it('rejects unsafe or ambiguous resource URLs', () => {
+		expect(toSafeResourceUrl('javascript:alert(1)')).toBeNull();
+		expect(toSafeResourceUrl('data:image/svg+xml,<svg></svg>')).toBeNull();
+		expect(toSafeResourceUrl('//example.com/image.png')).toBeNull();
 	});
 });

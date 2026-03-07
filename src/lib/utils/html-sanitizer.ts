@@ -126,6 +126,7 @@ const BOOLEAN_ATTRIBUTES = new Set([
 
 const URL_ATTRIBUTES = new Set(['href', 'poster', 'src']);
 const SAFE_PROTOCOLS = new Set(['blob:', 'http:', 'https:', 'mailto:', 'tel:']);
+const SAFE_RESOURCE_PROTOCOLS = new Set(['blob:', 'http:', 'https:']);
 const SAFE_STYLE_PATTERN =
 	/^(?!.*(?:expression\s*\(|javascript:|data:text\/html|data:application|vbscript:|@import|-moz-binding|behavior\s*:)).*$/i;
 
@@ -149,8 +150,7 @@ function isSafeUrl(value: string): boolean {
 		trimmed.startsWith('#') ||
 		trimmed.startsWith('/') ||
 		trimmed.startsWith('./') ||
-		trimmed.startsWith('../') ||
-		trimmed.startsWith('//')
+		trimmed.startsWith('../')
 	) {
 		return true;
 	}
@@ -289,4 +289,32 @@ export function toSafeHttpUrl(value: string | null | undefined): string | null {
 	} catch {
 		return null;
 	}
+}
+
+export function toSafeResourceUrl(value: string | null | undefined): string | null {
+	if (!value) {
+		return null;
+	}
+
+	const trimmed = value.trim();
+
+	if (!trimmed || trimmed.startsWith('#') || trimmed.startsWith('//')) {
+		return null;
+	}
+
+	if (trimmed.startsWith('/') || trimmed.startsWith('./') || trimmed.startsWith('../')) {
+		return trimmed;
+	}
+
+	const protocolMatch = trimmed.match(/^([a-zA-Z][a-zA-Z\d+\-.]*:)/);
+	if (!protocolMatch) {
+		return trimmed;
+	}
+
+	const protocol = protocolMatch[1]?.toLowerCase();
+	if (!protocol || !SAFE_RESOURCE_PROTOCOLS.has(protocol)) {
+		return null;
+	}
+
+	return trimmed;
 }

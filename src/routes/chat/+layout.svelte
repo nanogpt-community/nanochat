@@ -4,7 +4,14 @@
 	import { useCachedQuery, api, invalidateQueryPattern } from '$lib/cache/cached-query.svelte.js';
 	import { extractUrlsByType } from '$lib/backend/url-scraper';
 	import type { Doc, Id } from '$lib/db/types';
-	import type { Assistant, Conversation, UserKeyStatus, UserSettings, Message, UserRule } from '$lib/api';
+	import type {
+		Assistant,
+		Conversation,
+		UserKeyStatus,
+		UserSettings,
+		Message,
+		UserRule,
+	} from '$lib/api';
 	import { apiCall } from '$lib/api';
 	import AppSidebar from '$lib/components/app-sidebar.svelte';
 	import { Button } from '$lib/components/ui/button';
@@ -36,6 +43,7 @@
 		isImageOnlyModel,
 	} from '$lib/utils/model-capabilities';
 	import { validateFiles, getFileType } from '$lib/utils/file-validation';
+	import { toSafeResourceUrl } from '$lib/utils/html-sanitizer';
 	import { omit, pick } from '$lib/utils/object.js';
 	import { cn } from '$lib/utils/utils.js';
 	import { mutate } from '$lib/client/mutation.svelte';
@@ -849,9 +857,12 @@
 	});
 
 	function openImageModal(imageUrl: string, fileName: string) {
+		const safeImageUrl = toSafeResourceUrl(imageUrl);
+		if (!safeImageUrl) return;
+
 		imageModal = {
 			open: true,
-			imageUrl,
+			imageUrl: safeImageUrl,
 			fileName,
 		};
 	}
@@ -876,6 +887,10 @@
 		fileName: string,
 		fileType: 'pdf' | 'markdown' | 'text' | 'epub'
 	) {
+		if (!documentUrl.startsWith('/api/storage/')) {
+			return;
+		}
+
 		let content = '';
 
 		// For text and markdown files, fetch the content
@@ -1341,20 +1356,23 @@
 							{#if selectedImages.length > 0 || selectedDocuments.length > 0}
 								<div class="mb-2 flex flex-wrap gap-2 px-2 pt-2">
 									{#each selectedImages as image, index (image.storage_id)}
+										{@const safeImageUrl = toSafeResourceUrl(image.url)}
 										<div
 											class="group border-border bg-muted relative flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border p-1 transition-all"
 										>
-											<button
-												type="button"
-												onclick={() => openImageModal(image.url, image.fileName || 'image')}
-												class="block size-full overflow-hidden rounded-lg"
-											>
-												<img
-													src={image.url}
-													alt="Uploaded"
-													class="size-full object-cover transition-opacity hover:opacity-80"
-												/>
-											</button>
+											{#if safeImageUrl}
+												<button
+													type="button"
+													onclick={() => openImageModal(safeImageUrl, image.fileName || 'image')}
+													class="block size-full overflow-hidden rounded-lg"
+												>
+													<img
+														src={safeImageUrl}
+														alt="Uploaded"
+														class="size-full object-cover transition-opacity hover:opacity-80"
+													/>
+												</button>
+											{/if}
 											<button
 												type="button"
 												onclick={() => removeImage(index)}
