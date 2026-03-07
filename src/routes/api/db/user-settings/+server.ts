@@ -12,6 +12,7 @@ import { getAuthenticatedUserId } from '$lib/backend/auth-utils';
 import { db } from '$lib/db';
 import { scheduledTasks } from '$lib/db/schema';
 import { computeNextRunAt } from '$lib/backend/scheduler';
+import { assertEncryptionEnabled } from '$lib/encryption';
 
 function normalizeTimezone(value: unknown): string | undefined {
 	if (typeof value !== 'string') return undefined;
@@ -51,6 +52,14 @@ export const POST: RequestHandler = async ({ request }) => {
 		case 'update': {
 			const existingSettings = await getUserSettings(userId);
 			const previousTimezone = normalizeTimezone(existingSettings?.timezone) ?? 'UTC';
+
+			if (typeof body.karakeepApiKey === 'string' && body.karakeepApiKey.trim().length > 0) {
+				try {
+					assertEncryptionEnabled();
+				} catch (e) {
+					return error(503, e instanceof Error ? e.message : 'Secret storage is not configured');
+				}
+			}
 
 			const updateData: Parameters<typeof updateUserSettings>[1] = {
 				privacyMode: body.privacyMode,

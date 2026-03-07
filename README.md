@@ -178,7 +178,7 @@ You can use URL parameters to pre-configure your chat session. This is useful fo
 | Parameter         | Description                                              | Example                      |
 | ----------------- | -------------------------------------------------------- | ---------------------------- |
 | `q`               | Pre-fills the chat input                                 | `?q=Explain quantum physics` |
-| `model`           | Selects the AI model                                     | `?model=zai-org/glm-4.7`       |
+| `model`           | Selects the AI model                                     | `?model=zai-org/glm-4.7`     |
 | `model_provider`  | Selects the provider for the model (NanoGPT)             | `?model_provider=cerebras`   |
 | `search`          | Sets web search mode (`off`, `standard`, `deep`)         | `?search=deep`               |
 | `search_provider` | Sets search provider (`linkup`, `tavily`, `exa`, `kagi`) | `?search_provider=linkup`    |
@@ -195,21 +195,24 @@ You can use URL parameters to pre-configure your chat session. This is useful fo
 
 ## Environment Variables
 
-| Variable                      | Description                                                                             |
-| ----------------------------- | --------------------------------------------------------------------------------------- |
-| `DATABASE_URL`                | SQLite database path (default: ./data/nanochat.db)                                      |
-| `NANOGPT_API_KEY`             | Nano-GPT API key for generation                                                         |
-| `BETTER_AUTH_SECRET`          | Authentication secret                                                                   |
-| `BETTER_AUTH_URL`             | Base URL for authentication                                                             |
-| `ARTIFICIAL_ANALYSIS_API_KEY` | (Optional) API key for model benchmarks from artificialanalysis.ai                      |
-| `ENCRYPTION_KEY`              | (Optional) Encryption key for API keys at rest. Generate with `openssl rand -base64 32` |
+| Variable                      | Description                                                                                           |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                | SQLite database path (default: ./data/nanochat.db)                                                    |
+| `NANOGPT_API_KEY`             | Nano-GPT API key for generation                                                                       |
+| `BETTER_AUTH_SECRET`          | Authentication secret                                                                                 |
+| `BETTER_AUTH_URL`             | Base URL for authentication                                                                           |
+| `ARTIFICIAL_ANALYSIS_API_KEY` | (Optional) API key for model benchmarks from artificialanalysis.ai                                    |
+| `API_KEY_HASH_SECRET`         | (Optional) Dedicated secret for developer API key lookup hashes; defaults to `ENCRYPTION_KEY` or `BETTER_AUTH_SECRET` |
+| `ENCRYPTION_KEY`              | Encryption key for API keys and other stored secrets at rest. Generate with `openssl rand -base64 32` |
 
 ### API Key Encryption
 
 The application supports encrypting API keys stored in the database using AES-256-GCM:
 
-- **Optional**: The app works without `ENCRYPTION_KEY` (keys stored in plain text)
-- **Recommended**: Set `ENCRYPTION_KEY` to encrypt all API keys at rest
+- **Required for new secrets**: `ENCRYPTION_KEY` must be set before creating developer API keys, provider keys, or other stored secrets
+- **At rest**: Secrets are encrypted with AES-256-GCM
+- **Developer API auth**: API keys are also indexed with a non-reversible lookup hash so requests no longer require decrypting the entire key table
+- **Schema update**: Run `npx drizzle-kit push` after upgrading so the `api_keys.key_hash` column exists
 - **Migration**: Run `bun run scripts/migrate-encrypt-api-keys.ts` to encrypt existing keys
 - **Details**: See [`scripts/README-API-KEY-ENCRYPTION.md`](scripts/README-API-KEY-ENCRYPTION.md)
 

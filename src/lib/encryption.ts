@@ -34,9 +34,21 @@ let encryptionWarningShown = false;
 /**
  * Check if encryption is properly configured
  */
-function isEncryptionEnabled(): boolean {
+export function isEncryptionEnabled(): boolean {
 	const key = process.env.ENCRYPTION_KEY;
 	return !!key && key.length >= 32;
+}
+
+export function assertEncryptionEnabled(): void {
+	if (!process.env.ENCRYPTION_KEY) {
+		throw new Error(
+			'ENCRYPTION_KEY is required before storing API keys or other secrets. Set it and migrate existing keys if needed.'
+		);
+	}
+
+	if (process.env.ENCRYPTION_KEY.length < 32) {
+		throw new Error('ENCRYPTION_KEY must be at least 32 characters long.');
+	}
 }
 
 /**
@@ -52,9 +64,7 @@ function deriveKey(): Buffer {
 	}
 
 	if (encryptionKey.length < 32) {
-		throw new Error(
-			'ENCRYPTION_KEY must be at least 32 characters long for security.'
-		);
+		throw new Error('ENCRYPTION_KEY must be at least 32 characters long for security.');
 	}
 
 	// Use a static salt for key derivation from the environment variable
@@ -79,7 +89,7 @@ export function encryptApiKey(plaintext: string): string {
 		if (!encryptionWarningShown) {
 			console.warn(
 				'⚠️  ENCRYPTION_KEY not set. API keys will be stored in plain text. ' +
-				'Set ENCRYPTION_KEY to enable encryption. See .env.example for details.'
+					'Set ENCRYPTION_KEY to enable encryption. See .env.example for details.'
 			);
 			encryptionWarningShown = true;
 		}
@@ -98,13 +108,7 @@ export function encryptApiKey(plaintext: string): string {
 	const authTag = cipher.getAuthTag();
 
 	// Format: VERSION | SALT | IV | ENCRYPTED | AUTH_TAG
-	const combined = Buffer.concat([
-		Buffer.from([VERSION]),
-		salt,
-		iv,
-		encrypted,
-		authTag,
-	]);
+	const combined = Buffer.concat([Buffer.from([VERSION]), salt, iv, encrypted, authTag]);
 
 	return combined.toString('base64');
 }

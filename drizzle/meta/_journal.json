@@ -197,6 +197,27 @@
       "when": 1770134547633,
       "tag": "0027_unknown_the_professor",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "6",
+      "when": 1772895472069,
+      "tag": "0028_add_time_to_first_token_ms_to_messages",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "6",
+      "when": 1772895472070,
+      "tag": "0029_add_theme_color_overrides_to_user_settings",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "6",
+      "when": 1772895472071,
+      "tag": "0030_add_api_key_hash",
+      "breakpoints": true
     }
   ]
 }

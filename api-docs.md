@@ -494,7 +494,7 @@ Create a new API key.
   "createdAt": "date"
 }
 ```
-**Note**: The key is returned only during creation. Save it securely - it cannot be retrieved again. Keys are stored encrypted in the database using AES-256-GCM.
+**Note**: The key is returned only during creation. Save it securely - it cannot be retrieved again. Keys are stored encrypted in the database using AES-256-GCM and indexed by a non-reversible lookup hash. This endpoint returns `503` until `ENCRYPTION_KEY` is configured and the database schema has been updated with `npx drizzle-kit push`.
 
 **CURL Example**:
 ```bash
@@ -1912,6 +1912,7 @@ Update user settings.
 }
 ```
 **Response**: Same as `GET /api/db/user-settings`. Secret values are omitted from responses.
+**Note**: Writing `karakeepApiKey` requires `ENCRYPTION_KEY` to be configured; otherwise the endpoint returns `503`.
 
 **CURL Example**:
 ```bash
@@ -1987,6 +1988,7 @@ Set an API key for a provider.
   "updatedAt": "date"
 }
 ```
+**Note**: Writing provider keys requires `ENCRYPTION_KEY` to be configured; otherwise the endpoint returns `503`.
 
 **CURL Example**:
 ```bash

@@ -1,7 +1,12 @@
 import { db, generateId } from '../index';
 import { userSettings, type UserSettings, type NewUserSettings } from '../schema';
 import { eq } from 'drizzle-orm';
-import { decryptApiKey, encryptApiKey, isEncrypted } from '$lib/encryption';
+import {
+	assertEncryptionEnabled,
+	decryptApiKey,
+	encryptApiKey,
+	isEncrypted,
+} from '$lib/encryption';
 
 type UserSettingsUpdate = Partial<
 	Omit<NewUserSettings, 'id' | 'userId' | 'createdAt' | 'updatedAt'>
@@ -35,7 +40,10 @@ function prepareUserSettingsWrite(data: UserSettingsUpdate): UserSettingsUpdate 
 		...rest,
 		karakeepApiKey:
 			typeof karakeepApiKey === 'string' && karakeepApiKey.length > 0
-				? encryptApiKey(karakeepApiKey)
+				? (() => {
+						assertEncryptionEnabled();
+						return encryptApiKey(karakeepApiKey);
+					})()
 				: karakeepApiKey,
 	};
 }

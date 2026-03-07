@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, real, index } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, real, index, uniqueIndex } from 'drizzle-orm/sqlite-core';
 import { relations } from 'drizzle-orm';
 
 // ============================================================================
@@ -76,18 +76,18 @@ export const passkey = sqliteTable('passkey', {
 // Application Tables (migrated from Convex)
 // ============================================================================
 
-	export const userSettings = sqliteTable(
-		'user_settings',
-		{
-			id: text('id').primaryKey(),
-			userId: text('user_id')
-				.notNull()
-				.references(() => user.id, { onDelete: 'cascade' }),
-			timezone: text('timezone').notNull().default('UTC'),
-			privacyMode: integer('privacy_mode', { mode: 'boolean' }).notNull().default(false),
-			contextMemoryEnabled: integer('context_memory_enabled', { mode: 'boolean' })
-				.notNull()
-				.default(false),
+export const userSettings = sqliteTable(
+	'user_settings',
+	{
+		id: text('id').primaryKey(),
+		userId: text('user_id')
+			.notNull()
+			.references(() => user.id, { onDelete: 'cascade' }),
+		timezone: text('timezone').notNull().default('UTC'),
+		privacyMode: integer('privacy_mode', { mode: 'boolean' }).notNull().default(false),
+		contextMemoryEnabled: integer('context_memory_enabled', { mode: 'boolean' })
+			.notNull()
+			.default(false),
 		persistentMemoryEnabled: integer('persistent_memory_enabled', { mode: 'boolean' })
 			.notNull()
 			.default(false),
@@ -173,11 +173,15 @@ export const apiKeys = sqliteTable(
 			.notNull()
 			.references(() => user.id, { onDelete: 'cascade' }),
 		key: text('key').notNull().unique(),
+		keyHash: text('key_hash'),
 		name: text('name').notNull(),
 		lastUsedAt: integer('last_used_at', { mode: 'timestamp' }),
 		createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
 	},
-	(table) => [index('api_keys_user_id_idx').on(table.userId)]
+	(table) => [
+		index('api_keys_user_id_idx').on(table.userId),
+		uniqueIndex('api_keys_key_hash_unique').on(table.keyHash),
+	]
 );
 
 export const userRules = sqliteTable(

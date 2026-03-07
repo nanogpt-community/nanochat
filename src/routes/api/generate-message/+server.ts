@@ -11,7 +11,6 @@ import {
 	assistants,
 	projects,
 	projectFiles,
-	apiKeys,
 	user,
 	modelPerformanceStats,
 } from '$lib/db/schema';
@@ -47,6 +46,7 @@ import {
 import { substituteSystemPromptVariables } from '$lib/utils/system-prompt-variables';
 import { mcpToolDefinitions, executeMcpTool, isMcpAvailable } from '$lib/backend/mcp-tools';
 import { nanoGptUrl } from '$lib/backend/nano-gpt-url.server';
+import { getUserIdFromApiKey } from '$lib/backend/auth-utils';
 
 // Set to true to enable debug logging
 const ENABLE_LOGGING = true;
@@ -183,56 +183,6 @@ async function getUserIdFromSession(sessionToken: string): Promise<Result<string
 		return ok(session.userId);
 	} catch (e) {
 		return err(`Failed to get user from session: ${e}`);
-	}
-}
-
-// Helper to get user ID from API key (Bearer token)
-async function getUserIdFromApiKey(authHeader: string | null): Promise<Result<string, string>> {
-	if (!authHeader) {
-		return err('Missing Authorization header. Use: Authorization: Bearer <your_api_key>');
-	}
-
-	if (!authHeader.startsWith('Bearer ')) {
-		return err('Invalid Authorization header format. Expected: Bearer <your_api_key>');
-	}
-
-	const keyValue = authHeader.slice(7); // Remove 'Bearer ' prefix
-
-	if (!keyValue) {
-		return err('Empty API key. Provide your key after "Bearer "');
-	}
-
-	if (!keyValue.startsWith('nc_')) {
-		return err(
-			'Invalid API key format. Keys should start with "nc_". Generate one at /account/developer'
-		);
-	}
-
-	try {
-		// Get all API keys for the user and compare after decryption
-		const allApiKeys = await db.query.apiKeys.findMany();
-
-		// Find matching key by decrypting each one
-		const apiKeyRecord = allApiKeys.find((record) => {
-			try {
-				const decryptedKey = isEncrypted(record.key) ? decryptApiKey(record.key) : record.key;
-				return decryptedKey === keyValue;
-			} catch {
-				// If decryption fails, skip this record
-				return false;
-			}
-		});
-
-		if (!apiKeyRecord) {
-			return err('API key not found or has been revoked. Generate a new key at /account/developer');
-		}
-
-		// Update lastUsedAt timestamp
-		await db.update(apiKeys).set({ lastUsedAt: new Date() }).where(eq(apiKeys.id, apiKeyRecord.id));
-
-		return ok(apiKeyRecord.userId);
-	} catch (e) {
-		return err(`Internal error validating API key. Please try again or contact support.`);
 	}
 }
 
@@ -1561,9 +1511,7 @@ async function generateVideoResponse({
 			await new Promise((resolve) => setTimeout(resolve, delayMs));
 
 			const statusRes = await fetch(
-				nanoGptUrl(
-					`/api/generate-video/status?runId=${runId}&modelSlug=${model.modelId}`
-				),
+				nanoGptUrl(`/api/generate-video/status?runId=${runId}&modelSlug=${model.modelId}`),
 				{
 					headers: { 'x-api-key': apiKey },
 				}
