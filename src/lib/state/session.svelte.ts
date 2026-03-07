@@ -1,8 +1,8 @@
 import { page } from '$app/state';
-import type { Session, User } from 'better-auth';
+import type { PublicAuthSession } from '$lib/auth-session';
 
 export const session = {
 	get current() {
-		return page.data.session as { session: Session; user: User } | null;
+		return page.data.session as PublicAuthSession | null;
 	},
 };

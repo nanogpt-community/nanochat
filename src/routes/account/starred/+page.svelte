@@ -9,7 +9,7 @@
 	import { invalidateQueryPattern } from '$lib/cache/cached-query.svelte';
 
 	const starredMessages = useCachedQuery<Message[]>(api.starred_messages.get, {
-		session_token: session.current?.session.token ?? '',
+		cache_scope: session.current?.user.id ?? 'anonymous',
 	});
 
 	async function unstarMessage(messageId: string) {

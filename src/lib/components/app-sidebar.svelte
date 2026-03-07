@@ -58,7 +58,7 @@
 	}
 
 	async function saveRename() {
-		if (!editingConversationId || !session.current?.session.token) return;
+		if (!editingConversationId || !session.current?.user.id) return;
 
 		const id = editingConversationId;
 		const title = editingTitle.trim();
@@ -85,7 +85,7 @@
 	}
 
 	async function togglePin(conversationId: string) {
-		if (!session.current?.session.token) return;
+		if (!session.current?.user.id) return;
 
 		await mutate(api.conversations.togglePin.url, {
 			action: 'togglePin',
@@ -96,7 +96,7 @@
 	}
 
 	async function setConversationProject(conversationId: string, projectId: string | null) {
-		if (!session.current?.session.token) return;
+		if (!session.current?.user.id) return;
 
 		await mutate(api.conversations.setProject.url, {
 			action: 'setProject',
@@ -116,7 +116,7 @@
 
 		if (res !== 'delete') return;
 
-		if (!session.current?.session.token) return;
+		if (!session.current?.user.id) return;
 
 		await fetch(`/api/db/conversations?id=${conversationId}`, {
 			method: 'DELETE',
@@ -130,15 +130,15 @@
 	}
 
 	const settings = useCachedQuery<UserSettings>(api.user_settings.get, {
-		session_token: session.current?.session.token ?? '',
+		cache_scope: session.current?.user.id ?? 'anonymous',
 	});
 
 	const conversationsQuery = useCachedQuery<Conversation[]>(api.conversations.get, {
-		session_token: session.current?.session.token ?? '',
+		cache_scope: session.current?.user.id ?? 'anonymous',
 	});
 
 	const projectsQuery = useCachedQuery<Project[]>(api.projects.list, {
-		session_token: session.current?.session.token ?? '',
+		cache_scope: session.current?.user.id ?? 'anonymous',
 	});
 
 	let expandedProjects = $state<Record<string, boolean>>({});

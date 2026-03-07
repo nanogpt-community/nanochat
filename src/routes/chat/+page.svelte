@@ -22,7 +22,7 @@
 	];
 
 	const userSettingsQuery = useCachedQuery<UserSettings>(api.user_settings.get, {
-		session_token: session.current?.session.token ?? '',
+		cache_scope: session.current?.user.id ?? 'anonymous',
 	});
 
 	const suggestionCategories: Record<string, { icon: typeof IconAi; suggestions: string[] }> = {
@@ -68,7 +68,7 @@
 
 	const nanoGPTKeyQuery = useCachedQuery<UserKeyStatus>(api.user_keys.get, {
 		provider: Provider.NanoGPT,
-		session_token: session.current?.session.token ?? '',
+		cache_scope: session.current?.user.id ?? 'anonymous',
 	});
 
 	const prompt = usePrompt();

@@ -141,7 +141,6 @@
 
 		if (message.role === 'user' && settings.modelId) {
 			const generateRes = await callGenerateMessage({
-				session_token: session.current?.session.token ?? '',
 				conversation_id: cid,
 				model_id: settings.modelId,
 				images: message.images ?? undefined,
@@ -263,7 +262,7 @@
 	}
 
 	async function toggleStarred() {
-		if (!session.current?.session.token) return;
+		if (!session.current?.user.id) return;
 		if (message.role !== 'assistant') return;
 
 		const previous = isStarred;
@@ -323,7 +322,7 @@
 		}
 	}
 	async function regenerateInPlace() {
-		if (!session.current?.session.token) return;
+		if (!session.current?.user.id) return;
 
 		// Log regenerate interaction
 		await logInteraction('regenerate');
@@ -355,7 +354,6 @@
 
 		if (settings.modelId) {
 			const generateRes = await callGenerateMessage({
-				session_token: session.current.session.token,
 				conversation_id: message.conversationId,
 				model_id: settings.modelId,
 				images: message.images ?? undefined,

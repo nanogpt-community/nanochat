@@ -20,7 +20,7 @@ import { eq, and, asc, sql } from 'drizzle-orm';
 import { auth } from '$lib/auth';
 import { Provider, type Annotation } from '$lib/types';
 import { error, type RequestHandler } from '@sveltejs/kit';
-import { Result, ResultAsync, ok, err } from 'neverthrow';
+import { ResultAsync } from 'neverthrow';
 import OpenAI from 'openai';
 import { z } from 'zod/v4';
 import { generationAbortControllers } from '../cache.js';
@@ -56,8 +56,6 @@ const reqBodySchema = z
 		model_id: z.string(),
 		assistant_id: z.string().optional(),
 		project_id: z.string().optional(),
-
-		session_token: z.string().optional(),
 		conversation_id: z.string().optional(),
 		web_search_enabled: z.boolean().optional(),
 		web_search_mode: z.enum(['off', 'standard', 'deep']).optional(),
@@ -154,21 +152,6 @@ function normalizeUsageTokens(usage: Record<string, unknown>): {
 	}
 
 	return { promptTokens, completionTokens: resolvedCompletion, totalTokens };
-}
-
-// Helper to get user ID from session token
-async function getUserIdFromSession(sessionToken: string): Promise<Result<string, string>> {
-	try {
-		const session = await db.query.session.findFirst({
-			where: (sessions, { eq }) => eq(sessions.token, sessionToken),
-		});
-		if (!session) {
-			return err('Session not found');
-		}
-		return ok(session.userId);
-	} catch (e) {
-		return err(`Failed to get user from session: ${e}`);
-	}
 }
 
 async function generateConversationTitle({
@@ -279,7 +262,7 @@ export const POST: RequestHandler = async ({ request }) => {
 	}
 	const args = parsed.data;
 
-	// Try API key auth first (Bearer token), then session cookie, then session_token
+	// Try API key auth first (Bearer token), then session cookie.
 	const authHeader = request.headers.get('Authorization');
 	let userId: string;
 
@@ -291,19 +274,11 @@ export const POST: RequestHandler = async ({ request }) => {
 		}
 		userId = userIdResult.value;
 		log('API key authentication successful', startTime);
-	} else if (args.session_token) {
-		const userIdResult = await getUserIdFromSession(args.session_token);
-		if (userIdResult.isErr()) {
-			log(`Session token auth failed: ${userIdResult.error}`, startTime);
-			return error(401, userIdResult.error);
-		}
-		userId = userIdResult.value;
-		log('Session token authentication successful', startTime);
 	} else {
 		const session = await auth.api.getSession({ headers: request.headers });
 		if (!session?.user?.id) {
 			log('No valid authentication found', startTime);
-			return error(401, 'Authentication required: provide Bearer token or session_token');
+			return error(401, 'Authentication required: provide Bearer token or session cookie');
 		}
 		userId = session.user.id;
 		log('Cookie session authentication successful', startTime);

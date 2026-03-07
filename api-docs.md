@@ -64,7 +64,6 @@ Notes:
 	"model_id": "string",
 	"assistant_id": "string (optional)",
 	"project_id": "string (optional)",
-	"session_token": "string (optional)",
 	"conversation_id": "string (optional)",
 	"web_search_enabled": "boolean (optional)",
 	"web_search_mode": "enum: 'off' | 'standard' | 'deep' (optional)",
@@ -1587,8 +1586,7 @@ Cancel an active message generation.
 
 ```json
 {
-	"conversation_id": "string",
-	"session_token": "string"
+	"conversation_id": "string"
 }
 ```
 
@@ -1607,7 +1605,7 @@ Cancel an active message generation.
 curl -X POST "http://localhost:3432/api/cancel-generation" \
   -H "Content-Type: application/json" \
   -b "session_cookie=your_session" \
-  -d '{"conversation_id": "conv_abc123", "session_token": "token_xyz"}'
+  -d '{"conversation_id": "conv_abc123"}'
 ```
 
 #### POST `/api/enhance-prompt`

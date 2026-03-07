@@ -24,7 +24,7 @@
 	const userTimezone = $derived(settingsQuery.data?.timezone ?? 'UTC');
 
 	const tasksQuery = useCachedQuery<ScheduledTask[]>(api.scheduled_tasks.list, {
-		session_token: session.current?.session.token ?? '',
+		cache_scope: session.current?.user.id ?? 'anonymous',
 	});
 	const assistantsQuery = useCachedQuery<Assistant[]>(api.assistants.list, {});
 	const projectsQuery = useCachedQuery<Project[]>(api.projects.list, {});

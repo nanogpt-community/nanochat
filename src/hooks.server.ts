@@ -10,24 +10,6 @@ export const handle: Handle = async ({ event, resolve }) => {
 	event.locals.auth = () => auth.api.getSession({ headers: event.request.headers }) as any;
 
 	const response = await svelteKitHandler({ event, resolve, auth, building });
-
-	response.headers.set(
-		'Content-Security-Policy',
-		[
-			"default-src 'self'",
-			"base-uri 'self'",
-			"frame-ancestors 'none'",
-			"object-src 'none'",
-			"script-src 'self' 'unsafe-eval'",
-			"style-src 'self' 'unsafe-inline'",
-			"img-src 'self' https: data: blob:",
-			"font-src 'self' data:",
-			"media-src 'self' https: blob:",
-			"connect-src 'self' https: ws: wss:",
-			"frame-src 'self'",
-			"form-action 'self'",
-		].join('; ')
-	);
 	response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
 	response.headers.set('X-Content-Type-Options', 'nosniff');
 

@@ -2,6 +2,7 @@ import { getNanoGPTModels, type NanoGPTModel } from '$lib/backend/models/nano-gp
 import { isSubscriptionOnlyMode, isWebDisabledForServerKey, getDailyMessageLimit } from '$lib/backend/message-limits';
 import { getUserKey } from '$lib/db/queries/user-keys';
 import { Provider } from '$lib/types';
+import { toPublicAuthSession } from '$lib/auth-session';
 import type { LayoutServerLoad } from './$types';
 
 export const load: LayoutServerLoad = async ({ locals }) => {
@@ -38,7 +39,7 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 	};
 
 	return {
-		session,
+		session: toPublicAuthSession(session),
 		models: {
 			[Provider.NanoGPT]: models,
 		},

@@ -92,7 +92,7 @@
 
 	// Query for user's daily limit usage
 	const userSettingsQuery = useCachedQuery<UserSettings>(api.user_settings.get, {
-		session_token: session.current?.session.token ?? '',
+		cache_scope: session.current?.user.id ?? 'anonymous',
 	});
 </script>
 

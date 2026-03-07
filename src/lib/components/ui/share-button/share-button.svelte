@@ -60,7 +60,7 @@
 	});
 
 	async function toggleSharing(newValue: boolean) {
-		if (!session.current?.session.token) return;
+		if (!session.current?.user.id) return;
 
 		const prev = isPublic;
 		isPublic = newValue;
@@ -89,7 +89,7 @@
 	}
 
 	async function saveToKarakeep() {
-		if (!session.current?.session.token) return;
+		if (!session.current?.user.id) return;
 
 		karakeepSaving = true;
 		karakeepStatus = 'idle';

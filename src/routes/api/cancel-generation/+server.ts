@@ -11,7 +11,6 @@ import { generationAbortControllers } from '../generate-message/cache.js';
 
 const reqBodySchema = z.object({
 	conversation_id: z.string(),
-	session_token: z.string().optional(),
 });
 
 export type CancelGenerationRequestBody = z.infer<typeof reqBodySchema>;

@@ -8,7 +8,7 @@ import {
 	type GenerateMessageResponse,
 } from '../../routes/api/generate-message/+server';
 
-export type ScheduledTaskPayload = Omit<GenerateMessageRequestBody, 'session_token'>;
+export type ScheduledTaskPayload = GenerateMessageRequestBody;
 export type ScheduleType = 'cron' | 'interval' | 'once';
 
 const DEFAULT_POLL_INTERVAL_MS = 60_000;

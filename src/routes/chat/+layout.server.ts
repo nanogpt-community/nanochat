@@ -1,4 +1,5 @@
 import { redirectToLogin } from '$lib/backend/auth/redirect';
+import { toPublicAuthSession } from '$lib/auth-session';
 
 export async function load({ locals, url }) {
 	const session = await locals.auth();
@@ -6,6 +7,6 @@ export async function load({ locals, url }) {
 	if (!session) redirectToLogin(url);
 
 	return {
-		session,
+		session: toPublicAuthSession(session),
 	};
 }

@@ -30,7 +30,7 @@
 	);
 
 	const assistantsQuery = useCachedQuery<Assistant[]>(api.assistants.list, {
-		session_token: session.current?.session.token ?? '',
+		cache_scope: session.current?.user.id ?? 'anonymous',
 	});
 
 	let assistants = $derived(assistantsQuery.data ?? []);

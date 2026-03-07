@@ -19,9 +19,10 @@
 	import type { UserSettings } from '$lib/api';
 
 	let { data, children } = $props();
+	const currentSession = $derived(data.session!);
 
 	const settings = useCachedQuery<UserSettings>(api.user_settings.get, {
-		session_token: session.current?.session.token ?? '',
+		cache_scope: session.current?.user.id ?? 'anonymous',
 	});
 	const themeToggleSettings = $derived({
 		theme: settings.data?.theme,
@@ -157,7 +158,7 @@
 					onclick={() => fileInput?.click()}
 					disabled={avatarUploading}
 				>
-					<Avatar src={data.session.user.image ?? undefined}>
+					<Avatar src={currentSession.user.image ?? undefined}>
 						{#snippet children(avatar)}
 							<img
 								{...avatar.image}
@@ -175,7 +176,7 @@
 									}
 								)}
 							>
-								{data.session.user.name
+								{currentSession.user.name
 									.split(' ')
 									.map((i) => i[0]?.toUpperCase())
 									.join('')}
@@ -206,14 +207,14 @@
 							'blur-[6px]': settings.data?.privacyMode,
 						})}
 					>
-						{data.session.user.name}
+						{currentSession.user.name}
 					</p>
 					<span
 						class={cn('text-muted-foreground text-center text-sm', {
 							'blur-[6px]': settings.data?.privacyMode,
 						})}
 					>
-						{data.session.user.email}
+						{currentSession.user.email}
 					</span>
 				</div>
 				<div class="mt-4 flex w-full flex-col gap-2">

@@ -549,7 +549,7 @@
 
 		if (res !== 'delete') return;
 
-		if (!session.current?.session.token) return;
+		if (!session.current?.user.id) return;
 
 		deleteAllChatsDeleting = true;
 
@@ -600,7 +600,7 @@
 
 		if (res !== 'delete') return;
 
-		if (!session.current?.session.token) return;
+		if (!session.current?.user.id) return;
 
 		clearUploadsClearing = true;
 

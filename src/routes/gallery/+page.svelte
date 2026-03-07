@@ -28,7 +28,7 @@
 	type GalleryFilter = 'all' | 'images' | 'documents' | 'project_files' | 'other';
 
 	const galleryQuery = useCachedQuery<GalleryFile[]>(api.storage.gallery, {
-		session_token: session.current?.session.token ?? '',
+		cache_scope: session.current?.user.id ?? 'anonymous',
 	});
 
 	let deletingFileIds = $state<string[]>([]);

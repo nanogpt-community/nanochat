@@ -1,4 +1,3 @@
-import { session } from '$lib/state/session.svelte';
 import { settings } from '$lib/state/settings.svelte';
 
 export class AudioPlayer {
@@ -40,18 +39,11 @@ export class AudioPlayer {
         this.error = null;
 
         try {
-            const token = session.current?.session.token;
-            // Using user's API key if available in settings, or relying on server to use env var/session
-            // For now, let's assume the session token or server handles auth. 
-            // In +server.ts we check x-api-key header. 
+            // Use the session cookie for authenticated playback and let the server resolve
+            // the user-owned NanoGPT key or the shared server key as needed.
             // We usually pass the user's personal key if they have one set in the UI, 
             // but `settings` store might not expose it directly depending on implementation.
             // Let's rely on the server side handling or pass what we can.
-
-            // Actually, in `generate-message` call we pass `session_token`.
-            // The `api/tts/+server.ts` checks `x-api-key`. 
-            // We should use `settings.apiKey` if available? 
-            // Let's check `settings.svelte`.
 
             const headers: Record<string, string> = {
                 'Content-Type': 'application/json'
@@ -59,18 +51,17 @@ export class AudioPlayer {
 
             // If user has a custom API key set in settings (local usage), pass it.
             // But usually we rely on the backend proxy. 
-            // Let's assume the user is logged in and we use the session cookie or token.
+            // Let's assume the user is logged in and we use the session cookie.
             // Wait, my server implementation checks `request.headers.get('x-api-key')`.
             // I should check how other API calls authenticate. `generate-message` calls use `callGenerateMessage` which passes params.
 
             // Let's look at `src/routes/api/generate-message/+server.ts` again.
-            // It uses `getUserIdFromApiKey` or `getUserIdFromSession`.
-            // My `tts/+server.ts` currently only checks `x-api-key` or `env.NANOGPT_API_KEY`.
+            // It uses cookie or developer API key auth.
+            // My `tts/+server.ts` checks for an explicit NanoGPT key and otherwise
+            // derives the right key from the authenticated user or server config.
             // If I am a logged in user without a custom key, I want to use the server's key (if allowed) or my account balance.
             // The `api/tts` implementation I wrote uses `env.NANOGPT_API_KEY` as fallback. This is good for "Server Key" mode.
             // But if I want to use MY account quota, I need to pass MY key.
-            // In `src/lib/state/session.svelte`, do we have the key?
-
             // Let's just try to fetch.
 
             const res = await fetch('/api/tts', {

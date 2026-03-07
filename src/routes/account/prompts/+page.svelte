@@ -29,7 +29,7 @@
 	);
 
 	const promptsQuery = useCachedQuery<Prompt[]>(api.prompts.list, {
-		session_token: session.current?.session.token ?? '',
+		cache_scope: session.current?.user.id ?? 'anonymous',
 	});
 
 	let promptsList = $derived(promptsQuery.data ?? []);

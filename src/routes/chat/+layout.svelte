@@ -104,7 +104,7 @@
 	});
 
 	const assistantsQuery = useCachedQuery<Assistant[]>(api.assistants.list, {
-		session_token: session.current?.session.token ?? '',
+		cache_scope: session.current?.user.id ?? 'anonymous',
 	});
 
 	const selectedAssistantId = new PersistedState<string>('selectedAssistantId', '');
@@ -194,12 +194,11 @@
 	});
 
 	async function stopGeneration() {
-		if (!page.params.id || !session.current?.session.token) return;
+		if (!page.params.id || !session.current?.user.id) return;
 
 		try {
 			const result = await callCancelGeneration({
 				conversation_id: page.params.id,
-				session_token: session.current.session.token,
 			});
 
 			if (result.isErr()) {
@@ -243,7 +242,7 @@
 	const transcriptsEnabled = $derived(userSettings.data?.youtubeTranscriptsEnabled ?? false);
 	const nanoGPTKeyQuery = useCachedQuery<UserKeyStatus>(api.user_keys.get, {
 		provider: Provider.NanoGPT,
-		session_token: session.current?.session.token ?? '',
+		cache_scope: session.current?.user.id ?? 'anonymous',
 	});
 	const suggestedPromptsEnabled = $derived(userSettings.data?.suggestedPromptsEnabled ?? true);
 	const centerPromptInput = $derived(
@@ -391,7 +390,6 @@
 		try {
 			const res = await callGenerateMessage({
 				message: message.current,
-				session_token: session.current?.session.token,
 				conversation_id: page.params.id ?? undefined,
 				model_id: settings.modelId,
 				provider_id: settings.providerId || undefined,
@@ -535,7 +533,7 @@
 	let abortEnhance: AbortController | null = $state(null);
 
 	async function enhancePrompt() {
-		if (!session.current?.session.token) return;
+		if (!session.current?.user.id) return;
 
 		enhancingPrompt = true;
 
@@ -570,7 +568,7 @@
 	}
 
 	const rulesQuery = useCachedQuery<UserRule[]>(api.user_rules.all, {
-		session_token: session.current?.session.token ?? '',
+		cache_scope: session.current?.user.id ?? 'anonymous',
 	});
 
 	const autosize = new TextareaAutosize();
@@ -715,7 +713,7 @@
 	}
 
 	async function handleFilesSelect(files: File[]) {
-		if (!files.length || !session.current?.session.token) return;
+		if (!files.length || !session.current?.user.id) return;
 
 		const imageFiles = files.filter(isImageFile);
 		const documentFiles = files.filter((f) => !isImageFile(f));

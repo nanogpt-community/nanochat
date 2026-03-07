@@ -109,7 +109,12 @@ export function useCachedQuery<TResult>(
 				if (queryConfig.method === 'GET' || !queryConfig.method) {
 					const params = new URLSearchParams();
 					for (const [key, value] of Object.entries(args)) {
-						if (value !== undefined && value !== null && key !== 'session_token') {
+						if (
+							value !== undefined &&
+							value !== null &&
+							key !== 'session_token' &&
+							key !== 'cache_scope'
+						) {
 							params.set(key, String(value));
 						}
 					}
