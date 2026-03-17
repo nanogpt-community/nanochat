@@ -684,37 +684,36 @@
 			onkeydown={(e) => e.key === 'Escape' && (open = false)}
 		></div>
 		<div
-			class="bg-background fixed inset-x-0 bottom-0 z-50 h-[85vh] touch-none rounded-t-xl border-t shadow-xl"
+			class="bg-background fixed inset-x-0 bottom-0 z-50 h-[85vh] rounded-t-xl border-t shadow-xl"
 			role="dialog"
 			aria-modal="true"
 			aria-label="Model picker"
 			tabindex="-1"
 			style="transform: translateY({drawerTranslateY}px);"
 			transition:fly={{ y: 100, duration: 200 }}
-			ontouchstart={(e) => {
-				// Track touch start position
-				touchStartY = e.touches[0]?.clientY ?? 0;
-				isDragging = true;
-			}}
-			ontouchmove={(e) => {
-				if (!isDragging) return;
-				e.preventDefault(); // Prevent pull-to-refresh
-				const currentY = e.touches[0]?.clientY ?? 0;
-				const deltaY = currentY - touchStartY;
-				// Only allow dragging down
-				drawerTranslateY = Math.max(0, deltaY);
-			}}
-			ontouchend={() => {
-				isDragging = false;
-				if (drawerTranslateY > CLOSE_THRESHOLD) {
-					open = false;
-				}
-				drawerTranslateY = 0;
-			}}
 		>
-			<!-- Drag handle area -->
+			<!-- Drag handle area (touch gestures only here) -->
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div
-				class="border-border flex cursor-grab items-center justify-center border-b p-3 active:cursor-grabbing"
+				class="border-border flex touch-none cursor-grab items-center justify-center border-b p-3 active:cursor-grabbing"
+				ontouchstart={(e) => {
+					touchStartY = e.touches[0]?.clientY ?? 0;
+					isDragging = true;
+				}}
+				ontouchmove={(e) => {
+					if (!isDragging) return;
+					e.preventDefault();
+					const currentY = e.touches[0]?.clientY ?? 0;
+					const deltaY = currentY - touchStartY;
+					drawerTranslateY = Math.max(0, deltaY);
+				}}
+				ontouchend={() => {
+					isDragging = false;
+					if (drawerTranslateY > CLOSE_THRESHOLD) {
+						open = false;
+					}
+					drawerTranslateY = 0;
+				}}
 			>
 				<div class="bg-muted h-1.5 w-12 rounded-full"></div>
 			</div>

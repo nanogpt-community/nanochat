@@ -234,6 +234,15 @@
 	body {
 		@apply bg-background text-foreground fill-device-height w-full;
 	}
+
+	/* Prevent iOS Safari auto-zoom on focus — triggered when font-size < 16px */
+	@media (max-width: 767px) {
+		input,
+		textarea,
+		select {
+			font-size: 16px !important;
+		}
+	}
 }
 
 /* For components that need horizontal scrolling */
