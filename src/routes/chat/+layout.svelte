@@ -28,6 +28,7 @@
 	import Tooltip from '$lib/components/ui/tooltip.svelte';
 	import { cmdOrCtrl } from '$lib/hooks/is-mac.svelte.js';
 	import { TextareaAutosize } from '$lib/spells/textarea-autosize.svelte.js';
+	import { IsMobile } from '$lib/hooks/is-mobile.svelte';
 	import { models } from '$lib/state/models.svelte';
 	import { usePrompt } from '$lib/state/prompt.svelte.js';
 	import { session } from '$lib/state/session.svelte.js';
@@ -580,6 +581,7 @@
 	});
 
 	const autosize = new TextareaAutosize();
+	const isMobileDevice = new IsMobile();
 
 	const message = new PersistedState('prompt', '', {
 		serializer: {
@@ -1443,7 +1445,7 @@
 										: 'Type your message here...'}
 									name="message"
 									onkeydown={(e) => {
-										if (e.key === 'Enter' && !e.shiftKey && !popover.open) {
+										if (e.key === 'Enter' && !e.shiftKey && !popover.open && !isMobileDevice.current) {
 											e.preventDefault();
 											handleSubmit();
 										}

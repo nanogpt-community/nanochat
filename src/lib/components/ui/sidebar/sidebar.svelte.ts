@@ -2,6 +2,7 @@ import { IsMobile } from '$lib/hooks/is-mobile.svelte';
 import { Context } from 'runed';
 
 const SIDEBAR_WIDTH_STORAGE_KEY = 'nanochat-sidebar-width';
+const SIDEBAR_OPEN_STORAGE_KEY = 'nanochat-sidebar-open';
 const DEFAULT_SIDEBAR_WIDTH = 280;
 const MIN_SIDEBAR_WIDTH = 200;
 const MAX_SIDEBAR_WIDTH = 460;
@@ -21,8 +22,15 @@ function loadStoredSidebarWidth(): number {
 	return clampSidebarWidth(parsed);
 }
 
+function loadStoredSidebarOpen(): boolean {
+	if (typeof localStorage === 'undefined') return true;
+	const value = localStorage.getItem(SIDEBAR_OPEN_STORAGE_KEY);
+	if (value === null) return true;
+	return value !== 'false';
+}
+
 export class SidebarRootState {
-	open = $state(true);
+	open = $state(loadStoredSidebarOpen());
 	openMobile = $state(false);
 	isMobile = new IsMobile();
 	width = $state(loadStoredSidebarWidth());
@@ -42,6 +50,10 @@ export class SidebarRootState {
 		$effect(() => {
 			this.persistWidth(this.width);
 		});
+
+		$effect(() => {
+			this.persistOpen(this.open);
+		});
 	}
 
 	showSidebar = $derived(this.isMobile.current ? this.openMobile : this.open);
@@ -49,6 +61,11 @@ export class SidebarRootState {
 	persistWidth(width: number) {
 		if (typeof localStorage === 'undefined') return;
 		localStorage.setItem(SIDEBAR_WIDTH_STORAGE_KEY, String(width));
+	}
+
+	persistOpen(open: boolean) {
+		if (typeof localStorage === 'undefined') return;
+		localStorage.setItem(SIDEBAR_OPEN_STORAGE_KEY, String(open));
 	}
 
 	setWidth(nextWidth: number) {

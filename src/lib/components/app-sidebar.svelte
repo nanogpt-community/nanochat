@@ -271,12 +271,27 @@
 		<Tooltip>
 			{#snippet trigger(tooltip)}
 				<a
-					href="/gallery"
+					href="/studio"
 					class="bg-secondary text-secondary-foreground font-fake-proxima hover:bg-secondary/80 flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-semibold tracking-[-0.01em] transition-all duration-200"
 					{...tooltip.trigger}
 					onclick={controls.closeMobile}
 				>
 					<ImageIcon class="size-4" />
+					Image Studio
+				</a>
+			{/snippet}
+			Image Studio
+		</Tooltip>
+	</div>
+	<div class="mt-2 flex w-full flex-col gap-2 px-2">
+		<Tooltip>
+			{#snippet trigger(tooltip)}
+				<a
+					href="/gallery"
+					class="text-secondary-foreground/70 hover:text-secondary-foreground font-fake-proxima hover:bg-secondary/40 flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium tracking-[-0.01em] transition-all duration-200"
+					{...tooltip.trigger}
+					onclick={controls.closeMobile}
+				>
 					My Stuff
 				</a>
 			{/snippet}
@@ -540,10 +555,11 @@
 									{/if}
 								</div>
 								<div
-									class={[
+									class={cn(
 										'pointer-events-none absolute inset-y-0.5 right-0 flex translate-x-full items-center gap-2 rounded-r-lg pr-2 pl-6 transition group-hover:pointer-events-auto group-hover:translate-0',
 										'to-sidebar-accent via-sidebar-accent bg-gradient-to-r from-transparent from-10% via-21% ',
-									]}
+										isActive && 'pointer-events-auto translate-x-0',
+									)}
 									class:hidden={editingConversationId === conversation.id}
 								>
 									<Tooltip>

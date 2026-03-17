@@ -1,7 +1,3 @@
-Always use Context7 MCP when I need library/API documentation, code generation, setup or configuration steps without me having to explicitly ask.
-
-Context7 MCP has nano-gpt api documentation: websites/nano-gpt
-
 # Agent Development Guidelines
 
 ## API Documentation Requirement

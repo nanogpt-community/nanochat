@@ -236,6 +236,96 @@ client.newCall(request).enqueue(object : Callback {
 
 ---
 
+### Image Studio Generation
+
+#### POST `/api/generate-image`
+Starts an image generation job in the background and returns a generation ID immediately. Used by the Image Studio for standalone image generation without creating a conversation.
+
+**Authentication**: Session or API Key
+
+**Request Body**:
+```json
+{
+  "model_id": "string (required - image model ID)",
+  "prompt": "string (required - image generation prompt)",
+  "image_params": {
+    "resolution": "string (e.g. '1024x1024')",
+    "nImages": "number (how many images to generate)",
+    "quality": "string (model-dependent, e.g. 'hd')",
+    "aspect_ratio": "string (model-dependent, e.g. '16:9')",
+    "seed": "number (optional, for reproducibility)"
+  },
+  "reference_image_id": "string (optional - storage ID of a reference image for img2img)"
+}
+```
+
+**Response**:
+```json
+{
+  "generation_id": "string (use this to poll for results)"
+}
+```
+
+**CURL Example**:
+```bash
+curl -X POST "http://localhost:3432/api/generate-image" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your_api_key" \
+  -d '{
+    "model_id": "flux-1.1-pro",
+    "prompt": "A serene mountain landscape at sunset",
+    "image_params": {
+      "resolution": "1024x1024"
+    }
+  }'
+```
+
+#### GET `/api/generate-image`
+Polls for the status and result of an image generation job started via POST.
+
+**Authentication**: Session or API Key
+
+**Query Parameters**:
+- `id` (required): The `generation_id` returned from the POST request.
+
+**Response** (pending):
+```json
+{
+  "status": "pending"
+}
+```
+
+**Response** (complete):
+```json
+{
+  "status": "complete",
+  "images": [
+    {
+      "url": "/api/storage/{storageId}",
+      "storage_id": "string",
+      "fileName": "generated-image-1.png"
+    }
+  ],
+  "cost": 0.05
+}
+```
+
+**Response** (error):
+```json
+{
+  "status": "error",
+  "message": "string (error description)"
+}
+```
+
+**CURL Example**:
+```bash
+curl "http://localhost:3432/api/generate-image?id=your_generation_id" \
+  -H "Authorization: Bearer your_api_key"
+```
+
+---
+
 ### Text-to-Speech
 
 #### POST `/api/tts`
