@@ -11,6 +11,10 @@
 	let isLoading = $state(false);
 	let error = $state('');
 
+	function getErrorMessage(authError: { message?: unknown } | null | undefined, fallback: string) {
+		return typeof authError?.message === 'string' ? authError.message : fallback;
+	}
+
 	async function handleSignUp() {
 		if (!username || !password) return;
 		if (password.length < 8) {
@@ -26,7 +30,7 @@
 				password: password,
 			});
 			if (result.error) {
-				error = result.error.message || 'Sign up failed';
+				error = getErrorMessage(result.error, 'Sign up failed');
 			} else {
 				window.location.href = '/chat';
 			}
@@ -47,7 +51,7 @@
 				password: password,
 			});
 			if (result.error) {
-				error = result.error.message || 'Sign in failed';
+				error = getErrorMessage(result.error, 'Sign in failed');
 			} else {
 				window.location.href = '/chat';
 			}
@@ -70,7 +74,7 @@
 				},
 			});
 			if (result?.error) {
-				error = result.error.message || 'Sign in failed';
+				error = getErrorMessage(result.error, 'Sign in failed');
 			}
 		} catch (e: any) {
 			error = e.message || 'Sign in failed';

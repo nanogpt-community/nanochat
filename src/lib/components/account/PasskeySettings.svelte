@@ -26,6 +26,10 @@
 
 	let isLoading = $state(false);
 
+	function getErrorMessage(error: { message?: unknown } | null | undefined, fallback: string) {
+		return typeof error?.message === 'string' ? error.message : fallback;
+	}
+
 	async function addPasskey() {
 		console.log('[Passkey] addPasskey called');
 		isLoading = true;
@@ -35,7 +39,7 @@
 			console.log('[Passkey] Result:', result);
 			if (result?.error) {
 				console.error('[Passkey] Error:', result.error);
-				toast.error(result.error.message || 'Failed to add passkey');
+				toast.error(getErrorMessage(result.error, 'Failed to add passkey'));
 			} else {
 				console.log('[Passkey] Success!');
 				toast.success('Passkey added successfully');
@@ -58,7 +62,7 @@
              // @ts-ignore
 			if (result?.error) {
                  // @ts-ignore
-				toast.error(result.error.message || 'Failed to delete passkey');
+				toast.error(getErrorMessage(result.error, 'Failed to delete passkey'));
 			} else {
 				toast.success('Passkey deleted successfully');
 				await invalidateAll();
