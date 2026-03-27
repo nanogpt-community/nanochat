@@ -82,6 +82,7 @@
 			const hasReasoning = !!(nanoModel && supportsReasoning(nanoModel));
 			const isImageOnly = !!(nanoModel && isImageOnlyModel(nanoModel));
 			const hasVideo = !!(nanoModel && supportsVideo(nanoModel));
+			const formattedModelName = formatModelName(model.modelId);
 
 			return {
 				...model,
@@ -94,7 +95,8 @@
 					imageOnly: isImageOnly,
 					video: hasVideo,
 				},
-				formattedModelName: formatModelName(model.modelId),
+				formattedModelName,
+				searchText: [model.modelId, nanoModel?.name, formattedModelName.full].filter(Boolean).join(' '),
 			};
 		})
 	);
@@ -133,7 +135,7 @@
 			? fuzzysearch({
 					haystack: enrichedEnabledModels,
 					needle: search,
-					property: 'modelId',
+					property: 'searchText',
 				})
 			: enrichedEnabledModels;
 
