@@ -21,6 +21,8 @@ export interface QueryResult<T> {
 	refetch?: () => Promise<void>;
 }
 
+type QueryArgs = Record<string, unknown> | undefined;
+
 const globalCache = new SessionStorageCache('query-cache');
 const inFlightRequests = new Map<string, Promise<unknown>>();
 
@@ -41,8 +43,14 @@ async function dedupedFetch<TResult>(
 	}
 }
 
-type Listener = (key: string) => void;
+type CacheEvent =
+	| { type: 'invalidate'; key: string }
+	| { type: 'update'; key: string };
+
+type Listener = (event: CacheEvent) => void;
 const listeners = new Set<Listener>();
+let pendingEvents: CacheEvent[] = [];
+let cacheFlushScheduled = false;
 
 function subscribeToCacheInvalidation(listener: Listener) {
 	listeners.add(listener);
@@ -51,8 +59,60 @@ function subscribeToCacheInvalidation(listener: Listener) {
 	};
 }
 
+function flushCacheEvents() {
+	cacheFlushScheduled = false;
+	const events = pendingEvents;
+	pendingEvents = [];
+
+	for (const event of events) {
+		listeners.forEach((listener) => listener(event));
+	}
+}
+
+function enqueueCacheEvent(event: CacheEvent) {
+	pendingEvents.push(event);
+
+	if (cacheFlushScheduled) {
+		return;
+	}
+
+	cacheFlushScheduled = true;
+	queueMicrotask(flushCacheEvents);
+}
+
 function notifyInvalidation(key: string) {
-	listeners.forEach((listener) => listener(key));
+	enqueueCacheEvent({ type: 'invalidate', key });
+}
+
+function notifyUpdate(key: string) {
+	enqueueCacheEvent({ type: 'update', key });
+}
+
+function buildQueryKey(queryConfig: QueryConfig, queryArgs: QueryArgs): string {
+	return `${queryConfig.url}:${JSON.stringify(queryArgs || {})}`;
+}
+
+function matchesCacheKey(eventKey: string, currentKey: string): boolean {
+	return eventKey === currentKey || (eventKey.endsWith('*') && currentKey.startsWith(eventKey.slice(0, -1)));
+}
+
+function parseCacheKey(key: string): { url: string; args: QueryArgs } | null {
+	const separatorIndex = key.indexOf(':');
+	if (separatorIndex === -1) {
+		return null;
+	}
+
+	const url = key.slice(0, separatorIndex);
+	const rawArgs = key.slice(separatorIndex + 1);
+
+	try {
+		return {
+			url,
+			args: rawArgs ? (JSON.parse(rawArgs) as QueryArgs) : undefined,
+		};
+	} catch {
+		return null;
+	}
 }
 
 /**
@@ -77,7 +137,7 @@ export function useCachedQuery<TResult>(
 	let isStale = $state(false);
 
 	const getArgs = () => (typeof queryArgs === 'function' ? queryArgs() : queryArgs);
-	const getCacheKey = () => cacheKey || `${queryConfig.url}:${JSON.stringify(getArgs())}`;
+	const getCacheKey = () => cacheKey || buildQueryKey(queryConfig, getArgs());
 	const isEnabled = () => (typeof enabled === 'function' ? enabled() : enabled);
 
 	async function fetchData() {
@@ -161,9 +221,22 @@ export function useCachedQuery<TResult>(
 
 	// Subscribe to cache invalidations
 	$effect(() => {
-		const unsubscribe = subscribeToCacheInvalidation((key) => {
+		const unsubscribe = subscribeToCacheInvalidation((event) => {
 			const currentKey = getCacheKey();
-			if (key === currentKey || (key.endsWith('*') && currentKey.startsWith(key.slice(0, -1)))) {
+			if (!matchesCacheKey(event.key, currentKey)) {
+				return;
+			}
+
+			if (event.type === 'update') {
+				const cached = globalCache.get(currentKey);
+				data = cached as TResult | undefined;
+				error = undefined;
+				isLoading = false;
+				isStale = false;
+				return;
+			}
+
+			if (event.type === 'invalidate') {
 				fetchData();
 			}
 		});
@@ -304,9 +377,60 @@ export const api = {
 } as const;
 
 export function invalidateQuery(query: QueryConfig, queryArgs?: unknown): void {
-	const key = `${query.url}:${JSON.stringify(queryArgs || {})}`;
+	const key = buildQueryKey(query, (queryArgs as QueryArgs) ?? undefined);
 	globalCache.delete(key);
 	notifyInvalidation(key);
+}
+
+export function setCachedQueryData<TResult>(
+	query: QueryConfig,
+	queryArgs: QueryArgs,
+	updater: TResult | ((current: TResult | undefined) => TResult | undefined),
+	options: { ttl?: number } = {}
+): void {
+	const key = buildQueryKey(query, queryArgs);
+	const current = globalCache.get(key) as TResult | undefined;
+	const next =
+		typeof updater === 'function'
+			? (updater as (current: TResult | undefined) => TResult | undefined)(current)
+			: updater;
+
+	if (next === undefined) {
+		globalCache.delete(key);
+	} else {
+		globalCache.set(key, next, options.ttl);
+	}
+
+	notifyUpdate(key);
+}
+
+export function setCachedQueryDataMatching<TResult>(
+	matcher: (entry: { key: string; url: string; args: QueryArgs }) => boolean,
+	updater: (current: TResult | undefined, entry: { key: string; url: string; args: QueryArgs }) => TResult | undefined,
+	options: { ttl?: number } = {}
+): void {
+	for (const key of globalCache.keys()) {
+		const parsed = parseCacheKey(key);
+		if (!parsed) {
+			continue;
+		}
+
+		const entry = { key, url: parsed.url, args: parsed.args };
+		if (!matcher(entry)) {
+			continue;
+		}
+
+		const current = globalCache.get(key) as TResult | undefined;
+		const next = updater(current, entry);
+
+		if (next === undefined) {
+			globalCache.delete(key);
+		} else {
+			globalCache.set(key, next, options.ttl);
+		}
+
+		notifyUpdate(key);
+	}
 }
 
 export function invalidateQueryPattern(urlPrefix: string): void {

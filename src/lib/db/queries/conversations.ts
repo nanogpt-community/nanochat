@@ -1,9 +1,18 @@
 import { db, generateId } from '../index';
 import { conversations, messages, type Conversation, type Message } from '../schema';
-import { eq, desc, and, or, isNull } from 'drizzle-orm';
+import { eq, desc, and, or, isNull, asc, sql } from 'drizzle-orm';
 import enhancedSearch from '$lib/utils/fuzzy-search';
 import { getFirstSentence } from '$lib/utils/strings';
 import { sanitizeHtml } from '$lib/utils/html-sanitizer';
+
+const messageRoleOrder = sql<number>`
+	case
+		when ${messages.role} = 'system' then 0
+		when ${messages.role} = 'user' then 1
+		when ${messages.role} = 'assistant' then 2
+		else 3
+	end
+`;
 
 export async function getUserConversations(
 	userId: string,
@@ -282,27 +291,41 @@ export async function deleteTemporaryConversations(userId: string): Promise<void
 
 export async function getConversationMessages(
 	conversationId: string,
-	userId: string
+	userId: string,
+	options?: { limit?: number }
 ): Promise<Message[]> {
 	const conv = await getConversationById(conversationId, userId);
 	if (!conv) throw new Error('Conversation not found');
 
-	return db.query.messages.findMany({
+	const limit = options?.limit;
+	const results = await db.query.messages.findMany({
 		where: eq(messages.conversationId, conversationId),
-		orderBy: [messages.createdAt],
+		orderBy: limit
+			? [desc(messages.createdAt), desc(messageRoleOrder), desc(messages.id)]
+			: [asc(messages.createdAt), asc(messageRoleOrder), asc(messages.id)],
+		...(limit ? { limit } : {}),
 	});
+
+	return limit ? results.reverse() : results;
 }
 
 export async function getPublicConversationMessages(
-	conversationId: string
+	conversationId: string,
+	options?: { limit?: number }
 ): Promise<Message[] | null> {
 	const conv = await getPublicConversationById(conversationId);
 	if (!conv) return null;
 
-	return db.query.messages.findMany({
+	const limit = options?.limit;
+	const results = await db.query.messages.findMany({
 		where: eq(messages.conversationId, conversationId),
-		orderBy: [messages.createdAt],
+		orderBy: limit
+			? [desc(messages.createdAt), desc(messageRoleOrder), desc(messages.id)]
+			: [asc(messages.createdAt), asc(messageRoleOrder), asc(messages.id)],
+		...(limit ? { limit } : {}),
 	});
+
+	return limit ? results.reverse() : results;
 }
 
 interface ConversationSearchResult {

@@ -165,7 +165,25 @@ data: {
 }
 ```
 
-4. **`error`** - Sent if an error occurs during generation
+4. **`title_updated`** - Sent when server-side title generation finishes
+
+```
+event: title_updated
+data: {"conversation_id":"conv_abc123","title":"France Capital Question"}
+```
+
+5. **`follow_ups_updated`** - Sent when server-side follow-up suggestions are stored
+
+```
+event: follow_ups_updated
+data: {
+  "conversation_id":"conv_abc123",
+  "message_id":"msg_xyz789",
+  "suggestions":["What is the population of Paris?","What language is spoken there?"]
+}
+```
+
+6. **`error`** - Sent if an error occurs during generation
 
 ```
 event: error
@@ -181,6 +199,7 @@ On an `error`, the server also persists the error on the assistant message (when
 - Messages are still saved to the database, preserving conversation history.
 - Client disconnection is handled gracefully (generation is cancelled).
 - Supports all features of the non-streaming endpoint (web search, MCP tools, reasoning models, etc.).
+- Title generation and follow-up suggestions are produced server-side and streamed back as additional SSE events when available.
 
 **CURL Example**:
 
@@ -1872,6 +1891,7 @@ Get messages for a conversation.
 
 - `conversationId`: (Required) Conversation ID.
 - `public`: Set to `"true"` for public conversations.
+- `limit`: Optional positive integer. Returns only the most recent `limit` messages in ascending order.
 
 **Response**:
 
@@ -1896,7 +1916,7 @@ Get messages for a conversation.
 **CURL Example**:
 
 ```bash
-curl -X GET "http://localhost:3432/api/db/messages?conversationId=conv_abc123" \
+curl -X GET "http://localhost:3432/api/db/messages?conversationId=conv_abc123&limit=121" \
   -b "session_cookie=your_session"
 ```
 

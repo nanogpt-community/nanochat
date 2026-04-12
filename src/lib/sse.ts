@@ -15,6 +15,11 @@ export type SSEEvent =
 				time_to_first_token_ms?: number;
 			};
 	  }
+	| { event: 'title_updated'; data: { conversation_id: string; title: string } }
+	| {
+			event: 'follow_ups_updated';
+			data: { conversation_id: string; message_id: string; suggestions: string[] };
+	  }
 	| { event: 'error'; data: { error: string } };
 
 /**

@@ -4,13 +4,14 @@
 	import type { Snippet } from 'svelte';
 
 	type FloatingConfig = NonNullable<Extracted<TooltipProps['floatingConfig']>>;
+	type TooltipSlotProps = Pick<Tooltip, 'trigger'>;
 
 	interface Props extends Omit<
 		ComponentProps<TooltipProps>,
 		'floatingConfig' | 'open' | 'onOpenChange'
 	> {
 		children: Snippet;
-		trigger: Snippet<[Tooltip]>;
+		trigger: Snippet<[TooltipSlotProps]>;
 		placement?: NonNullable<FloatingConfig['computePosition']>['placement'];
 		openDelay?: ComponentProps<TooltipProps>['openDelay'];
 		disabled?: boolean;
@@ -47,11 +48,32 @@
 		openDelay: () => openDelay,
 		disableHoverableContent: () => disableHoverableContent,
 	});
+
+	function closeTooltipSafely() {
+		try {
+			open = false;
+		} catch {
+			// Ignore teardown races from transient blur handlers.
+		}
+	}
+
+	$effect(() => {
+		if (disabled) {
+			closeTooltipSafely();
+		}
+	});
+
+	const tooltipTrigger = $derived.by(() => {
+		return {
+			...tooltip.trigger,
+			onblur: closeTooltipSafely,
+		};
+	});
 </script>
 
-<svelte:window onblur={() => (open = false)} />
+<svelte:window onblur={closeTooltipSafely} />
 
-{@render trigger(tooltip)}
+{@render trigger({ trigger: tooltipTrigger })}
 
 <div {...tooltip.content} class="bg-popover border-border rounded border p-0 shadow-xl">
 	<p class="text-popover-foreground px-2 py-1 text-xs">{@render children()}</p>

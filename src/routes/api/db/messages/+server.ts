@@ -81,13 +81,24 @@ function withInlineImages<
 export const GET: RequestHandler = async ({ request, url }) => {
 	const conversationId = url.searchParams.get('conversationId');
 	const isPublic = url.searchParams.get('public') === 'true';
+	const limitParam = url.searchParams.get('limit');
+	const limit =
+		limitParam === null
+			? undefined
+			: Number.isFinite(Number(limitParam)) && Number(limitParam) > 0
+				? Math.floor(Number(limitParam))
+				: null;
 
 	if (!conversationId) {
 		return error(400, 'Missing conversationId');
 	}
 
+	if (limit === null) {
+		return error(400, 'Invalid limit');
+	}
+
 	if (isPublic) {
-		const messages = await getPublicConversationMessages(conversationId);
+		const messages = await getPublicConversationMessages(conversationId, { limit: limit ?? undefined });
 		if (!messages) {
 			return error(404, 'Conversation not found or not public');
 		}
@@ -95,7 +106,7 @@ export const GET: RequestHandler = async ({ request, url }) => {
 	}
 
 	const userId = await getAuthenticatedUserId(request);
-	const messages = await getConversationMessages(conversationId, userId);
+	const messages = await getConversationMessages(conversationId, userId, { limit: limit ?? undefined });
 	return json(withInlineImages(messages));
 };
 

@@ -13,7 +13,7 @@ import {
 	user,
 	modelPerformanceStats,
 } from '$lib/db/schema';
-import { existsSync, readFileSync } from 'fs';
+import { readFile } from 'fs/promises';
 import { extractTextFromPDF } from '$lib/utils/pdf-extraction';
 import { extractTextFromEPUB } from '$lib/utils/epub-extraction';
 import { eq, and, asc, sql } from 'drizzle-orm';
@@ -46,6 +46,7 @@ import { mcpToolDefinitions, executeMcpTool, isMcpAvailable } from '$lib/backend
 import { nanoGptUrl } from '$lib/backend/nano-gpt-url.server';
 import { SSEEncoder, sseHeaders } from '$lib/sse';
 import { getUserIdFromApiKey } from '$lib/backend/auth-utils';
+import { FOLLOW_UP_QUESTIONS_PROMPT } from '$lib/prompts/follow-up-questions';
 
 // Set to true to enable debug logging
 const ENABLE_LOGGING = true;
@@ -154,6 +155,10 @@ function normalizeUsageTokens(usage: Record<string, unknown>): {
 	return { promptTokens, completionTokens: resolvedCompletion, totalTokens };
 }
 
+async function readStorageBuffer(path: string): Promise<Buffer> {
+	return Buffer.from(await readFile(path));
+}
+
 async function generateConversationTitle({
 	conversationId,
 	userId,
@@ -170,7 +175,7 @@ async function generateConversationTitle({
 	userMessage: string;
 	assistantMessage: string;
 	userSettingsData: Doc<'user_settings'> | null;
-}) {
+}): Promise<string | null> {
 	log('Starting conversation title generation', startTime);
 
 	const conversation = await db.query.conversations.findFirst({
@@ -179,12 +184,12 @@ async function generateConversationTitle({
 
 	if (!conversation) {
 		log('Title generation: Conversation not found', startTime);
-		return;
+		return null;
 	}
 
 	if (conversation.title !== 'New Chat') {
 		log('Title generation: Conversation already has custom title', startTime);
-		return;
+		return null;
 	}
 
 	const openai = new OpenAI({
@@ -220,7 +225,7 @@ Requirements:
 
 	if (titleResult.isErr()) {
 		log(`Title generation: OpenAI call failed: ${titleResult.error}`, startTime);
-		return;
+		return null;
 	}
 
 	const titleResponse = titleResult.value;
@@ -228,7 +233,7 @@ Requirements:
 
 	if (!rawTitle) {
 		log('Title generation: No title generated', startTime);
-		return;
+		return null;
 	}
 
 	const generatedTitle = rawTitle.replace(/^["']|["']$/g, '');
@@ -239,6 +244,89 @@ Requirements:
 		.where(eq(conversations.id, conversationId));
 
 	log(`Title generation: Successfully updated title to "${generatedTitle}"`, startTime);
+	return generatedTitle;
+}
+
+async function generateFollowUpSuggestions({
+	conversationId,
+	assistantMessageId,
+	userId,
+	startTime,
+	apiKey,
+	userMessage,
+	assistantMessage,
+	userSettingsData,
+}: {
+	conversationId: string;
+	assistantMessageId: string;
+	userId: string;
+	startTime: number;
+	apiKey: string;
+	userMessage: string;
+	assistantMessage: string;
+	userSettingsData: Doc<'user_settings'> | null;
+}): Promise<string[] | null> {
+	if (userSettingsData?.followUpQuestionsEnabled === false) {
+		log('Follow-up generation: disabled in user settings', startTime);
+		return null;
+	}
+
+	if (assistantMessage.length <= 100) {
+		log('Follow-up generation: assistant message too short', startTime);
+		return null;
+	}
+
+	const modelId = userSettingsData?.followUpModelId || 'zai-org/GLM-4.5-Air';
+	const prompt = FOLLOW_UP_QUESTIONS_PROMPT(userMessage, assistantMessage);
+
+	const openai = new OpenAI({
+		baseURL: nanoGptUrl('/api/v1'),
+		apiKey,
+		defaultHeaders: userSettingsData?.followUpProviderId
+			? { 'X-Provider': userSettingsData.followUpProviderId }
+			: undefined,
+	});
+
+	const suggestionsResult = await ResultAsync.fromPromise(
+		openai.chat.completions.create({
+			model: modelId,
+			messages: [{ role: 'user', content: prompt }],
+			temperature: 0.7,
+		}),
+		(e) => `Follow-up questions API call failed: ${e}`
+	);
+
+	if (suggestionsResult.isErr()) {
+		log(`Follow-up generation: OpenAI call failed: ${suggestionsResult.error}`, startTime);
+		return null;
+	}
+
+	const rawSuggestions = suggestionsResult.value.choices[0]?.message?.content?.trim();
+	if (!rawSuggestions) {
+		log('Follow-up generation: No suggestions generated', startTime);
+		return null;
+	}
+
+	try {
+		const parsed = JSON.parse(rawSuggestions) as unknown;
+		if (!Array.isArray(parsed) || parsed.some((item) => typeof item !== 'string')) {
+			throw new Error('Invalid response format');
+		}
+
+		const suggestions = parsed.slice(0, 3);
+		await db
+			.update(messages)
+			.set({ followUpSuggestions: suggestions })
+			.where(
+				and(eq(messages.id, assistantMessageId), eq(messages.conversationId, conversationId))
+			);
+
+		log(`Follow-up generation: Generated ${suggestions.length} suggestions`, startTime);
+		return suggestions;
+	} catch (error) {
+		log(`Follow-up generation: Failed to parse suggestions: ${error}`, startTime);
+		return null;
+	}
 }
 
 export const POST: RequestHandler = async ({ request }) => {
@@ -821,10 +909,10 @@ async function streamAIResponse({
 							};
 						}
 
-						try {
-							const fileBuffer = readFileSync(storageRecord.path);
-							const base64 = fileBuffer.toString('base64');
-							const dataUrl = `data:${storageRecord.mimeType};base64,${base64}`;
+							try {
+								const fileBuffer = await readStorageBuffer(storageRecord.path);
+								const base64 = fileBuffer.toString('base64');
+								const dataUrl = `data:${storageRecord.mimeType};base64,${base64}`;
 
 							return {
 								type: 'image_url' as const,
@@ -872,9 +960,9 @@ async function streamAIResponse({
 						}
 
 						try {
-							if (doc.fileType === 'text' || doc.fileType === 'markdown') {
-								const fileBuffer = readFileSync(storageRecord.path);
-								const content = fileBuffer.toString('utf-8');
+								if (doc.fileType === 'text' || doc.fileType === 'markdown') {
+									const fileBuffer = await readStorageBuffer(storageRecord.path);
+									const content = fileBuffer.toString('utf-8');
 								return {
 									type: 'text' as const,
 									text: `[${doc.fileType.toUpperCase()} Document: ${doc.fileName || 'Untitled'}]\n\n${content}`,
@@ -1637,19 +1725,6 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 			}
 		})();
 
-		// Generate title if needed (after response is complete)
-		if (lastUserMessage && content) {
-			generateConversationTitle({
-				conversationId,
-				userId,
-				startTime,
-				apiKey,
-				userMessage: lastUserMessage.content,
-				assistantMessage: content,
-				userSettingsData,
-			}).catch((e) => log(`Title generation error: ${e}`, startTime));
-		}
-
 		// Update conversation generating status and cost
 		await db
 			.update(conversations)
@@ -1659,6 +1734,61 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 				costUsd: sql`COALESCE(${conversations.costUsd}, 0) + ${costUsd ?? 0}`,
 			})
 			.where(eq(conversations.id, conversationId));
+
+		if (lastUserMessage && content) {
+			const [generatedTitle, followUpSuggestions] = await Promise.all([
+				generateConversationTitle({
+					conversationId,
+					userId,
+					startTime,
+					apiKey,
+					userMessage: lastUserMessage.content,
+					assistantMessage: content,
+					userSettingsData,
+				}).catch((e) => {
+					log(`Title generation error: ${e}`, startTime);
+					return null;
+				}),
+				generateFollowUpSuggestions({
+					conversationId,
+					assistantMessageId,
+					userId,
+					startTime,
+					apiKey,
+					userMessage: lastUserMessage.content,
+					assistantMessage: content,
+					userSettingsData,
+				}).catch((e) => {
+					log(`Follow-up generation error: ${e}`, startTime);
+					return null;
+				}),
+			]);
+
+			if (generatedTitle) {
+				controller.enqueue(
+					sse.encode({
+						event: 'title_updated',
+						data: {
+							conversation_id: conversationId,
+							title: generatedTitle,
+						},
+					})
+				);
+			}
+
+			if (followUpSuggestions && followUpSuggestions.length > 0) {
+				controller.enqueue(
+					sse.encode({
+						event: 'follow_ups_updated',
+						data: {
+							conversation_id: conversationId,
+							message_id: assistantMessageId,
+							suggestions: followUpSuggestions,
+						},
+					})
+				);
+			}
+		}
 
 		// Update persistent memory if enabled
 		if (userSettingsData?.persistentMemoryEnabled) {

@@ -140,6 +140,10 @@
 	const projectsQuery = useCachedQuery<Project[]>(api.projects.list, {
 		cache_scope: session.current?.user.id ?? 'anonymous',
 	});
+	const safeProjects = $derived(Array.isArray(projectsQuery.data) ? projectsQuery.data : []);
+	const safeConversations = $derived(
+		Array.isArray(conversationsQuery.data) ? conversationsQuery.data : []
+	);
 
 	let expandedProjects = $state<Record<string, boolean>>({});
 
@@ -147,33 +151,7 @@
 		expandedProjects[projectId] = !expandedProjects[projectId];
 	}
 
-	// Track previous generating state to detect when generation completes
-	let wasGenerating = $state(false);
-	const hasGeneratingConversation = $derived(
-		conversationsQuery.data?.some((c) => c.generating) ?? false
-	);
-
-	// Poll for updates while a conversation is generating (to catch title updates)
-	// and do a final refresh when generation completes
-	$effect(() => {
-		if (hasGeneratingConversation) {
-			wasGenerating = true;
-			// Poll every 3 seconds while generating to catch title updates
-			const interval = setInterval(() => {
-				invalidateQueryPattern(api.conversations.get.url);
-			}, 3000);
-			return () => clearInterval(interval);
-		} else if (wasGenerating) {
-			// Generation just completed, do a final refresh to catch the title
-			wasGenerating = false;
-			// Small delay to ensure title generation has completed
-			setTimeout(() => {
-				invalidateQueryPattern(api.conversations.get.url);
-			}, 1000);
-		}
-	});
-
-	function groupConversationsByTime(conversations: Doc<'conversations'>[]) {
+		function groupConversationsByTime(conversations: Doc<'conversations'>[]) {
 		const now = Date.now();
 		const oneDay = 24 * 60 * 60 * 1000;
 		const sevenDays = 7 * oneDay;
@@ -225,7 +203,7 @@
 		return groups;
 	}
 
-	const groupedConversations = $derived(groupConversationsByTime(conversationsQuery.data ?? []));
+	const groupedConversations = $derived(groupConversationsByTime(safeConversations));
 
 	const templateConversations = $derived([
 		{ key: 'pinned', label: 'Pinned', conversations: groupedConversations.pinned, icon: PinIcon },
@@ -235,6 +213,18 @@
 		{ key: 'lastMonth', label: 'Last 30 days', conversations: groupedConversations.lastMonth },
 		{ key: 'older', label: 'Older', conversations: groupedConversations.older },
 	]);
+	const userInitials = $derived.by(() => {
+		const userName = page.data.session?.user?.name;
+		if (typeof userName !== 'string' || userName.trim().length === 0) {
+			return '';
+		}
+
+		return userName
+			.split(' ')
+			.filter(Boolean)
+			.map((name) => name[0]?.toUpperCase() ?? '')
+			.join('');
+	});
 </script>
 
 <Sidebar.Sidebar class="flex flex-col overflow-clip p-2">
@@ -323,15 +313,14 @@
 		<div class="flex flex-col gap-0.5">
 			{#if projectsQuery.isLoading}
 				<div class="text-muted-foreground px-2 py-1 text-xs">Loading...</div>
-			{:else if !projectsQuery.data || projectsQuery.data.length === 0}
+			{:else if safeProjects.length === 0}
 				<div class="text-muted-foreground px-2 py-1 text-xs italic">
 					No projects. Create one above.
 				</div>
 			{:else}
-				{#each projectsQuery.data as project (project.id)}
+				{#each safeProjects as project (project.id)}
 					{@const isExpanded = expandedProjects[project.id]}
-					{@const projectConversations =
-						conversationsQuery.data?.filter((c) => c.projectId === project.id) ?? []}
+					{@const projectConversations = safeConversations.filter((c) => c.projectId === project.id)}
 
 					<div class="flex flex-col">
 						<div class="group/project flex w-full items-center gap-1">
@@ -408,8 +397,8 @@
 														>
 															Remove from project
 														</DropdownMenu.Item>
-														{#if projectsQuery.data && projectsQuery.data.length > 0}
-															{#each projectsQuery.data as project (project.id)}
+														{#if safeProjects.length > 0}
+															{#each safeProjects as project (project.id)}
 																<DropdownMenu.Item
 																	disabled={conversation.projectId === project.id}
 																	onclick={() => setConversationProject(conversation.id, project.id)}
@@ -623,8 +612,8 @@
 											>
 												Remove from project
 											</DropdownMenu.Item>
-											{#if projectsQuery.data && projectsQuery.data.length > 0}
-												{#each projectsQuery.data as project (project.id)}
+											{#if safeProjects.length > 0}
+												{#each safeProjects as project (project.id)}
 													<DropdownMenu.Item
 														disabled={conversation.projectId === project.id}
 														onclick={() => setConversationProject(conversation.id, project.id)}
@@ -696,10 +685,7 @@
 								}
 							)}
 						>
-							{page.data.session?.user.name
-								.split(' ')
-								.map((name: string) => name[0]?.toUpperCase())
-								.join('')}
+							{userInitials}
 						</span>
 					{/snippet}
 				</Avatar>

@@ -18,7 +18,7 @@
 	import { session } from '$lib/state/session.svelte';
 	import { ResultAsync } from 'neverthrow';
 	import { goto } from '$app/navigation';
-	import { callGenerateMessage } from '../../api/generate-message/call';
+	import { callGenerateMessageStream } from '../../api/generate-message/call';
 	import { Branch, BranchAndRegen } from '$lib/components/icons';
 	import { settings } from '$lib/state/settings.svelte';
 	import ShinyText from '$lib/components/animations/shiny-text.svelte';
@@ -147,17 +147,17 @@
 		const cid = res.value.conversationId;
 
 		if (message.role === 'user' && settings.modelId) {
-			const generateRes = await callGenerateMessage({
+			await callGenerateMessageStream({
 				conversation_id: cid,
 				model_id: settings.modelId,
 				images: message.images ?? undefined,
 				web_search_enabled: message.webSearchEnabled ?? undefined,
+			}, {
+				userId: session.current?.user.id,
+				onError: (error) => {
+					console.error('Failed to generate branched response:', error);
+				},
 			});
-
-			if (generateRes.isErr()) {
-				// TODO: add error toast
-				return;
-			}
 		}
 
 		await goto(`/chat/${cid}`);
@@ -360,19 +360,17 @@
 		}
 
 		if (settings.modelId) {
-			const generateRes = await callGenerateMessage({
+			await callGenerateMessageStream({
 				conversation_id: message.conversationId,
 				model_id: settings.modelId,
 				images: message.images ?? undefined,
 				web_search_enabled: message.webSearchEnabled ?? undefined,
+			}, {
+				userId: session.current.user.id,
+				onError: (error) => {
+					console.error('Failed to regenerate:', error);
+				},
 			});
-
-			if (generateRes.isErr()) {
-				console.error('Failed to regenerate:', generateRes.error);
-			} else {
-				invalidateQueryPattern(api.conversations.getById.url);
-				invalidateQueryPattern(api.messages.getAllFromConversation.url);
-			}
 		}
 	}
 </script>

@@ -25,7 +25,10 @@
 	}));
 
 	// Use prop data if available (live), otherwise fall back to cached query data
-	const effectiveMessages = $derived(propMessages ?? messagesQuery.data);
+	const effectiveMessages = $derived.by(() => {
+		const messages = propMessages ?? messagesQuery.data;
+		return Array.isArray(messages) ? messages : [];
+	});
 	const effectiveConversation = $derived(propConversation ?? conversationQuery.data);
 
 	function formatDate(timestamp: Date | number | undefined): string {
@@ -44,7 +47,7 @@
 		const conversation = effectiveConversation;
 		const messages = effectiveMessages;
 
-		if (!conversation || !messages) return '';
+		if (!conversation || messages.length === 0) return '';
 
 		let markdown = `# ${conversation.title || 'Untitled Conversation'}\n\n`;
 		markdown += `**Exported on:** ${formatDate(new Date())}\n`;
@@ -110,7 +113,7 @@
 			variant="ghost"
 			size="icon"
 			class="size-8"
-			disabled={!effectiveConversation || !effectiveMessages}
+			disabled={!effectiveConversation || effectiveMessages.length === 0}
 			{...tooltip.trigger}
 		>
 			<DownloadIcon class="size-4" />

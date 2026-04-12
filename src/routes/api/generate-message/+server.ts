@@ -14,7 +14,7 @@ import {
 	user,
 	modelPerformanceStats,
 } from '$lib/db/schema';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { mkdir, readFile, writeFile } from 'fs/promises';
 import { extractTextFromPDF } from '$lib/utils/pdf-extraction';
 import { extractTextFromEPUB } from '$lib/utils/epub-extraction';
 import { eq, and, asc, sql } from 'drizzle-orm';
@@ -166,6 +166,10 @@ function normalizeUsageTokens(usage: Record<string, unknown>): {
 	}
 
 	return { promptTokens, completionTokens: resolvedCompletion, totalTokens };
+}
+
+async function readStorageBuffer(path: string): Promise<Buffer> {
+	return Buffer.from(await readFile(path));
 }
 
 async function generateConversationTitle({
@@ -470,10 +474,10 @@ async function generateAIResponse({
 							};
 						}
 
-						try {
-							const fileBuffer = readFileSync(storageRecord.path);
-							const base64 = fileBuffer.toString('base64');
-							const dataUrl = `data:${storageRecord.mimeType};base64,${base64}`;
+							try {
+								const fileBuffer = await readStorageBuffer(storageRecord.path);
+								const base64 = fileBuffer.toString('base64');
+								const dataUrl = `data:${storageRecord.mimeType};base64,${base64}`;
 
 							return {
 								type: 'image_url' as const,
@@ -524,9 +528,9 @@ async function generateAIResponse({
 
 						try {
 							// For text and markdown files, read content
-							if (doc.fileType === 'text' || doc.fileType === 'markdown') {
-								const fileBuffer = readFileSync(storageRecord.path);
-								const content = fileBuffer.toString('utf-8');
+								if (doc.fileType === 'text' || doc.fileType === 'markdown') {
+									const fileBuffer = await readStorageBuffer(storageRecord.path);
+									const content = fileBuffer.toString('utf-8');
 								return {
 									type: 'text' as const,
 									text: `[${doc.fileType.toUpperCase()} Document: ${doc.fileName || 'Untitled'}]\n\n${content}`,
@@ -1430,10 +1434,10 @@ async function generateVideoResponse({
 			});
 
 			if (storageRecord) {
-				try {
-					const fileBuffer = readFileSync(storageRecord.path);
-					const base64 = fileBuffer.toString('base64');
-					imageDataUrl = `data:${storageRecord.mimeType};base64,${base64}`;
+					try {
+						const fileBuffer = await readStorageBuffer(storageRecord.path);
+						const base64 = fileBuffer.toString('base64');
+						imageDataUrl = `data:${storageRecord.mimeType};base64,${base64}`;
 				} catch (e) {
 					console.error(`Failed to read file for image ${img.storage_id}:`, e);
 				}
@@ -1844,8 +1848,8 @@ export async function _generateMessageForUser({
 						where: eq(storage.id, inputImage.storage_id),
 					});
 
-					if (storageRecord && existsSync(storageRecord.path)) {
-						const fileBuffer = readFileSync(storageRecord.path);
+					if (storageRecord) {
+						const fileBuffer = await readStorageBuffer(storageRecord.path);
 						const base64 = fileBuffer.toString('base64');
 						imageDataUrl = `data:${storageRecord.mimeType};base64,${base64}`;
 						log('Prepared input image for img2img', startTime);
@@ -1918,9 +1922,7 @@ export async function _generateMessageForUser({
 
 				// Ensure upload dir exists
 				const UPLOAD_DIR = join(process.cwd(), 'data', 'uploads');
-				if (!existsSync(UPLOAD_DIR)) {
-					mkdirSync(UPLOAD_DIR, { recursive: true });
-				}
+				await mkdir(UPLOAD_DIR, { recursive: true });
 
 				const requestedImageCount = imageCount;
 				const generatedImages: Array<{ url: string; storage_id: string; fileName?: string }> = [];
@@ -1971,7 +1973,7 @@ export async function _generateMessageForUser({
 							throw new Error('Invalid file path');
 						}
 
-						writeFileSync(filepath, buffer);
+						await writeFile(filepath, buffer);
 
 						await db.insert(storage).values({
 							id: storageId,

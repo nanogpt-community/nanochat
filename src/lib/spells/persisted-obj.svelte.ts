@@ -114,6 +114,10 @@ export function createPersistedObj<T extends Record<string, unknown>>(
 					return proxy(Reflect.get(target, property));
 				},
 				set: (target, property, value) => {
+					if (Object.is(Reflect.get(target, property), value)) {
+						return true;
+					}
+
 					version += 1;
 					Reflect.set(target, property, value);
 					serialize(root);

@@ -1,7 +1,16 @@
 import { db, generateId } from '../index';
 import { messages, conversations, type Message } from '../schema';
-import { eq, asc } from 'drizzle-orm';
+import { eq, asc, sql } from 'drizzle-orm';
 import { sanitizeHtml } from '$lib/utils/html-sanitizer';
+
+const messageRoleOrder = sql<number>`
+	case
+		when ${messages.role} = 'system' then 0
+		when ${messages.role} = 'user' then 1
+		when ${messages.role} = 'assistant' then 2
+		else 3
+	end
+`;
 
 export async function createMessage(
 	conversationId: string,
@@ -112,7 +121,7 @@ export async function getMessageById(messageId: string): Promise<Message | null>
 export async function getMessagesByConversation(conversationId: string): Promise<Message[]> {
 	const result = await db.query.messages.findMany({
 		where: eq(messages.conversationId, conversationId),
-		orderBy: [asc(messages.createdAt)],
+		orderBy: [asc(messages.createdAt), asc(messageRoleOrder), asc(messages.id)],
 	});
 	return result;
 }
@@ -134,7 +143,7 @@ export async function getStarredMessages(userId: string): Promise<Message[]> {
 		.from(messages)
 		.innerJoin(conversations, eq(messages.conversationId, conversations.id))
 		.where(eq(conversations.userId, userId))
-		.orderBy(asc(messages.createdAt));
+		.orderBy(asc(messages.createdAt), asc(messageRoleOrder), asc(messages.id));
 
 	// Filter to only starred messages and return the message objects
 	return result.filter((r) => r.message.starred === true).map((r) => r.message);

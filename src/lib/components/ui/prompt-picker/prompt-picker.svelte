@@ -26,9 +26,14 @@
 	let variableValues = $state<Record<string, string>>({});
 
 	const promptsQuery = useCachedQuery<Prompt[]>(api.prompts.list, {});
+	const safePrompts = $derived(
+		Array.isArray(promptsQuery.data)
+			? promptsQuery.data.filter((prompt): prompt is Prompt => !!prompt && typeof prompt.name === 'string')
+			: []
+	);
 
 	const filteredPrompts = $derived(
-		(promptsQuery.data ?? []).filter(
+		safePrompts.filter(
 			(p) =>
 				p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
 				(p.description?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false)
@@ -213,7 +218,7 @@
 					<p>No prompts found for "{searchTerm}"</p>
 					<p class="mt-1 text-xs">Try a different search term</p>
 				</div>
-			{:else if promptsQuery.data?.length === 0}
+			{:else if safePrompts.length === 0}
 				<div class="text-muted-foreground py-8 text-center">
 					<p>No prompts yet</p>
 					<p class="mt-1 text-xs">

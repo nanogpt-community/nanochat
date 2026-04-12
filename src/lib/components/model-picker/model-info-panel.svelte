@@ -85,7 +85,8 @@
 
 	// Find matching LLM benchmark using scoring system (find BEST match, not first match)
 	const llmBenchmark = $derived.by(() => {
-		if (!benchmarks.data?.available || !benchmarks.data.llms) return null;
+		const llms = Array.isArray(benchmarks.data?.llms) ? benchmarks.data.llms : [];
+		if (!benchmarks.data?.available || llms.length === 0) return null;
 
 		const modelName = stripSuffixes(model.name).toLowerCase();
 		const modelIdFull = model.id.toLowerCase();
@@ -109,7 +110,7 @@
 		let bestScore = 0;
 		let bestMatchReason = '';
 
-		for (const llm of benchmarks.data.llms) {
+		for (const llm of llms) {
 			const aaName = llm.name.toLowerCase();
 			const aaSlug = llm.slug.toLowerCase();
 			const normalizedAaName = normalizeForMatch(llm.name);
@@ -189,7 +190,8 @@
 
 	// Find matching image model benchmark
 	const imageBenchmark = $derived.by(() => {
-		if (!benchmarks.data?.available || !benchmarks.data.imageModels || !isImageOnlyModel(model))
+		const imageModels = Array.isArray(benchmarks.data?.imageModels) ? benchmarks.data.imageModels : [];
+		if (!benchmarks.data?.available || imageModels.length === 0 || !isImageOnlyModel(model))
 			return null;
 
 		const modelName = model.name.toLowerCase();
@@ -199,7 +201,7 @@
 		const modelNameTokens = extractKeyTokens(model.name);
 		const modelIdTokens = extractKeyTokens(modelIdShort);
 
-		return benchmarks.data.imageModels.find((img: AAImageModel) => {
+		return imageModels.find((img: AAImageModel) => {
 			const aaName = img.name.toLowerCase();
 			const aaSlug = img.slug.toLowerCase();
 			const normalizedAaName = normalizeForMatch(img.name);

@@ -1,7 +1,12 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import { useCachedQuery, api, invalidateQueryPattern } from '$lib/cache/cached-query.svelte.js';
+	import {
+		useCachedQuery,
+		api,
+		invalidateQueryPattern,
+		setCachedQueryData,
+	} from '$lib/cache/cached-query.svelte.js';
 	import { extractUrlsByType } from '$lib/backend/url-scraper';
 	import type { Doc, Id } from '$lib/db/types';
 	import type {
@@ -64,7 +69,7 @@
 	import MicIcon from '~icons/lucide/mic';
 	import { audioRecorder } from '$lib/state/audio-recorder.svelte';
 	import { callCancelGeneration } from '../api/cancel-generation/call.js';
-	import { callGenerateMessage } from '../api/generate-message/call.js';
+	import { callGenerateMessage, callGenerateMessageStream } from '../api/generate-message/call.js';
 	import { ModelPicker } from '$lib/components/model-picker';
 	import { ProviderPicker } from '$lib/components/provider-picker';
 	import SearchModal from './search-modal.svelte';
@@ -85,6 +90,7 @@
 	import { isTemporaryConversation } from '$lib/state/temporary-chat.svelte';
 	import VideoIcon from '~icons/lucide/video';
 	import ImageIcon from '~icons/lucide/image';
+	import { activeGeneration } from '$lib/state/active-generation.svelte';
 
 	let { children } = $props();
 
@@ -115,22 +121,23 @@
 	const assistantsQuery = useCachedQuery<Assistant[]>(api.assistants.list, {
 		cache_scope: session.current?.user.id ?? 'anonymous',
 	});
+	const safeAssistants = $derived(Array.isArray(assistantsQuery.data) ? assistantsQuery.data : []);
 
 	const selectedAssistantId = new PersistedState<string>('selectedAssistantId', '');
 
 	$effect(() => {
-		if (selectedAssistantId.current === '' && assistantsQuery.data) {
-			const defaultAssistant = assistantsQuery.data.find((a: any) => a.isDefault);
+		if (selectedAssistantId.current === '' && safeAssistants.length > 0) {
+			const defaultAssistant = safeAssistants.find((a: any) => a.isDefault);
 			if (defaultAssistant) {
 				selectedAssistantId.current = defaultAssistant.id;
-			} else if (assistantsQuery.data && assistantsQuery.data.length > 0) {
-				selectedAssistantId.current = assistantsQuery.data[0]?.id ?? '';
+			} else if (safeAssistants.length > 0) {
+				selectedAssistantId.current = safeAssistants[0]?.id ?? '';
 			}
 		}
 	});
 
 	const selectedAssistant = $derived(
-		assistantsQuery.data?.find((a: any) => a.id === selectedAssistantId.current)
+		safeAssistants.find((a: any) => a.id === selectedAssistantId.current)
 	);
 
 	// Apply assistant defaults when switching assistants
@@ -214,6 +221,18 @@
 				console.error('Failed to cancel generation:', result.error);
 			} else {
 				console.log('Generation cancelled:', result.value.cancelled);
+				activeGeneration.clear(page.params.id);
+				setCachedQueryData<Conversation>(api.conversations.getById, { id: page.params.id }, (current) =>
+					current
+						? {
+								...current,
+								generating: false,
+								updatedAt: new Date(),
+							}
+						: current
+				);
+				invalidateQueryPattern(api.messages.getAllFromConversation.url);
+				invalidateQueryPattern(api.conversations.get.url);
 			}
 		} catch (error) {
 			console.error('Error cancelling generation:', error);
@@ -221,6 +240,7 @@
 
 		// Clear local abort controller if it exists
 		if (abortController) {
+			abortController.abort();
 			abortController = null;
 		}
 	}
@@ -272,16 +292,19 @@
 		api.messages.getAllFromConversation,
 		() => ({
 			conversationId: page.params.id ?? '',
+			limit: 20,
 		}),
 		{
-			enabled: !!page.params.id,
+			enabled: () => !!page.params.id,
+			staleWhileRevalidate: false,
 		}
 	);
+	const safeRecentMessages = $derived(Array.isArray(messages.data) ? messages.data : []);
 
 	// Check for YouTube URLs in the last user message
 	$effect(() => {
-		if (messages.data) {
-			const userMessages = messages.data.filter((m) => m.role === 'user');
+		if (safeRecentMessages.length > 0) {
+			const userMessages = safeRecentMessages.filter((m) => m.role === 'user');
 			const lastUserMessage = userMessages[userMessages.length - 1];
 
 			if (lastUserMessage) {
@@ -395,40 +418,74 @@
 		const documentsCopy = [...selectedDocuments];
 		selectedImages = [];
 		selectedDocuments = [];
+		const promptValue = message.current;
+
+		const requestArgs = {
+			message: promptValue,
+			conversation_id: page.params.id ?? undefined,
+			model_id: settings.modelId,
+			provider_id: settings.providerId || undefined,
+			images: imagesCopy.length > 0 ? imagesCopy : undefined,
+			documents: documentsCopy.length > 0 ? documentsCopy : undefined,
+			web_search_mode: settings.webSearchMode,
+			web_search_provider: settings.webSearchProvider,
+			web_search_exa_depth:
+				settings.webSearchProvider === 'exa' ? settings.webSearchExaDepth : undefined,
+			web_search_context_size:
+				settings.webSearchMode !== 'off' ? settings.webSearchContextSize : undefined,
+			web_search_kagi_source:
+				settings.webSearchProvider === 'kagi' ? settings.webSearchKagiSource : undefined,
+			web_search_valyu_search_type:
+				settings.webSearchProvider === 'valyu' ? settings.webSearchValyuSearchType : undefined,
+			assistant_id: selectedAssistantId.current || undefined,
+			project_id: page.url.searchParams.get('projectId') || undefined,
+			reasoning_effort:
+				currentModelSupportsReasoning && currentModelSupportsVerbosity
+					? settings.reasoningEffort
+					: undefined,
+			temporary: settings.temporaryMode || undefined,
+			image_params:
+				currentModelSupportsImageGen && Object.keys(imageParams).length > 0 ? imageParams : undefined,
+		} as const;
+
+		message.current = '';
 
 		try {
-			const res = await callGenerateMessage({
-				message: message.current,
-				conversation_id: page.params.id ?? undefined,
-				model_id: settings.modelId,
-				provider_id: settings.providerId || undefined,
-				images: imagesCopy.length > 0 ? imagesCopy : undefined,
-				documents: documentsCopy.length > 0 ? documentsCopy : undefined,
-				web_search_mode: settings.webSearchMode,
-				web_search_provider: settings.webSearchProvider,
-				web_search_exa_depth:
-					settings.webSearchProvider === 'exa' ? settings.webSearchExaDepth : undefined,
-				web_search_context_size:
-					settings.webSearchMode !== 'off' ? settings.webSearchContextSize : undefined,
-				web_search_kagi_source:
-					settings.webSearchProvider === 'kagi' ? settings.webSearchKagiSource : undefined,
-				web_search_valyu_search_type:
-					settings.webSearchProvider === 'valyu' ? settings.webSearchValyuSearchType : undefined,
-				assistant_id: selectedAssistantId.current || undefined,
-				project_id: page.url.searchParams.get('projectId') || undefined,
-				reasoning_effort:
-					currentModelSupportsReasoning && currentModelSupportsVerbosity
-						? settings.reasoningEffort
-						: undefined,
-				temporary: settings.temporaryMode || undefined,
-				image_params:
-					currentModelSupportsImageGen && Object.keys(imageParams).length > 0
-						? imageParams
-						: undefined,
-			});
+			if (!currentModelSupportsImageGen) {
+				const streamController = new AbortController();
+				abortController = streamController;
+
+				await callGenerateMessageStream(requestArgs, {
+					signal: streamController.signal,
+					userId: session.current.user.id,
+					onConversationId: (conversationId) => {
+						if (page.params.id !== conversationId) {
+							goto(`/chat/${conversationId}`);
+						}
+					},
+					onComplete: () => {
+						if (abortController === streamController) {
+							abortController = null;
+						}
+					},
+					onError: (streamError) => {
+						error = streamError;
+						if (abortController === streamController) {
+							abortController = null;
+						}
+					},
+				});
+
+				return;
+			}
+
+			const res = await callGenerateMessage(requestArgs);
 
 			if (res.isErr()) {
 				error = res._unsafeUnwrapErr() ?? 'An unknown error occurred';
+				message.current = promptValue;
+				selectedImages = imagesCopy;
+				selectedDocuments = documentsCopy;
 				return;
 			}
 
@@ -445,9 +502,12 @@
 			}
 		} catch (error) {
 			console.error('Error generating message:', error);
+			abortController = null;
+			message.current = promptValue;
+			selectedImages = imagesCopy;
+			selectedDocuments = documentsCopy;
 		} finally {
 			loading = false;
-			message.current = '';
 		}
 	}
 
@@ -1169,7 +1229,7 @@
 				{#if page.params.id && currentConversationQuery.data}
 					<ExportButton
 						conversationId={page.params.id}
-						messages={messages.data}
+						messages={safeRecentMessages}
 						conversation={currentConversationQuery.data}
 					/>
 					<ShareButton conversationId={page.params.id as Id<'conversations'>} />
@@ -1212,7 +1272,7 @@
 							<div class="flex flex-col gap-1 p-1">
 								<ExportButton
 									conversationId={page.params.id}
-									messages={messages.data}
+									messages={safeRecentMessages}
 									conversation={currentConversationQuery.data}
 								/>
 								<ShareButton conversationId={page.params.id as Id<'conversations'>} />
@@ -1483,292 +1543,322 @@
 							</div>
 							<div class="mt-1 flex w-full items-center justify-between gap-2 px-2 pb-2 md:pb-1">
 								<!-- Left side: Model picker + action buttons -->
-								<div class="flex items-center gap-1.5">
-									<ModelPicker
-										class="bg-secondary/50 hover:bg-secondary text-muted-foreground flex h-9 items-center justify-center rounded-lg px-2.5 transition-colors"
-										onlyImageModels={selectedImages.length > 0}
-									/>
-									<!-- Desktop only: Provider picker -->
-									<ProviderPicker
-										class="bg-secondary/50 hover:bg-secondary text-muted-foreground hidden h-9 items-center justify-center rounded-lg px-1.5 transition-colors md:flex"
-										modelId={settings.modelId}
-									/>
-									<!-- Desktop only: Assistant picker -->
-									{#if assistantsQuery.data && assistantsQuery.data.length > 0}
-										<DropdownMenu.Root>
-											<DropdownMenu.Trigger
-												class="bg-secondary/50 hover:bg-secondary text-muted-foreground hidden h-9 items-center justify-center gap-2 rounded-lg px-2.5 transition-colors md:flex"
-											>
-												<BotIcon class="size-4" />
-												<span class="max-w-[100px] truncate text-sm"
-													>{selectedAssistant?.name ?? 'Assistant'}</span
-												>
-											</DropdownMenu.Trigger>
-											<DropdownMenu.Content>
-												<DropdownMenu.Group>
-													<DropdownMenu.Label>Assistant</DropdownMenu.Label>
-													<DropdownMenu.Separator />
-													{#each assistantsQuery.data as assistant (assistant.id)}
-														<DropdownMenu.CheckboxItem
-															checked={selectedAssistantId.current === assistant.id}
-															onclick={() => (selectedAssistantId.current = assistant.id)}
-														>
-															{assistant.name}
-														</DropdownMenu.CheckboxItem>
-													{/each}
-												</DropdownMenu.Group>
-												<DropdownMenu.Separator />
-												<DropdownMenu.Item onclick={() => goto('/account/assistants?create=true')}>
-													<PlusIcon class="mr-2 size-4" />
-													Create new
-												</DropdownMenu.Item>
-											</DropdownMenu.Content>
-										</DropdownMenu.Root>
-									{/if}
-									<!-- Desktop: All action buttons inline -->
-									<div class="hidden items-center gap-1.5 md:flex">
-										{#if !restrictions?.webDisabled}
+								<svelte:boundary>
+									<div class="flex items-center gap-1.5">
+										<ModelPicker
+											class="bg-secondary/50 hover:bg-secondary text-muted-foreground flex h-9 items-center justify-center rounded-lg px-2.5 transition-colors"
+											onlyImageModels={selectedImages.length > 0}
+										/>
+										<!-- Desktop only: Provider picker -->
+										<ProviderPicker
+											class="bg-secondary/50 hover:bg-secondary text-muted-foreground hidden h-9 items-center justify-center rounded-lg px-1.5 transition-colors md:flex"
+											modelId={settings.modelId}
+										/>
+										<!-- Desktop only: Assistant picker -->
+										{#if safeAssistants.length > 0}
 											<DropdownMenu.Root>
 												<DropdownMenu.Trigger
-													class={cn(
-														'bg-secondary/50 hover:bg-secondary text-muted-foreground relative flex h-8 items-center justify-center gap-1.5 rounded-lg px-2 transition-colors',
-														settings.webSearchMode === 'standard' && 'bg-primary/20 text-primary',
-														settings.webSearchMode === 'deep' && 'bg-amber-500/20 text-amber-500'
-													)}
+													class="bg-secondary/50 hover:bg-secondary text-muted-foreground hidden h-9 items-center justify-center gap-2 rounded-lg px-2.5 transition-colors md:flex"
 												>
-													<SearchIcon class="size-4" />
-													<span class="text-xs font-medium">
-														{settings.webSearchMode === 'off'
-															? 'Off'
-															: settings.webSearchMode === 'standard'
-																? 'On'
-																: 'Deep'}
-													</span>
-													<ChevronDownIcon class="size-3 opacity-50" />
+													<BotIcon class="size-4" />
+													<span class="max-w-[100px] truncate text-sm"
+														>{selectedAssistant?.name ?? 'Assistant'}</span
+													>
 												</DropdownMenu.Trigger>
-												<DropdownMenu.Content align="start" class="w-56">
-													<DropdownMenu.Label>Search Mode</DropdownMenu.Label>
-													<DropdownMenu.RadioGroup bind:value={settings.webSearchMode}>
-														<DropdownMenu.RadioItem value="off">Off</DropdownMenu.RadioItem>
-														<DropdownMenu.RadioItem value="standard">
-															Standard <span class="text-muted-foreground ml-auto text-xs"
-																>$0.006</span
-															>
-														</DropdownMenu.RadioItem>
-														<DropdownMenu.RadioItem value="deep">
-															Deep <span class="text-muted-foreground ml-auto text-xs">$0.06</span>
-														</DropdownMenu.RadioItem>
-													</DropdownMenu.RadioGroup>
-
-													{#if settings.webSearchMode !== 'off'}
+												<DropdownMenu.Content>
+													<DropdownMenu.Group>
+														<DropdownMenu.Label>Assistant</DropdownMenu.Label>
 														<DropdownMenu.Separator />
-														<DropdownMenu.Label>Provider</DropdownMenu.Label>
-														<DropdownMenu.RadioGroup bind:value={settings.webSearchProvider}>
-															<DropdownMenu.RadioItem value="linkup">Linkup</DropdownMenu.RadioItem>
-															<DropdownMenu.RadioItem value="tavily">Tavily</DropdownMenu.RadioItem>
-															<DropdownMenu.RadioItem value="exa">Exa</DropdownMenu.RadioItem>
-															<DropdownMenu.RadioItem value="kagi">Kagi</DropdownMenu.RadioItem>
-															<DropdownMenu.RadioItem value="perplexity"
-																>Perplexity</DropdownMenu.RadioItem
+														{#each safeAssistants as assistant (assistant.id)}
+															<DropdownMenu.CheckboxItem
+																checked={selectedAssistantId.current === assistant.id}
+																onclick={() => (selectedAssistantId.current = assistant.id)}
 															>
-															<DropdownMenu.RadioItem value="valyu">Valyu</DropdownMenu.RadioItem>
-															<DropdownMenu.RadioItem value="brave">Brave</DropdownMenu.RadioItem>
-															<DropdownMenu.RadioItem value="brave-pro"
-																>Brave Pro</DropdownMenu.RadioItem
-															>
-															<DropdownMenu.RadioItem value="brave-research"
-																>Brave Research</DropdownMenu.RadioItem
-															>
-														</DropdownMenu.RadioGroup>
-
-														{#if settings.webSearchProvider === 'exa'}
-															<DropdownMenu.Separator />
-															<DropdownMenu.Label>Exa Depth</DropdownMenu.Label>
-															<DropdownMenu.RadioGroup bind:value={settings.webSearchExaDepth}>
-																<DropdownMenu.RadioItem value="fast">Fast</DropdownMenu.RadioItem>
-																<DropdownMenu.RadioItem value="auto">Auto</DropdownMenu.RadioItem>
-																<DropdownMenu.RadioItem value="neural"
-																	>Neural</DropdownMenu.RadioItem
-																>
-																<DropdownMenu.RadioItem value="deep">Deep</DropdownMenu.RadioItem>
-															</DropdownMenu.RadioGroup>
-														{/if}
-
-														{#if settings.webSearchProvider === 'kagi'}
-															<DropdownMenu.Separator />
-															<DropdownMenu.Label>Kagi Source</DropdownMenu.Label>
-															<DropdownMenu.RadioGroup bind:value={settings.webSearchKagiSource}>
-																<DropdownMenu.RadioItem value="web">Web</DropdownMenu.RadioItem>
-																<DropdownMenu.RadioItem value="news">News</DropdownMenu.RadioItem>
-																<DropdownMenu.RadioItem value="search"
-																	>Search</DropdownMenu.RadioItem
-																>
-															</DropdownMenu.RadioGroup>
-														{/if}
-
-														{#if settings.webSearchProvider === 'valyu'}
-															<DropdownMenu.Separator />
-															<DropdownMenu.Label>Valyu Search Type</DropdownMenu.Label>
-															<DropdownMenu.RadioGroup
-																bind:value={settings.webSearchValyuSearchType}
-															>
-																<DropdownMenu.RadioItem value="all"
-																	>All Sources</DropdownMenu.RadioItem
-																>
-																<DropdownMenu.RadioItem value="web">Web Only</DropdownMenu.RadioItem
-																>
-															</DropdownMenu.RadioGroup>
-														{/if}
-
-														<DropdownMenu.Separator />
-														<DropdownMenu.Label>Context Size</DropdownMenu.Label>
-														<DropdownMenu.RadioGroup bind:value={settings.webSearchContextSize}>
-															<DropdownMenu.RadioItem value="low">Low</DropdownMenu.RadioItem>
-															<DropdownMenu.RadioItem value="medium">Medium</DropdownMenu.RadioItem>
-															<DropdownMenu.RadioItem value="high">High</DropdownMenu.RadioItem>
-														</DropdownMenu.RadioGroup>
-													{/if}
+																{assistant.name}
+															</DropdownMenu.CheckboxItem>
+														{/each}
+													</DropdownMenu.Group>
+													<DropdownMenu.Separator />
+													<DropdownMenu.Item
+														onclick={() => goto('/account/assistants?create=true')}
+													>
+														<PlusIcon class="mr-2 size-4" />
+														Create new
+													</DropdownMenu.Item>
 												</DropdownMenu.Content>
 											</DropdownMenu.Root>
 										{/if}
-										{#if currentModelSupportsImages || currentModelSupportsDocuments}
-											<Tooltip>
-												{#snippet trigger(tooltip)}
-													<button
-														type="button"
-														class="bg-secondary/50 hover:bg-secondary text-muted-foreground flex size-8 items-center justify-center rounded-lg transition-colors disabled:opacity-50"
-														onclick={() => fileInput?.click()}
-														disabled={isUploading}
-														{...tooltip.trigger}
+										<!-- Desktop: All action buttons inline -->
+										<div class="hidden items-center gap-1.5 md:flex">
+											{#if !restrictions?.webDisabled}
+												<DropdownMenu.Root>
+													<DropdownMenu.Trigger
+														class={cn(
+															'bg-secondary/50 hover:bg-secondary text-muted-foreground relative flex h-8 items-center justify-center gap-1.5 rounded-lg px-2 transition-colors',
+															settings.webSearchMode === 'standard' && 'bg-primary/20 text-primary',
+															settings.webSearchMode === 'deep' && 'bg-amber-500/20 text-amber-500'
+														)}
 													>
-														{#if isUploading}
-															<div
-																class="size-3 animate-spin rounded-full border-2 border-current border-t-transparent"
-															></div>
-														{:else}
-															<PaperclipIcon class="size-4" />
+														<SearchIcon class="size-4" />
+														<span class="text-xs font-medium">
+															{settings.webSearchMode === 'off'
+																? 'Off'
+																: settings.webSearchMode === 'standard'
+																	? 'On'
+																	: 'Deep'}
+														</span>
+														<ChevronDownIcon class="size-3 opacity-50" />
+													</DropdownMenu.Trigger>
+													<DropdownMenu.Content align="start" class="w-56">
+														<DropdownMenu.Label>Search Mode</DropdownMenu.Label>
+														<DropdownMenu.RadioGroup bind:value={settings.webSearchMode}>
+															<DropdownMenu.RadioItem value="off">Off</DropdownMenu.RadioItem>
+															<DropdownMenu.RadioItem value="standard">
+																Standard <span class="text-muted-foreground ml-auto text-xs"
+																	>$0.006</span
+																>
+															</DropdownMenu.RadioItem>
+															<DropdownMenu.RadioItem value="deep">
+																Deep <span class="text-muted-foreground ml-auto text-xs"
+																	>$0.06</span
+																>
+															</DropdownMenu.RadioItem>
+														</DropdownMenu.RadioGroup>
+
+														{#if settings.webSearchMode !== 'off'}
+															<DropdownMenu.Separator />
+															<DropdownMenu.Label>Provider</DropdownMenu.Label>
+															<DropdownMenu.RadioGroup bind:value={settings.webSearchProvider}>
+																<DropdownMenu.RadioItem value="linkup"
+																	>Linkup</DropdownMenu.RadioItem
+																>
+																<DropdownMenu.RadioItem value="tavily"
+																	>Tavily</DropdownMenu.RadioItem
+																>
+																<DropdownMenu.RadioItem value="exa">Exa</DropdownMenu.RadioItem>
+																<DropdownMenu.RadioItem value="kagi">Kagi</DropdownMenu.RadioItem>
+																<DropdownMenu.RadioItem value="perplexity"
+																	>Perplexity</DropdownMenu.RadioItem
+																>
+																<DropdownMenu.RadioItem value="valyu"
+																	>Valyu</DropdownMenu.RadioItem
+																>
+																<DropdownMenu.RadioItem value="brave"
+																	>Brave</DropdownMenu.RadioItem
+																>
+																<DropdownMenu.RadioItem value="brave-pro"
+																	>Brave Pro</DropdownMenu.RadioItem
+																>
+																<DropdownMenu.RadioItem value="brave-research"
+																	>Brave Research</DropdownMenu.RadioItem
+																>
+															</DropdownMenu.RadioGroup>
+
+															{#if settings.webSearchProvider === 'exa'}
+																<DropdownMenu.Separator />
+																<DropdownMenu.Label>Exa Depth</DropdownMenu.Label>
+																<DropdownMenu.RadioGroup bind:value={settings.webSearchExaDepth}>
+																	<DropdownMenu.RadioItem value="fast"
+																		>Fast</DropdownMenu.RadioItem
+																	>
+																	<DropdownMenu.RadioItem value="auto"
+																		>Auto</DropdownMenu.RadioItem
+																	>
+																	<DropdownMenu.RadioItem value="neural"
+																		>Neural</DropdownMenu.RadioItem
+																	>
+																	<DropdownMenu.RadioItem value="deep"
+																		>Deep</DropdownMenu.RadioItem
+																	>
+																</DropdownMenu.RadioGroup>
+															{/if}
+
+															{#if settings.webSearchProvider === 'kagi'}
+																<DropdownMenu.Separator />
+																<DropdownMenu.Label>Kagi Source</DropdownMenu.Label>
+																<DropdownMenu.RadioGroup bind:value={settings.webSearchKagiSource}>
+																	<DropdownMenu.RadioItem value="web"
+																		>Web</DropdownMenu.RadioItem
+																	>
+																	<DropdownMenu.RadioItem value="news"
+																		>News</DropdownMenu.RadioItem
+																	>
+																	<DropdownMenu.RadioItem value="search"
+																		>Search</DropdownMenu.RadioItem
+																	>
+																</DropdownMenu.RadioGroup>
+															{/if}
+
+															{#if settings.webSearchProvider === 'valyu'}
+																<DropdownMenu.Separator />
+																<DropdownMenu.Label>Valyu Search Type</DropdownMenu.Label>
+																<DropdownMenu.RadioGroup
+																	bind:value={settings.webSearchValyuSearchType}
+																>
+																	<DropdownMenu.RadioItem value="all"
+																		>All Sources</DropdownMenu.RadioItem
+																	>
+																	<DropdownMenu.RadioItem value="web"
+																		>Web Only</DropdownMenu.RadioItem
+																	>
+																</DropdownMenu.RadioGroup>
+															{/if}
+
+															<DropdownMenu.Separator />
+															<DropdownMenu.Label>Context Size</DropdownMenu.Label>
+															<DropdownMenu.RadioGroup bind:value={settings.webSearchContextSize}>
+																<DropdownMenu.RadioItem value="low"
+																	>Low</DropdownMenu.RadioItem
+																>
+																<DropdownMenu.RadioItem value="medium"
+																	>Medium</DropdownMenu.RadioItem
+																>
+																<DropdownMenu.RadioItem value="high"
+																	>High</DropdownMenu.RadioItem
+																>
+															</DropdownMenu.RadioGroup>
 														{/if}
-													</button>
-												{/snippet}
-												Attach files (images, PDF, Markdown, Text, EPUB)
-											</Tooltip>
-										{/if}
-										{#if currentModelSupportsReasoning && currentModelSupportsVerbosity}
+													</DropdownMenu.Content>
+												</DropdownMenu.Root>
+											{/if}
+											{#if currentModelSupportsImages || currentModelSupportsDocuments}
+												<Tooltip>
+													{#snippet trigger(tooltip)}
+														<button
+															type="button"
+															class="bg-secondary/50 hover:bg-secondary text-muted-foreground flex size-8 items-center justify-center rounded-lg transition-colors disabled:opacity-50"
+															onclick={() => fileInput?.click()}
+															disabled={isUploading}
+															{...tooltip.trigger}
+														>
+															{#if isUploading}
+																<div
+																	class="size-3 animate-spin rounded-full border-2 border-current border-t-transparent"
+																></div>
+															{:else}
+																<PaperclipIcon class="size-4" />
+															{/if}
+														</button>
+													{/snippet}
+													Attach files (images, PDF, Markdown, Text, EPUB)
+												</Tooltip>
+											{/if}
+											{#if currentModelSupportsReasoning && currentModelSupportsVerbosity}
+												<Tooltip>
+													{#snippet trigger(tooltip)}
+														<button
+															type="button"
+															class={cn(
+																'bg-secondary/50 hover:bg-secondary text-muted-foreground relative flex size-8 items-center justify-center rounded-lg transition-colors',
+																settings.reasoningEffort === 'medium' && 'bg-primary/20 text-primary',
+																settings.reasoningEffort === 'high' &&
+																	'bg-amber-500/20 text-amber-500'
+															)}
+															onclick={() => {
+																if (settings.reasoningEffort === 'low')
+																	settings.reasoningEffort = 'medium';
+																else if (settings.reasoningEffort === 'medium')
+																	settings.reasoningEffort = 'high';
+																else settings.reasoningEffort = 'low';
+															}}
+															{...tooltip.trigger}
+														>
+															<BrainIcon class="size-4" />
+															{#if settings.reasoningEffort === 'high'}
+																<span
+																	class="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-amber-500"
+																></span>
+															{/if}
+														</button>
+													{/snippet}
+													{settings.reasoningEffort === 'low'
+														? 'Extended Thinking: Off — Click to enable step-by-step reasoning'
+														: settings.reasoningEffort === 'medium'
+															? 'Extended Thinking: Medium — AI reasons before responding (uses more tokens)'
+															: 'Extended Thinking: High — Deep reasoning for complex problems (uses most tokens)'}
+												</Tooltip>
+											{/if}
 											<Tooltip>
 												{#snippet trigger(tooltip)}
 													<button
 														type="button"
 														class={cn(
-															'bg-secondary/50 hover:bg-secondary text-muted-foreground relative flex size-8 items-center justify-center rounded-lg transition-colors',
-															settings.reasoningEffort === 'medium' && 'bg-primary/20 text-primary',
-															settings.reasoningEffort === 'high' &&
-																'bg-amber-500/20 text-amber-500'
+															'bg-secondary/50 hover:bg-secondary text-muted-foreground flex size-8 items-center justify-center rounded-lg transition-colors',
+															(audioRecorder.isRecording || audioRecorder.isProcessing) &&
+																'animate-pulse bg-red-500/20 text-red-500'
 														)}
-														onclick={() => {
-															if (settings.reasoningEffort === 'low')
-																settings.reasoningEffort = 'medium';
-															else if (settings.reasoningEffort === 'medium')
-																settings.reasoningEffort = 'high';
-															else settings.reasoningEffort = 'low';
-														}}
+														onclick={toggleRecording}
 														{...tooltip.trigger}
 													>
-														<BrainIcon class="size-4" />
-														{#if settings.reasoningEffort === 'high'}
-															<span
-																class="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-amber-500"
-															></span>
+														{#if audioRecorder.isProcessing}
+															<div
+																class="size-3 animate-spin rounded-full border-2 border-current border-t-transparent"
+															></div>
+														{:else if audioRecorder.isRecording}
+															<StopIcon class="size-4" />
+														{:else}
+															<MicIcon class="size-4" />
 														{/if}
 													</button>
 												{/snippet}
-												{settings.reasoningEffort === 'low'
-													? 'Extended Thinking: Off — Click to enable step-by-step reasoning'
-													: settings.reasoningEffort === 'medium'
-														? 'Extended Thinking: Medium — AI reasons before responding (uses more tokens)'
-														: 'Extended Thinking: High — Deep reasoning for complex problems (uses most tokens)'}
+												{audioRecorder.isRecording ? 'Stop Recording' : 'Voice Input'}
 											</Tooltip>
-										{/if}
-										<Tooltip>
-											{#snippet trigger(tooltip)}
-												<button
-													type="button"
+											<!-- More Options dropdown for less-used features -->
+											<DropdownMenu.Root>
+												<DropdownMenu.Trigger
 													class={cn(
 														'bg-secondary/50 hover:bg-secondary text-muted-foreground flex size-8 items-center justify-center rounded-lg transition-colors',
-														(audioRecorder.isRecording || audioRecorder.isProcessing) &&
-															'animate-pulse bg-red-500/20 text-red-500'
+														(settings.temporaryMode ||
+															(currentModelSupportsVideo && Object.keys(videoParams).length > 0) ||
+															(currentModelSupportsImageGen &&
+																Object.keys(imageParams).length > 0)) &&
+															'bg-primary/20 text-primary'
 													)}
-													onclick={toggleRecording}
-													{...tooltip.trigger}
 												>
-													{#if audioRecorder.isProcessing}
-														<div
-															class="size-3 animate-spin rounded-full border-2 border-current border-t-transparent"
-														></div>
-													{:else if audioRecorder.isRecording}
-														<StopIcon class="size-4" />
-													{:else}
-														<MicIcon class="size-4" />
+													<EllipsisVerticalIcon class="size-4" />
+												</DropdownMenu.Trigger>
+												<DropdownMenu.Content align="end">
+													<DropdownMenu.Item
+														onclick={() => (settings.temporaryMode = !settings.temporaryMode)}
+													>
+														<GhostIcon
+															class={cn('mr-2 size-4', settings.temporaryMode && 'text-orange-500')}
+														/>
+														Temporary Mode: {settings.temporaryMode ? 'On' : 'Off'}
+													</DropdownMenu.Item>
+													{#if currentModelSupportsVideo}
+														<DropdownMenu.Item onclick={() => (videoModalOpen = true)}>
+															<VideoIcon
+																class={cn(
+																	'mr-2 size-4',
+																	Object.keys(videoParams).length > 0 && 'text-blue-500'
+																)}
+															/>
+															Video Settings
+															{#if Object.keys(videoParams).length > 0}
+																<span class="ml-auto text-xs text-blue-500">•</span>
+															{/if}
+														</DropdownMenu.Item>
 													{/if}
-												</button>
-											{/snippet}
-											{audioRecorder.isRecording ? 'Stop Recording' : 'Voice Input'}
-										</Tooltip>
-										<!-- More Options dropdown for less-used features -->
-										<DropdownMenu.Root>
-											<DropdownMenu.Trigger
-												class={cn(
-													'bg-secondary/50 hover:bg-secondary text-muted-foreground flex size-8 items-center justify-center rounded-lg transition-colors',
-													(settings.temporaryMode ||
-														(currentModelSupportsVideo && Object.keys(videoParams).length > 0) ||
-														(currentModelSupportsImageGen &&
-															Object.keys(imageParams).length > 0)) &&
-														'bg-primary/20 text-primary'
-												)}
-											>
-												<EllipsisVerticalIcon class="size-4" />
-											</DropdownMenu.Trigger>
-											<DropdownMenu.Content align="end">
-												<DropdownMenu.Item
-													onclick={() => (settings.temporaryMode = !settings.temporaryMode)}
-												>
-													<GhostIcon
-														class={cn('mr-2 size-4', settings.temporaryMode && 'text-orange-500')}
-													/>
-													Temporary Mode: {settings.temporaryMode ? 'On' : 'Off'}
-												</DropdownMenu.Item>
-												{#if currentModelSupportsVideo}
-													<DropdownMenu.Item onclick={() => (videoModalOpen = true)}>
-														<VideoIcon
-															class={cn(
-																'mr-2 size-4',
-																Object.keys(videoParams).length > 0 && 'text-blue-500'
-															)}
-														/>
-														Video Settings
-														{#if Object.keys(videoParams).length > 0}
-															<span class="ml-auto text-xs text-blue-500">•</span>
-														{/if}
-													</DropdownMenu.Item>
-												{/if}
-												{#if currentModelSupportsImageGen}
-													<DropdownMenu.Item onclick={() => (imageModalOpen = true)}>
-														<ImageIcon
-															class={cn(
-																'mr-2 size-4',
-																Object.keys(imageParams).length > 0 && 'text-purple-500'
-															)}
-														/>
-														Image Settings
-														{#if Object.keys(imageParams).length > 0}
-															<span class="ml-auto text-xs text-purple-500">•</span>
-														{/if}
-													</DropdownMenu.Item>
-												{/if}
-											</DropdownMenu.Content>
-										</DropdownMenu.Root>
-									</div>
-									<!-- Mobile: Essential buttons only -->
-									<div class="flex items-center gap-1 md:hidden">
+													{#if currentModelSupportsImageGen}
+														<DropdownMenu.Item onclick={() => (imageModalOpen = true)}>
+															<ImageIcon
+																class={cn(
+																	'mr-2 size-4',
+																	Object.keys(imageParams).length > 0 && 'text-purple-500'
+																)}
+															/>
+															Image Settings
+															{#if Object.keys(imageParams).length > 0}
+																<span class="ml-auto text-xs text-purple-500">•</span>
+															{/if}
+														</DropdownMenu.Item>
+													{/if}
+												</DropdownMenu.Content>
+											</DropdownMenu.Root>
+										</div>
+										<!-- Mobile: Essential buttons only -->
+										<div class="flex items-center gap-1 md:hidden">
 										{#if currentModelSupportsImages || currentModelSupportsDocuments}
 											<button
 												type="button"
@@ -1824,14 +1914,14 @@
 												{/if}
 											</DropdownMenu.Trigger>
 											<DropdownMenu.Content align="end">
-												{#if assistantsQuery.data && assistantsQuery.data.length > 0}
+												{#if safeAssistants.length > 0}
 													<DropdownMenu.Sub>
 														<DropdownMenu.SubTrigger>
 															<BotIcon class="mr-2 size-4" />
 															{selectedAssistant?.name ?? 'Assistant'}
 														</DropdownMenu.SubTrigger>
 														<DropdownMenu.SubContent>
-															{#each assistantsQuery.data as assistant (assistant.id)}
+															{#each safeAssistants as assistant (assistant.id)}
 																<DropdownMenu.CheckboxItem
 																	checked={selectedAssistantId.current === assistant.id}
 																	onclick={() => (selectedAssistantId.current = assistant.id)}
@@ -1930,7 +2020,17 @@
 											</DropdownMenu.Content>
 										</DropdownMenu.Root>
 									</div>
-								</div>
+									</div>
+
+									{#snippet failed(error)}
+										<div class="text-muted-foreground flex items-center gap-2 text-xs">
+											<span class="text-destructive">Composer controls unavailable</span>
+											<span class="hidden md:inline">
+												{error instanceof Error ? error.message : String(error)}
+											</span>
+										</div>
+									{/snippet}
+								</svelte:boundary>
 								<!-- Right side: Send button -->
 								<button
 									type={isGenerating ? 'button' : 'submit'}
@@ -1980,7 +2080,15 @@
 </Sidebar.Root>
 
 <SearchModal bind:open={searchModalOpen} />
-<PromptPicker bind:open={promptPickerOpen} onApply={handlePromptApply} />
+<svelte:boundary>
+	<PromptPicker bind:open={promptPickerOpen} onApply={handlePromptApply} />
+
+	{#snippet failed(error)}
+		<div class="text-destructive fixed right-4 bottom-24 z-50 rounded-lg bg-black/80 px-3 py-2 text-xs">
+			Prompt picker failed: {error instanceof Error ? error.message : String(error)}
+		</div>
+	{/snippet}
+</svelte:boundary>
 <!-- <SettingsModal bind:open={settingsModalOpen} /> -->
 <VideoGenerationModal
 	bind:open={videoModalOpen}

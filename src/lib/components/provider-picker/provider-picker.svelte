@@ -85,7 +85,15 @@
 			}
 
 			supportsSelection = data.supportsProviderSelection;
-			providers = data.providers?.filter((p) => p.available) || [];
+			providers = Array.isArray(data.providers)
+				? data.providers.filter(
+						(p): p is ProviderInfo =>
+							!!p &&
+							typeof p.provider === 'string' &&
+							typeof p.available === 'boolean' &&
+							p.available
+					)
+				: [];
 
 			// Reset provider selection if model changed and current provider is not available
 			if (settings.providerId && !providers.some((p) => p.provider === settings.providerId)) {
@@ -107,6 +115,7 @@
 	}
 
 	function formatProviderName(id: string): string {
+		if (typeof id !== 'string' || id.length === 0) return 'Unknown';
 		// Capitalize and format provider name
 		return id
 			.split(/[-_]/)
@@ -232,4 +241,3 @@
 		</Popover.Content>
 	</Popover.Root>
 {/if}
-

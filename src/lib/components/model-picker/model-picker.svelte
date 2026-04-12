@@ -62,7 +62,18 @@
 
 	const enabledModelsQuery = useCachedQuery(api.user_enabled_models.get_enabled, {});
 
-	const enabledArr = $derived(Object.values(enabledModelsQuery.data ?? {}));
+	const enabledModelsRecord = $derived.by(() => {
+		const data = enabledModelsQuery.data;
+		return data && typeof data === 'object' && !Array.isArray(data)
+			? (data as Record<string, { id?: string; modelId?: string; pinned?: boolean }>)
+			: {};
+	});
+	const enabledArr = $derived(
+		Object.values(enabledModelsRecord).filter(
+			(model): model is { id: string; modelId: string; pinned?: boolean } =>
+				!!model && typeof model.id === 'string' && typeof model.modelId === 'string'
+		)
+	);
 
 	modelsState.init();
 	const nanoGPTModels = $derived(modelsState.from(Provider.NanoGPT));
