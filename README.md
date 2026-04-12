@@ -1,7 +1,7 @@
 <div align="center">
   <h1>nanochat</h1>
   <p><em>Open-source self-hostable chat client for <a href="nano-gpt.com">Nano-GPT</a>.</em></p>
-  <p>Test it out at <a href="https://t3.0xgingi.xyz">t3.0xgingi.xyz</a></p>
+  <p>Test it out at <a href="https://nanochat.app">nanochat.app</a></p>
   <p>Get 25 Free Daily prompts using any nano-gpt subscription model without needing an API key</p>
   <img src="image.png">
 </div>
@@ -185,7 +185,7 @@ You can use URL parameters to pre-configure your chat session. This is useful fo
 | `projectId`       | Contextualizes chat with a specific Project              | `?projectId=123`             |
 
 **Example "Bang" URL:**
-`https://t3.0xgingi.xyz/chat?model=zai-org/glm-4.7&search=deep&q=%s`
+`https://nanochat.app/chat?model=zai-org/glm-5.1&search=deep&q=%s`
 
 **In-Chat Shortcuts:**
 
