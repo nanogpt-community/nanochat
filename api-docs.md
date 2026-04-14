@@ -2539,7 +2539,7 @@ Enable/disable models or toggle pinned status.
 
 ```json
 {
-  "action": "set" | "togglePinned" | "enableInitial" | "setAll",
+  "action": "set" | "togglePinned" | "enableInitial" | "setAll" | "resetDefaults",
   "provider": "string",
   "modelId": "string",
   "enabled": "boolean"
@@ -2550,6 +2550,7 @@ Enable/disable models or toggle pinned status.
 `provider` must be `"nanogpt"` and `modelId` is optional for this action.
 When `SUBSCRIPTION_MODELS_ONLY=true` and the user uses the server NanoGPT key, only models with
 `subscription.included === true` are enabled.
+`resetDefaults` disables all NanoGPT models and re-enables only the default NanoGPT seed list as pinned models.
 
 **CURL Example**:
 
@@ -2565,6 +2566,13 @@ curl -X POST "http://localhost:3432/api/db/user-models" \
   -H "Content-Type: application/json" \
   -b "session_cookie=your_session" \
   -d '{"action": "setAll", "provider": "nanogpt", "enabled": false}'
+```
+
+```bash
+curl -X POST "http://localhost:3432/api/db/user-models" \
+  -H "Content-Type: application/json" \
+  -b "session_cookie=your_session" \
+  -d '{"action": "resetDefaults"}'
 ```
 
 #### GET `/api/models`

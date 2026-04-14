@@ -8,6 +8,10 @@ COPY package.json bun.lock ./
 # Install all dependencies (including dev) with frozen lockfile
 RUN --mount=type=cache,target=/root/.bun/install/cache \
     bun install
+
+# Copy local build-time assets that are imported by the app
+COPY icons ./icons
+
 # Copy source code
 COPY . .
 

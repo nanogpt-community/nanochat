@@ -8,6 +8,7 @@ import {
 	setAllProviderModelsEnabled,
 	toggleModelPinned,
 	enableInitialModels,
+	resetDefaultNanoGptModels,
 } from '$lib/db/queries';
 import { isSubscriptionOnlyMode } from '$lib/backend/message-limits';
 import { getAuthenticatedUserId } from '$lib/backend/auth-utils';
@@ -46,6 +47,11 @@ export const POST: RequestHandler = async ({ request }) => {
 
 		case 'enableInitial': {
 			await enableInitialModels(userId);
+			return json({ ok: true });
+		}
+
+		case 'resetDefaults': {
+			await resetDefaultNanoGptModels(userId);
 			return json({ ok: true });
 		}
 

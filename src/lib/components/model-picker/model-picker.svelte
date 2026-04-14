@@ -35,19 +35,24 @@
 	import ModelInfoPanel from './model-info-panel.svelte';
 	import type { NanoGPTModel } from '$lib/backend/models/nano-gpt';
 	import { fade, fly } from 'svelte/transition';
+	import grokIcon from '../../../../icons/grok.png';
 
 	// Helper to check if model is pinned
 	function isPinned(model: { pinned?: boolean }): boolean {
 		return model.pinned === true;
 	}
 
-	function getProviderIconKey(iconUrl: string | undefined, modelId?: string): string {
-		if (iconUrl) return iconUrl;
-
+	function isGrokModel(modelId?: string): boolean {
 		const lowerModelId = modelId?.toLowerCase();
-		if (lowerModelId && (lowerModelId.includes('grok') || lowerModelId.includes('x-ai'))) {
+		return !!(lowerModelId && (lowerModelId.includes('grok') || lowerModelId.includes('x-ai')));
+	}
+
+	function getProviderIconKey(iconUrl: string | undefined, modelId?: string): string {
+		if (isGrokModel(modelId)) {
 			return 'fallback:grok';
 		}
+
+		if (iconUrl) return iconUrl;
 
 		return '';
 	}
@@ -300,12 +305,15 @@
 
 	// Fallback icons for providers that don't have icon_url in the API
 	const FALLBACK_ICONS: Record<string, string> = {
-		grok: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f9/Grok-icon.svg/640px-Grok-icon.svg.png',
-		'x-ai':
-			'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f9/Grok-icon.svg/640px-Grok-icon.svg.png',
+		grok: grokIcon,
+		'x-ai': grokIcon,
 	};
 
 	function getIconUrl(iconPath: string | undefined, modelId?: string): string {
+		if (isGrokModel(modelId)) {
+			return grokIcon;
+		}
+
 		if (iconPath) {
 			// Handle fallback: protocol for sidebar icons
 			if (iconPath.startsWith('fallback:')) {

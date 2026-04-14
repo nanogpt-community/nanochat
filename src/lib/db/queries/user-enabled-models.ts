@@ -1,15 +1,28 @@
 import { db, generateId } from '../index';
 import { userEnabledModels, type UserEnabledModel } from '../schema';
-import { eq, and, inArray, not } from 'drizzle-orm';
+import { eq, and, inArray, not, or } from 'drizzle-orm';
 import { Provider } from '$lib/types';
 import { getNanoGPTModels } from '$lib/backend/models/nano-gpt';
 
 const defaultNanoGptModels = [
-	'zai-org/glm-4.7',
-	'zai-org/glm-4.6v',
-	'minimax/minimax-m2.1',
-	'moonshotai/kimi-k2-thinking',
+	'zai-org/glm-5',
+	'zai-org/glm-5:thinking',
+	'minimax/minimax-m2.7',
+	'moonshotai/kimi-k2.5',
+	'moonshotai/kimi-k2.5:thinking',
+	'deepseek/deepseek-v3.2-speciale',
+	'deepseek/deepseek-v3.2:thinking',
 	'deepseek/deepseek-v3.2',
+	'qwen/qwen3.5-397b-a17b',
+	'qwen/qwen3.5-397b-a17b-thinking',
+	'google/gemma-4-31b-it',
+	'google/gemma-4-31b-it:thinking',
+	'google/gemma-4-26b-a4b-it',
+	'google/gemma-4-26b-a4b-it:thinking',
+	'nvidia/nemotron-3-super-120b-a12b',
+	'nvidia/nemotron-3-super-120b-a12b:thinking',
+	'openai/gpt-oss-120b',
+	'openai/gpt-oss-20b',
 ];
 
 const nanoGptAllDisabledSentinel = {
@@ -210,12 +223,28 @@ export async function enableInitialModels(userId: string): Promise<void> {
 
 	if (existingModels.length > 0) return;
 
+	await resetDefaultNanoGptModels(userId);
+}
+
+export async function resetDefaultNanoGptModels(userId: string): Promise<void> {
 	const now = new Date();
+	await db
+		.delete(userEnabledModels)
+		.where(
+			and(
+				eq(userEnabledModels.userId, userId),
+				or(
+					eq(userEnabledModels.provider, Provider.NanoGPT),
+					eq(userEnabledModels.provider, nanoGptAllDisabledSentinel.provider)
+				)
+			)
+		);
+
 	await db.insert(userEnabledModels).values(
 		defaultNanoGptModels.map((modelId) => ({
 			id: generateId(),
 			userId,
-			provider: 'nanogpt',
+			provider: Provider.NanoGPT,
 			modelId,
 			pinned: true,
 			createdAt: now,
@@ -225,29 +254,5 @@ export async function enableInitialModels(userId: string): Promise<void> {
 }
 
 export async function enableDefaultModelsOnKeyAdd(userId: string): Promise<void> {
-	const now = new Date();
-	// Clean up anything else when adding a key
-	await db
-		.delete(userEnabledModels)
-		.where(
-			and(
-				eq(userEnabledModels.userId, userId),
-				not(inArray(userEnabledModels.modelId, defaultNanoGptModels))
-			)
-		);
-
-	for (const modelId of defaultNanoGptModels) {
-		const existing = await getEnabledModel(userId, 'nanogpt', modelId);
-		if (existing) continue;
-
-		await db.insert(userEnabledModels).values({
-			id: generateId(),
-			userId,
-			provider: 'nanogpt',
-			modelId,
-			pinned: true,
-			createdAt: now,
-			updatedAt: now,
-		});
-	}
+	await resetDefaultNanoGptModels(userId);
 }

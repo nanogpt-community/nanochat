@@ -46,7 +46,7 @@
 	});
 
 	const nanoGPTModelCollection = $derived(models.from(Provider.NanoGPT));
-	let bulkToggleState = $state<'enable' | 'disable' | null>(null);
+	let bulkToggleState = $state<'enable' | 'disable' | 'reset' | null>(null);
 
 	const allNanoGPTModelsEnabled = $derived(nanoGPTModelCollection.every((model) => model.enabled));
 	const someNanoGPTModelsEnabled = $derived(
@@ -73,6 +73,30 @@
 			),
 			(error) => {
 				console.error(`Failed to ${enabled ? 'enable' : 'disable'} all NanoGPT models`, error);
+				return error;
+			}
+		);
+
+		bulkToggleState = null;
+	}
+
+	async function resetNanoGPTModels() {
+		if (!session.current?.user.id) return;
+
+		bulkToggleState = 'reset';
+
+		await ResultAsync.fromPromise(
+			mutate(
+				api.user_enabled_models.set.url,
+				{
+					action: 'resetDefaults',
+				},
+				{
+					invalidatePatterns: [api.user_enabled_models.get_enabled.url],
+				}
+			),
+			(error) => {
+				console.error('Failed to reset NanoGPT models to defaults', error);
 				return error;
 			}
 		);
@@ -179,6 +203,15 @@
 			disabled={bulkToggleState !== null || !someNanoGPTModelsEnabled}
 		>
 			Disable all
+		</Button>
+		<Button
+			variant="outline"
+			size="sm"
+			onclick={resetNanoGPTModels}
+			loading={bulkToggleState === 'reset'}
+			disabled={bulkToggleState !== null || nanoGPTModelCollection.length === 0}
+		>
+			Reset defaults
 		</Button>
 	</div>
 </div>

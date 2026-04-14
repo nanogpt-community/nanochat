@@ -60,6 +60,7 @@ image.png
 *.jpeg
 *.gif
 *.svg
+!icons/grok.png
 
 # Certificates and keys (these should be mounted as secrets if needed)
 *.crt
