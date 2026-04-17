@@ -47,6 +47,7 @@ import { nanoGptUrl } from '$lib/backend/nano-gpt-url.server';
 import { SSEEncoder, sseHeaders } from '$lib/sse';
 import { getUserIdFromApiKey } from '$lib/backend/auth-utils';
 import { FOLLOW_UP_QUESTIONS_PROMPT } from '$lib/prompts/follow-up-questions';
+import type { SSEEvent } from '$lib/sse';
 
 // Set to true to enable debug logging
 const ENABLE_LOGGING = true;
@@ -153,6 +154,30 @@ function normalizeUsageTokens(usage: Record<string, unknown>): {
 	}
 
 	return { promptTokens, completionTokens: resolvedCompletion, totalTokens };
+}
+
+function isAbortError(error: unknown): boolean {
+	if (error instanceof DOMException && error.name === 'AbortError') {
+		return true;
+	}
+
+	const message = error instanceof Error ? error.message : String(error);
+	const normalizedMessage = message.toLowerCase();
+
+	return (
+		normalizedMessage.includes('aborterror') ||
+		normalizedMessage.includes('request was aborted') ||
+		normalizedMessage.includes('cancelled by user') ||
+		(normalizedMessage.includes('aborted') && normalizedMessage.includes('request'))
+	);
+}
+
+function isClosedControllerError(error: unknown): boolean {
+	if (!(error instanceof Error)) {
+		return false;
+	}
+
+	return error.name === 'TypeError' && error.message.includes('Invalid state');
 }
 
 async function readStorageBuffer(path: string): Promise<Buffer> {
@@ -631,10 +656,63 @@ export const POST: RequestHandler = async ({ request }) => {
 
 	const stream = new ReadableStream({
 		async start(controller) {
+			let streamClosed = false;
+			const sendComment = (comment: string): boolean => {
+				if (streamClosed) {
+					return false;
+				}
+
+				try {
+					controller.enqueue(sse.encodeComment(comment));
+					return true;
+				} catch (error) {
+					if (isClosedControllerError(error)) {
+						streamClosed = true;
+						return false;
+					}
+
+					throw error;
+				}
+			};
+			const sendEvent = (event: SSEEvent): boolean => {
+				if (streamClosed) {
+					return false;
+				}
+
+				try {
+					controller.enqueue(sse.encode(event));
+					return true;
+				} catch (error) {
+					if (isClosedControllerError(error)) {
+						streamClosed = true;
+						return false;
+					}
+
+					throw error;
+				}
+			};
+			const closeStream = (): void => {
+				if (streamClosed) {
+					return;
+				}
+
+				streamClosed = true;
+
+				try {
+					controller.close();
+				} catch (error) {
+					if (!isClosedControllerError(error)) {
+						throw error;
+					}
+				}
+			};
+			const heartbeatInterval = setInterval(() => {
+				sendComment('keepalive');
+			}, 5000);
+
 			try {
 				await streamAIResponse({
-					controller,
-					sse,
+					sendEvent,
 					conversationId: capturedConversationId,
 					userId: capturedUserId,
 					startTime,
@@ -661,6 +739,15 @@ export const POST: RequestHandler = async ({ request }) => {
 					},
 				});
 			} catch (e) {
+				if (abortController.signal.aborted || streamClosed || isAbortError(e)) {
+					log('Stream aborted after client disconnect', startTime);
+					await handleGenerationAbort({
+						conversationId: capturedConversationId,
+						startTime,
+					});
+					return;
+				}
+
 				log(`Stream error: ${e}`, startTime);
 				await handleGenerationError({
 					error: e instanceof Error ? e.message : 'Unknown streaming error',
@@ -668,14 +755,13 @@ export const POST: RequestHandler = async ({ request }) => {
 					messageId: assistantMessageIdFromStream,
 					startTime,
 				});
-				controller.enqueue(
-					sse.encode({
-						event: 'error',
-						data: { error: e instanceof Error ? e.message : 'Unknown streaming error' },
-					})
-				);
+				sendEvent({
+					event: 'error',
+					data: { error: e instanceof Error ? e.message : 'Unknown streaming error' },
+				});
 			} finally {
-				controller.close();
+				clearInterval(heartbeatInterval);
+				closeStream();
 				generationAbortControllers.delete(capturedConversationId);
 			}
 		},
@@ -691,8 +777,7 @@ export const POST: RequestHandler = async ({ request }) => {
 };
 
 async function streamAIResponse({
-	controller,
-	sse,
+	sendEvent,
 	conversationId,
 	userId,
 	startTime,
@@ -716,8 +801,7 @@ async function streamAIResponse({
 	usingServerKey,
 	onMessageId,
 }: {
-	controller: ReadableStreamDefaultController<Uint8Array>;
-	sse: SSEEncoder;
+	sendEvent: (event: SSEEvent) => boolean;
 	conversationId: string;
 	userId: string;
 	startTime: number;
@@ -754,7 +838,10 @@ async function streamAIResponse({
 
 	if (abortSignal?.aborted) {
 		log('AI response generation aborted before starting', startTime);
-		controller.enqueue(sse.encode({ event: 'error', data: { error: 'Cancelled by user' } }));
+		await handleGenerationAbort({
+			conversationId,
+			startTime,
+		});
 		return;
 	}
 
@@ -830,12 +917,10 @@ async function streamAIResponse({
 	log('Assistant message created', startTime);
 
 	// Send message_start event
-	controller.enqueue(
-		sse.encode({
-			event: 'message_start',
-			data: { conversation_id: conversationId, message_id: assistantMessageId },
-		})
-	);
+	sendEvent({
+		event: 'message_start',
+		data: { conversation_id: conversationId, message_id: assistantMessageId },
+	});
 
 	const userMessage = conversationMessages[conversationMessages.length - 1];
 
@@ -847,7 +932,7 @@ async function streamAIResponse({
 			messageId: assistantMessageId,
 			startTime,
 		});
-		controller.enqueue(sse.encode({ event: 'error', data: { error: errorMsg } }));
+		sendEvent({ event: 'error', data: { error: errorMsg } });
 		return;
 	}
 
@@ -1154,14 +1239,10 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 			: finalMessages;
 
 	if (abortSignal?.aborted) {
-		const errorMsg = 'Cancelled by user';
-		await handleGenerationError({
-			error: errorMsg,
+		await handleGenerationAbort({
 			conversationId,
-			messageId: assistantMessageId,
 			startTime,
 		});
-		controller.enqueue(sse.encode({ event: 'error', data: { error: errorMsg } }));
 		return;
 	}
 
@@ -1237,6 +1318,14 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 	);
 
 	if (streamResult.isErr()) {
+		if (abortSignal?.aborted || isAbortError(streamResult.error)) {
+			await handleGenerationAbort({
+				conversationId,
+				startTime,
+			});
+			return;
+		}
+
 		const errorMsg = `Failed to create stream: ${streamResult.error}`;
 		await handleGenerationError({
 			error: errorMsg,
@@ -1244,7 +1333,7 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 			messageId: assistantMessageId,
 			startTime,
 		});
-		controller.enqueue(sse.encode({ event: 'error', data: { error: errorMsg } }));
+		sendEvent({ event: 'error', data: { error: errorMsg } });
 		return;
 	}
 
@@ -1334,12 +1423,10 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 			const reasoningDelta = reasoning.slice(previousReasoning.length);
 
 			if (contentDelta || reasoningDelta) {
-				controller.enqueue(
-					sse.encode({
-						event: 'delta',
-						data: { content: contentDelta, reasoning: reasoningDelta },
-					})
-				);
+				sendEvent({
+					event: 'delta',
+					data: { content: contentDelta, reasoning: reasoningDelta },
+				});
 
 				previousContent = content;
 				previousReasoning = reasoning;
@@ -1499,12 +1586,10 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 					const reasoningDelta = reasoning.slice(previousReasoning.length);
 
 					if (contentDelta || reasoningDelta) {
-						controller.enqueue(
-							sse.encode({
-								event: 'delta',
-								data: { content: contentDelta, reasoning: reasoningDelta },
-							})
-						);
+						sendEvent({
+							event: 'delta',
+							data: { content: contentDelta, reasoning: reasoningDelta },
+						});
 
 						previousContent = content;
 						previousReasoning = reasoning;
@@ -1530,16 +1615,14 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 
 		if (!generationId) {
 			log('No generation id found', startTime);
-			controller.enqueue(
-				sse.encode({
-					event: 'message_complete',
-					data: {
-						token_count: 0,
-						response_time_ms: 0,
-						time_to_first_token_ms: 0,
-					},
-				})
-			);
+			sendEvent({
+				event: 'message_complete',
+				data: {
+					token_count: 0,
+					response_time_ms: 0,
+					time_to_first_token_ms: 0,
+				},
+			});
 			return;
 		}
 
@@ -1647,17 +1730,15 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 			.where(eq(messages.id, assistantMessageId));
 
 		// Send message_complete event
-		controller.enqueue(
-			sse.encode({
-				event: 'message_complete',
-				data: {
-					token_count: tokenCount,
-					cost_usd: costUsd,
-					response_time_ms: responseTimeMs,
-					time_to_first_token_ms: timeToFirstTokenMs,
-				},
-			})
-		);
+		sendEvent({
+			event: 'message_complete',
+			data: {
+				token_count: tokenCount,
+				cost_usd: costUsd,
+				response_time_ms: responseTimeMs,
+				time_to_first_token_ms: timeToFirstTokenMs,
+			},
+		});
 
 		// Track analytics asynchronously (don't await)
 		(async () => {
@@ -1765,28 +1846,24 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 			]);
 
 			if (generatedTitle) {
-				controller.enqueue(
-					sse.encode({
-						event: 'title_updated',
-						data: {
-							conversation_id: conversationId,
-							title: generatedTitle,
-						},
-					})
-				);
+				sendEvent({
+					event: 'title_updated',
+					data: {
+						conversation_id: conversationId,
+						title: generatedTitle,
+					},
+				});
 			}
 
 			if (followUpSuggestions && followUpSuggestions.length > 0) {
-				controller.enqueue(
-					sse.encode({
-						event: 'follow_ups_updated',
-						data: {
-							conversation_id: conversationId,
-							message_id: assistantMessageId,
-							suggestions: followUpSuggestions,
-						},
-					})
-				);
+				sendEvent({
+					event: 'follow_ups_updated',
+					data: {
+						conversation_id: conversationId,
+						message_id: assistantMessageId,
+						suggestions: followUpSuggestions,
+					},
+				});
 			}
 		}
 
@@ -1830,6 +1907,14 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 
 		log('SSE stream completed successfully', startTime);
 	} catch (streamError) {
+		if (abortSignal?.aborted || isAbortError(streamError)) {
+			await handleGenerationAbort({
+				conversationId,
+				startTime,
+			});
+			return;
+		}
+
 		const errorMsg = `Stream processing error: ${streamError}`;
 		await handleGenerationError({
 			error: errorMsg,
@@ -1837,13 +1922,26 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 			messageId: assistantMessageId,
 			startTime,
 		});
-		controller.enqueue(
-			sse.encode({
-				event: 'error',
-				data: { error: streamError instanceof Error ? streamError.message : 'Unknown error' },
-			})
-		);
+		sendEvent({
+			event: 'error',
+			data: { error: streamError instanceof Error ? streamError.message : 'Unknown error' },
+		});
 	}
+}
+
+async function handleGenerationAbort({
+	conversationId,
+	startTime,
+}: {
+	conversationId: string;
+	startTime: number;
+}) {
+	log('Generation aborted', startTime);
+
+	await db
+		.update(conversations)
+		.set({ generating: false })
+		.where(eq(conversations.id, conversationId));
 }
 
 async function handleGenerationError({
