@@ -38,11 +38,16 @@
 	}
 </script>
 
-<div class="space-y-6">
-	<div>
-		<h2 class="text-2xl font-bold">Starred Messages</h2>
-		<p class="text-muted-foreground text-sm">Messages you've starred for quick reference.</p>
-	</div>
+<svelte:head>
+	<title>Starred | nanochat</title>
+</svelte:head>
+
+<div class="flex flex-col gap-1">
+	<h1 class="text-2xl font-bold tracking-tight">Starred Messages</h1>
+	<p class="text-muted-foreground text-sm">Messages you've starred for quick reference.</p>
+</div>
+
+<div class="mt-6 space-y-6">
 
 	{#if starredMessages.isLoading}
 		<div class="flex items-center justify-center py-12">

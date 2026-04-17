@@ -19,13 +19,6 @@ import { slide } from 'svelte/transition';
 	import { models } from '$lib/state/models.svelte';
 	import { settings as clientSettings } from '$lib/state/settings.svelte';
 	import { toast } from 'svelte-sonner';
-	import {
-		Root as Card,
-		Content as CardContent,
-		Description as CardDescription,
-		Header as CardHeader,
-		Title as CardTitle,
-	} from '$lib/components/ui/card';
 
 	const newRuleCollapsible = new Collapsible({
 		open: false,
@@ -176,16 +169,36 @@ import { slide } from 'svelte/transition';
 	<title>Customization | nanochat</title>
 </svelte:head>
 
-<h1 class="text-2xl font-bold">Customization</h1>
-<h2 class="text-muted-foreground mt-2 text-sm">Customize your experience with nanochat.</h2>
+<div class="flex flex-col gap-1">
+	<h1 class="text-2xl font-bold tracking-tight">Customization</h1>
+	<p class="text-muted-foreground text-sm">Customize your experience with nanochat.</p>
+</div>
 
-<div class="mt-8 flex flex-col gap-4">
-	<Card>
-		<CardHeader>
-			<CardTitle>Search forwarding URL</CardTitle>
-			<CardDescription>Use this URL to add nanochat as a search engine.</CardDescription>
-		</CardHeader>
-		<CardContent class="gap-3">
+<div class="mt-6 flex flex-col gap-8">
+	<!-- Theme -->
+	<section class="flex flex-col gap-3">
+		<div class="flex flex-col gap-0.5">
+			<h2 class="text-muted-foreground text-sm font-semibold tracking-wide uppercase">Theme</h2>
+			<p class="text-muted-foreground text-xs">Choose a color theme for the application.</p>
+		</div>
+		<div class="bg-card border-border rounded-lg border p-5">
+			<ThemeSelector
+				bind:currentTheme
+				bind:primaryColor={currentThemePrimaryColor}
+				bind:accentColor={currentThemeAccentColor}
+			/>
+		</div>
+	</section>
+
+	<!-- Search forwarding -->
+	<section class="flex flex-col gap-3">
+		<div class="flex flex-col gap-0.5">
+			<h2 class="text-muted-foreground text-sm font-semibold tracking-wide uppercase">
+				Search Forwarding URL
+			</h2>
+			<p class="text-muted-foreground text-xs">Use this URL to add nanochat as a search engine.</p>
+		</div>
+		<div class="bg-card border-border flex flex-col gap-4 rounded-lg border p-5">
 			<div class="grid grid-cols-1 gap-3 md:grid-cols-3">
 				<div class="flex flex-col gap-2">
 					<Label for="searchForwardModel">Model</Label>
@@ -240,86 +253,94 @@ import { slide } from 'svelte/transition';
 				</Button>
 			</div>
 			<p class="text-muted-foreground text-xs">
-				For browser search shortcuts, use <code class="bg-muted rounded px-1">%s</code> as the query placeholder.
+				For browser search shortcuts, use <code class="bg-muted rounded px-1">%s</code> as the query
+				placeholder.
 			</p>
-		</CardContent>
-	</Card>
-	<!-- Theme Section -->
-	<Card>
-		<CardHeader>
-			<CardTitle>Theme</CardTitle>
-			<CardDescription>Choose a color theme for the application.</CardDescription>
-		</CardHeader>
-		<CardContent>
-			<ThemeSelector
-				bind:currentTheme
-				bind:primaryColor={currentThemePrimaryColor}
-				bind:accentColor={currentThemeAccentColor}
-			/>
-		</CardContent>
-	</Card>
-	<div class="flex place-items-center justify-between">
-		<h3 class="text-xl font-bold">Rules</h3>
-		<Button
-			{...newRuleCollapsible.trigger}
-			variant={newRuleCollapsible.open ? 'outline' : 'default'}
-		>
-			{#if newRuleCollapsible.open}
-				<XIcon class="size-4" />
-			{:else}
-				<PlusIcon class="size-4" />
-			{/if}
-			{newRuleCollapsible.open ? 'Cancel' : 'New Rule'}
-		</Button>
-	</div>
-	{#if newRuleCollapsible.open}
-		<div
-			{...newRuleCollapsible.content}
-			in:slide={{ duration: 150, axis: 'y' }}
-			out:slide={{ duration: 150, axis: 'y' }}
-			class="bg-card flex flex-col gap-4 rounded-lg border p-4"
-		>
-			<div class="flex flex-col gap-1">
-				<h3 class="text-lg font-bold">New Rule</h3>
-				<p class="text-muted-foreground text-sm">
-					Create a new rule to customize the behavior of your AI.
+		</div>
+	</section>
+
+	<!-- Rules -->
+	<section class="flex flex-col gap-3">
+		<div class="flex flex-wrap items-center justify-between gap-2">
+			<div class="flex flex-col gap-0.5">
+				<h2 class="text-muted-foreground text-sm font-semibold tracking-wide uppercase">Rules</h2>
+				<p class="text-muted-foreground text-xs">
+					Custom instructions the AI follows during conversations.
 				</p>
 			</div>
-			<form onsubmit={submitNewRule} class="flex flex-col gap-4">
-				<div class="flex flex-col gap-2">
-					<Label for="name">Name (Used when referencing the rule)</Label>
-					<Input
-						id="name"
-						name="name"
-						placeholder="My Rule"
-						required
-						bind:value={name}
-						aria-invalid={ruleNameExists}
-					/>
-				</div>
-				<div class="flex flex-col gap-2">
-					<Label for="attach">Rule Type</Label>
-					<select
-						id="attach"
-						name="attach"
-						class="border-input bg-background h-9 w-fit rounded-md border px-2 pr-6 text-sm"
-						required
-					>
-						<option value="always">Always</option>
-						<option value="manual">Manual</option>
-					</select>
-				</div>
-				<div class="flex flex-col gap-2">
-					<Label for="rule">Instructions</Label>
-					<Textarea id="rule" name="rule" placeholder="How should the AI respond?" required />
-				</div>
-				<div class="flex justify-end">
-					<Button loading={creatingRule} type="submit">Create Rule</Button>
-				</div>
-			</form>
+			<Button
+				{...newRuleCollapsible.trigger}
+				size="sm"
+				variant={newRuleCollapsible.open ? 'outline' : 'default'}
+			>
+				{#if newRuleCollapsible.open}
+					<XIcon class="size-4" />
+				{:else}
+					<PlusIcon class="size-4" />
+				{/if}
+				{newRuleCollapsible.open ? 'Cancel' : 'New Rule'}
+			</Button>
 		</div>
-	{/if}
-	{#each userRulesQuery.data ?? [] as rule (rule.id)}
-		<Rule {rule} allRules={userRulesQuery.data ?? []} />
-	{/each}
+
+		{#if newRuleCollapsible.open}
+			<div
+				{...newRuleCollapsible.content}
+				in:slide={{ duration: 150, axis: 'y' }}
+				out:slide={{ duration: 150, axis: 'y' }}
+				class="bg-card border-border flex flex-col gap-4 rounded-lg border p-5"
+			>
+				<div class="flex flex-col gap-1">
+					<h3 class="font-medium">New Rule</h3>
+					<p class="text-muted-foreground text-sm">
+						Create a new rule to customize the behavior of your AI.
+					</p>
+				</div>
+				<form onsubmit={submitNewRule} class="flex flex-col gap-4">
+					<div class="flex flex-col gap-2">
+						<Label for="name">Name (used when referencing the rule)</Label>
+						<Input
+							id="name"
+							name="name"
+							placeholder="My Rule"
+							required
+							bind:value={name}
+							aria-invalid={ruleNameExists}
+						/>
+					</div>
+					<div class="flex flex-col gap-2">
+						<Label for="attach">Rule Type</Label>
+						<select
+							id="attach"
+							name="attach"
+							class="border-input bg-background h-9 w-fit rounded-md border px-2 pr-6 text-sm"
+							required
+						>
+							<option value="always">Always</option>
+							<option value="manual">Manual</option>
+						</select>
+					</div>
+					<div class="flex flex-col gap-2">
+						<Label for="rule">Instructions</Label>
+						<Textarea id="rule" name="rule" placeholder="How should the AI respond?" required />
+					</div>
+					<div class="flex justify-end">
+						<Button loading={creatingRule} type="submit">Create Rule</Button>
+					</div>
+				</form>
+			</div>
+		{/if}
+
+		<div class="flex flex-col gap-3">
+			{#each userRulesQuery.data ?? [] as rule (rule.id)}
+				<Rule {rule} allRules={userRulesQuery.data ?? []} />
+			{/each}
+			{#if (userRulesQuery.data ?? []).length === 0 && !newRuleCollapsible.open}
+				<div
+					class="border-border text-muted-foreground rounded-lg border border-dashed p-8 text-center text-sm"
+				>
+					No rules yet. Create one to customize how the AI responds.
+				</div>
+			{/if}
+		</div>
+	</section>
 </div>

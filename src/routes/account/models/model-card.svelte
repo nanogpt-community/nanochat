@@ -1,6 +1,5 @@
 <script lang="ts">
 	import type { Provider } from '$lib/types';
-	import * as Card from '$lib/components/ui/card';
 	import { Switch } from '$lib/components/ui/switch';
 	import { mutate } from '$lib/client/mutation.svelte';
 	import { api } from '$lib/cache/cached-query.svelte';
@@ -8,7 +7,6 @@
 	import { ResultAsync } from 'neverthrow';
 	import { getFirstSentence } from '$lib/utils/strings';
 	import {
-		supportsImages,
 		supportsReasoning,
 		supportsVideo,
 		supportsVision,
@@ -20,12 +18,9 @@
 	import BrainIcon from '~icons/lucide/brain';
 	import VideoIcon from '~icons/lucide/video';
 	import TicketIcon from '~icons/lucide/ticket';
-
-	type Model = {
-		id: string;
-		name: string;
-		description: string;
-	};
+	import ImageIcon from '~icons/lucide/image';
+	import ChevronDownIcon from '~icons/lucide/chevron-down';
+	import { cn } from '$lib/utils/utils';
 
 	type Props = {
 		enabled?: boolean;
@@ -38,11 +33,14 @@
 	let { provider, model, enabled = false, disabled = false }: Props = $props();
 
 	const [shortDescription, fullDescription] = $derived(getFirstSentence(model.description));
+	const hasMore = $derived(
+		shortDescription !== null && fullDescription && shortDescription !== fullDescription
+	);
 
-	let showMore = $state(false);
+	let expanded = $state(false);
 
 	async function toggleEnabled(v: boolean) {
-		enabled = v; // Optimistic!
+		enabled = v;
 		if (!session.current?.user.id) return;
 
 		const res = await ResultAsync.fromPromise(
@@ -64,100 +62,128 @@
 			(e) => e
 		);
 
-		if (res.isErr()) enabled = !v; // Should have been a realist :(
+		if (res.isErr()) enabled = !v;
 	}
+
+	const isNanoGPT = $derived(provider === 'nanogpt');
+	const hasReasoning = $derived(isNanoGPT && supportsReasoning(model));
+	const hasVision = $derived(isNanoGPT && supportsVision(model));
+	const hasVideo = $derived(isNanoGPT && supportsVideo(model));
+	const isImageOnly = $derived(isNanoGPT && isImageOnlyModel(model));
+	const hasSubscription = $derived(isNanoGPT && Boolean(model.subscription?.included));
 </script>
 
-<Card.Root>
-	<Card.Header>
-		<div class="flex items-center justify-between">
-			<div class="flex place-items-center gap-2">
-				<Card.Title>{model.name}</Card.Title>
-				<span class="text-muted-foreground hidden text-xs xl:block">{model.id}</span>
-			</div>
-			<Switch bind:value={() => enabled, toggleEnabled} {disabled} />
-		</div>
-		<Card.Description>
-			{showMore ? fullDescription : (shortDescription ?? fullDescription)}
-		</Card.Description>
-		{#if shortDescription !== null}
-			<button
-				type="button"
-				class="text-muted-foreground w-fit text-start text-xs"
-				onclick={() => (showMore = !showMore)}
-				{disabled}
-			>
-				{showMore ? 'Show less' : 'Show more'}
-			</button>
-		{/if}
-	</Card.Header>
-	<Card.Content>
-		<div class="flex place-items-center gap-1">
-			{#if model && provider === 'nanogpt' && supportsReasoning(model)}
+<div
+	class={cn(
+		'group hover:bg-accent/40 transition-colors',
+		enabled ? 'bg-card' : 'bg-card/40'
+	)}
+>
+	<div class="flex items-center gap-3 px-4 py-3">
+		<!-- Capability icons -->
+		<div class="flex shrink-0 items-center gap-1">
+			{#if hasReasoning}
 				<Tooltip>
 					{#snippet trigger(tooltip)}
 						<div
 							{...tooltip.trigger}
-							class="rounded-md border-green-500 bg-green-500/50 p-1 text-green-400"
+							class="flex size-6 items-center justify-center rounded-md bg-green-500/15 text-green-600 dark:text-green-400"
 						>
-							<BrainIcon class="size-3" />
+							<BrainIcon class="size-3.5" />
 						</div>
 					{/snippet}
-					Supports reasoning
+					Reasoning
 				</Tooltip>
 			{/if}
-			{#if model && provider === 'nanogpt' && supportsVision(model)}
+			{#if hasVision}
 				<Tooltip>
 					{#snippet trigger(tooltip)}
 						<div
 							{...tooltip.trigger}
-							class="rounded-md border-cyan-500 bg-cyan-500/50 p-1 text-cyan-400"
+							class="flex size-6 items-center justify-center rounded-md bg-cyan-500/15 text-cyan-600 dark:text-cyan-400"
 						>
-							<EyeIcon class="size-3" />
+							<EyeIcon class="size-3.5" />
 						</div>
 					{/snippet}
-					Supports vision (image input)
+					Vision (image input)
 				</Tooltip>
 			{/if}
-			{#if model && provider === 'nanogpt' && supportsVideo(model)}
+			{#if hasVideo}
 				<Tooltip>
 					{#snippet trigger(tooltip)}
 						<div
 							{...tooltip.trigger}
-							class="rounded-md border-blue-500 bg-blue-500/50 p-1 text-blue-400"
+							class="flex size-6 items-center justify-center rounded-md bg-blue-500/15 text-blue-600 dark:text-blue-400"
 						>
-							<VideoIcon class="size-3" />
+							<VideoIcon class="size-3.5" />
 						</div>
 					{/snippet}
-					Supports video generation
+					Video generation
 				</Tooltip>
 			{/if}
-			{#if model && provider === 'nanogpt' && isImageOnlyModel(model)}
+			{#if isImageOnly}
 				<Tooltip>
 					{#snippet trigger(tooltip)}
 						<div
 							{...tooltip.trigger}
-							class="rounded-md border-purple-500 bg-purple-500/50 p-1 text-purple-400"
+							class="flex size-6 items-center justify-center rounded-md bg-violet-500/15 text-violet-600 dark:text-violet-400"
 						>
-							<EyeIcon class="size-3" />
+							<ImageIcon class="size-3.5" />
 						</div>
 					{/snippet}
 					Image generation only
 				</Tooltip>
 			{/if}
-			{#if model && provider === 'nanogpt' && model.subscription?.included}
-				<Tooltip>
-					{#snippet trigger(tooltip)}
-						<div
-							{...tooltip.trigger}
-							class="rounded-md border-yellow-500 bg-yellow-500/50 p-1 text-yellow-400"
-						>
-							<TicketIcon class="size-3" />
-						</div>
-					{/snippet}
-					{model.subscription.note || 'Included in subscription'}
-				</Tooltip>
+		</div>
+
+		<!-- Name + id -->
+		<div class="min-w-0 flex-1">
+			<div class="flex items-center gap-2">
+				<span class="truncate font-medium">{model.name}</span>
+				<span class="text-muted-foreground hidden truncate text-xs xl:inline">{model.id}</span>
+			</div>
+			{#if shortDescription}
+				<p class="text-muted-foreground mt-0.5 line-clamp-1 text-xs">
+					{shortDescription}
+				</p>
 			{/if}
 		</div>
-	</Card.Content>
-</Card.Root>
+
+		<!-- Subscription badge -->
+		{#if hasSubscription}
+			<Tooltip>
+				{#snippet trigger(tooltip)}
+					<div
+						{...tooltip.trigger}
+						class="hidden shrink-0 items-center gap-1 rounded-full bg-yellow-500/15 px-2 py-0.5 text-xs font-medium text-yellow-700 sm:inline-flex dark:text-yellow-400"
+					>
+						<TicketIcon class="size-3" />
+						<span>Subscription</span>
+					</div>
+				{/snippet}
+				{model.subscription?.note || 'Included in subscription'}
+			</Tooltip>
+		{/if}
+
+		<!-- Expand button -->
+		{#if hasMore}
+			<button
+				type="button"
+				onclick={() => (expanded = !expanded)}
+				class="text-muted-foreground hover:bg-accent hover:text-foreground shrink-0 rounded-md p-1 transition-colors"
+				aria-label={expanded ? 'Collapse description' : 'Expand description'}
+			>
+				<ChevronDownIcon class={cn('size-4 transition-transform', expanded && 'rotate-180')} />
+			</button>
+		{/if}
+
+		<!-- Toggle -->
+		<Switch bind:value={() => enabled, toggleEnabled} {disabled} />
+	</div>
+
+	{#if expanded && hasMore}
+		<div class="border-border/50 border-t px-4 py-3">
+			<p class="text-muted-foreground text-sm leading-relaxed">{fullDescription}</p>
+		</div>
+	{/if}
+</div>

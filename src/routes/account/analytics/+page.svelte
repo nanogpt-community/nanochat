@@ -12,6 +12,9 @@
 	import CheckCircleIcon from '~icons/lucide/check-circle';
 	import SparklesIcon from '~icons/lucide/sparkles';
 	import ZapIcon from '~icons/lucide/zap';
+	import ArrowUpIcon from '~icons/lucide/arrow-up';
+	import ArrowDownIcon from '~icons/lucide/arrow-down';
+	import ArrowUpDownIcon from '~icons/lucide/arrow-up-down';
 
 	let { data }: { data: PageData } = $props();
 
@@ -138,295 +141,379 @@
 </script>
 
 <svelte:head>
-	<title>Model Analytics - nanochat</title>
+	<title>Analytics | nanochat</title>
 </svelte:head>
 
-<div class="container mx-auto max-w-7xl p-6">
-	<div class="mb-8 flex items-center justify-between">
-		<div>
-			<h1 class="text-3xl font-bold">Model Performance Analytics</h1>
-			<p class="text-muted-foreground mt-2">Track and compare AI model performance</p>
-		</div>
-		<Button onclick={refreshStats} disabled={isRefreshing}>
-			<RefreshCwIcon class={cn('mr-2 size-4', { 'animate-spin': isRefreshing })} />
-			{isRefreshing ? 'Refreshing...' : 'Refresh Stats'}
-		</Button>
-	</div>
+<div class="flex flex-col gap-1">
+	<h1 class="text-2xl font-bold tracking-tight">Analytics</h1>
+	<p class="text-muted-foreground text-sm">
+		Track and compare the performance of AI models you've used.
+	</p>
+</div>
 
-	<!-- Insights Cards -->
+<div class="mt-6 flex flex-col gap-6">
 	{#if data.stats.length > 0}
-		<div class="mb-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-			<div class="bg-card rounded-lg border p-6">
-				<div class="flex items-center justify-between">
-					<div>
-						<p class="text-muted-foreground text-sm">Total Messages</p>
-						<p class="text-2xl font-bold">{data.insights.totalMessages.toLocaleString()}</p>
-					</div>
-					<MessageSquareIcon class="text-muted-foreground size-8" />
+		<!-- Overview stats -->
+		<section class="flex flex-col gap-3">
+			<div class="flex flex-wrap items-end justify-between gap-3">
+				<div class="flex flex-col gap-0.5">
+					<h2 class="text-muted-foreground text-sm font-semibold tracking-wide uppercase">
+						Overview
+					</h2>
+					<p class="text-muted-foreground text-xs">Totals across all your conversations.</p>
 				</div>
+				<Button onclick={refreshStats} disabled={isRefreshing} size="sm" variant="outline">
+					<RefreshCwIcon class={cn('mr-2 size-4', { 'animate-spin': isRefreshing })} />
+					{isRefreshing ? 'Refreshing...' : 'Refresh Stats'}
+				</Button>
 			</div>
 
-			<div class="bg-card rounded-lg border p-6">
-				<div class="flex items-center justify-between">
-					<div>
-						<p class="text-muted-foreground text-sm">Total Cost</p>
-						<p class="text-2xl font-bold">{formatCostSafe(data.insights.totalCost)}</p>
+			<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+				<div class="bg-card border-border rounded-lg border p-4">
+					<div
+						class="text-muted-foreground flex items-center gap-2 text-xs font-medium tracking-wide uppercase"
+					>
+						<MessageSquareIcon class="size-3.5" /> Total Messages
 					</div>
-					<DollarSignIcon class="text-muted-foreground size-8" />
-				</div>
-			</div>
-
-			<div class="bg-card rounded-lg border p-6">
-				<div class="flex items-center justify-between">
-					<div>
-						<p class="text-muted-foreground text-sm">Avg Rating</p>
-						<p class="text-2xl font-bold">
-							{data.insights.avgRating ? data.insights.avgRating.toFixed(2) : 'N/A'}
-						</p>
+					<div class="mt-2 text-2xl font-semibold tabular-nums">
+						{data.insights.totalMessages.toLocaleString()}
 					</div>
-					<StarIcon class="text-muted-foreground size-8" />
 				</div>
-			</div>
-		</div>
 
-		<div class="bg-card mb-8 rounded-lg border p-6">
-			<div class="flex items-center justify-between">
-				<div class="min-w-0 flex-1">
-					<p class="text-muted-foreground mb-1 text-sm">Most Used Model</p>
-					<p class="text-2xl font-bold break-words" title={data.insights.mostUsedModel?.modelId}>
+				<div class="bg-card border-border rounded-lg border p-4">
+					<div
+						class="text-muted-foreground flex items-center gap-2 text-xs font-medium tracking-wide uppercase"
+					>
+						<DollarSignIcon class="size-3.5" /> Total Cost
+					</div>
+					<div class="mt-2 text-2xl font-semibold tabular-nums">
+						{formatCostSafe(data.insights.totalCost)}
+					</div>
+				</div>
+
+				<div class="bg-card border-border rounded-lg border p-4">
+					<div
+						class="text-muted-foreground flex items-center gap-2 text-xs font-medium tracking-wide uppercase"
+					>
+						<StarIcon class="size-3.5" /> Avg Rating
+					</div>
+					<div class="mt-2 text-2xl font-semibold tabular-nums">
+						{data.insights.avgRating ? data.insights.avgRating.toFixed(2) : 'N/A'}
+					</div>
+				</div>
+
+				<div class="bg-card border-border rounded-lg border p-4">
+					<div
+						class="text-muted-foreground flex items-center gap-2 text-xs font-medium tracking-wide uppercase"
+					>
+						<TrendingUpIcon class="size-3.5" /> Most Used
+					</div>
+					<div
+						class="mt-2 truncate text-2xl font-semibold"
+						title={data.insights.mostUsedModel?.modelId}
+					>
 						{data.insights.mostUsedModel?.modelId ?? 'N/A'}
-					</p>
+					</div>
 				</div>
-				<TrendingUpIcon class="text-muted-foreground ml-4 size-8 flex-shrink-0" />
 			</div>
-		</div>
+		</section>
 
-		<!-- Additional Insights -->
-		<div class="mb-8 grid gap-4 md:grid-cols-2">
-			{#if data.insights.bestRatedModel}
-				<div class="bg-card rounded-lg border p-6">
-					<h3 class="mb-2 text-lg font-semibold">Best Rated Model</h3>
-					<p class="text-muted-foreground text-sm">
-						<strong>{data.insights.bestRatedModel.modelId}</strong>
-						with an average rating of
-						<strong>{data.insights.bestRatedModel.avgRating?.toFixed(2)}</strong>
-						({data.insights.bestRatedModel.totalMessages} messages)
-					</p>
+		<!-- Highlights -->
+		{#if data.insights.bestRatedModel || (data.insights.mostCostEffective && !isNaN(data.insights.mostCostEffective.totalCost)) || data.insights.fastestModel}
+			<section class="flex flex-col gap-3">
+				<div class="flex flex-col gap-0.5">
+					<h2 class="text-muted-foreground text-sm font-semibold tracking-wide uppercase">
+						Highlights
+					</h2>
+					<p class="text-muted-foreground text-xs">Standout models from your usage.</p>
 				</div>
-			{/if}
+				<div class="bg-card border-border divide-border divide-y rounded-lg border">
+					{#if data.insights.bestRatedModel}
+						<div class="flex items-start gap-3 p-5">
+							<div class="bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 rounded-md p-2">
+								<StarIcon class="size-4" />
+							</div>
+							<div class="flex min-w-0 flex-col gap-1">
+								<span class="font-medium">Best Rated Model</span>
+								<span class="text-muted-foreground text-sm">
+									<strong class="text-foreground">{data.insights.bestRatedModel.modelId}</strong>
+									with an average rating of
+									<strong class="text-foreground"
+										>{data.insights.bestRatedModel.avgRating?.toFixed(2)}</strong
+									>
+									({data.insights.bestRatedModel.totalMessages} messages)
+								</span>
+							</div>
+						</div>
+					{/if}
 
-			{#if data.insights.mostCostEffective && !isNaN(data.insights.mostCostEffective.totalCost)}
-				<div class="bg-card rounded-lg border p-6">
-					<h3 class="mb-2 text-lg font-semibold">Most Cost-Effective</h3>
-					<p class="text-muted-foreground text-sm">
-						<strong>{data.insights.mostCostEffective.modelId}</strong>
-						at
-						<strong
-							>{formatCost(
-								data.insights.mostCostEffective.totalCost /
-									data.insights.mostCostEffective.totalMessages
-							)}</strong
-						>
-						per message
-					</p>
+					{#if data.insights.mostCostEffective && !isNaN(data.insights.mostCostEffective.totalCost)}
+						<div class="flex items-start gap-3 p-5">
+							<div class="bg-green-500/10 text-green-600 dark:text-green-400 rounded-md p-2">
+								<DollarSignIcon class="size-4" />
+							</div>
+							<div class="flex min-w-0 flex-col gap-1">
+								<span class="font-medium">Most Cost-Effective</span>
+								<span class="text-muted-foreground text-sm">
+									<strong class="text-foreground"
+										>{data.insights.mostCostEffective.modelId}</strong
+									>
+									at
+									<strong class="text-foreground"
+										>{formatCost(
+											data.insights.mostCostEffective.totalCost /
+												data.insights.mostCostEffective.totalMessages
+										)}</strong
+									>
+									per message
+								</span>
+							</div>
+						</div>
+					{/if}
+
+					{#if data.insights.fastestModel}
+						<div class="flex items-start gap-3 p-5">
+							<div class="bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-md p-2">
+								<ZapIcon class="size-4" />
+							</div>
+							<div class="flex min-w-0 flex-col gap-1">
+								<span class="font-medium">Fastest Model</span>
+								<span class="text-muted-foreground text-sm">
+									<strong class="text-foreground">{data.insights.fastestModel.modelId}</strong>
+									with an average speed of
+									<strong class="text-foreground"
+										>{getTokensPerSecond(data.insights.fastestModel).toFixed(1)} tokens/sec</strong
+									>
+									({data.insights.fastestModel.totalMessages} messages)
+								</span>
+							</div>
+						</div>
+					{/if}
 				</div>
-			{/if}
+			</section>
+		{/if}
 
-			{#if data.insights.fastestModel}
-				<div class="bg-card rounded-lg border p-6">
-					<h3 class="mb-2 text-lg font-semibold">Fastest Model</h3>
-					<p class="text-muted-foreground text-sm">
-						<strong>{data.insights.fastestModel.modelId}</strong>
-						with an average speed of
-						<strong>{getTokensPerSecond(data.insights.fastestModel).toFixed(1)} tokens/sec</strong>
-						({data.insights.fastestModel.totalMessages} messages)
-					</p>
-				</div>
-			{/if}
-		</div>
-
-		<!-- Model Comparison Table -->
-		<div class="bg-card rounded-lg border">
-			<div class="p-6">
-				<h2 class="mb-4 text-xl font-bold">Model Comparison</h2>
-				<div class="overflow-x-auto">
-					<table class="w-full">
-						<thead>
-							<tr class="border-border border-b">
-								<th class="pr-4 pb-3 text-left">
-									<button
-										type="button"
-										onclick={() => toggleSort('model')}
-										class="hover:text-foreground text-muted-foreground flex items-center gap-1 font-medium"
-									>
-										Model
-										{#if sortColumn === 'model'}
-											<span>{sortDirection === 'asc' ? '↑' : '↓'}</span>
-										{/if}
-									</button>
-								</th>
-								<th class="pr-4 pb-3 text-center">
-									<button
-										type="button"
-										onclick={() => toggleSort('rating')}
-										class="hover:text-foreground text-muted-foreground flex items-center gap-1 font-medium"
-									>
-										Rating
-										{#if sortColumn === 'rating'}
-											<span>{sortDirection === 'asc' ? '↑' : '↓'}</span>
-										{/if}
-									</button>
-								</th>
-								<th class="pr-4 pb-3 text-center">
-									<button
-										type="button"
-										onclick={() => toggleSort('uses')}
-										class="hover:text-foreground text-muted-foreground flex items-center gap-1 font-medium"
-									>
-										Uses
-										{#if sortColumn === 'uses'}
-											<span>{sortDirection === 'asc' ? '↑' : '↓'}</span>
-										{/if}
-									</button>
-								</th>
-								<th class="pr-4 pb-3 text-center">
-									<button
-										type="button"
-										onclick={() => toggleSort('cost')}
-										class="hover:text-foreground text-muted-foreground flex items-center gap-1 font-medium"
-									>
-										Avg Cost
-										{#if sortColumn === 'cost'}
-											<span>{sortDirection === 'asc' ? '↑' : '↓'}</span>
-										{/if}
-									</button>
-								</th>
-								<th class="pr-4 pb-3 text-center">
-									<button
-										type="button"
-										onclick={() => toggleSort('thumbsRatio')}
-										class="hover:text-foreground text-muted-foreground flex items-center gap-1 font-medium"
-									>
-										Thumbs Up
-										{#if sortColumn === 'thumbsRatio'}
-											<span>{sortDirection === 'asc' ? '↑' : '↓'}</span>
-										{/if}
-									</button>
-								</th>
-								<th class="pr-4 pb-3 text-center">
-									<button
-										type="button"
-										onclick={() => toggleSort('speed')}
-										class="hover:text-foreground text-muted-foreground flex items-center gap-1 font-medium"
-									>
-										Speed (t/s)
-										{#if sortColumn === 'speed'}
-											<span>{sortDirection === 'asc' ? '↑' : '↓'}</span>
-										{/if}
-									</button>
-								</th>
-								<th class="pr-4 pb-3 text-center">
-									<span class="text-muted-foreground font-medium">Top Categories</span>
-								</th>
-								<th class="pb-3 text-center">
-									<span class="text-muted-foreground font-medium">Errors</span>
-								</th>
-							</tr>
-						</thead>
-						<tbody>
-							{#each sortedStats as stat}
-								<tr class="border-border border-b last:border-b-0">
-									<td class="py-3 pr-4">
-										<div>
-											<div class="font-medium" title={stat.modelId}>{stat.modelId}</div>
-											<div class="text-muted-foreground text-xs">{stat.provider}</div>
-										</div>
-									</td>
-									<td class="py-3 pr-4 text-center">
-										<div class="flex items-center justify-center gap-1">
-											{#if stat.avgRating !== null}
-												<StarIcon class="size-4 fill-yellow-500 text-yellow-500" />
-												<span>{stat.avgRating.toFixed(2)}</span>
-											{:else}
-												<span class="text-muted-foreground">N/A</span>
-											{/if}
-										</div>
-									</td>
-									<td class="py-3 pr-4 text-center">{stat.totalMessages}</td>
-									<td class="py-3 pr-4 text-center">
-										{#if !isNaN(stat.totalCost) && stat.totalMessages > 0}
-											{formatCost(stat.totalCost / stat.totalMessages)}
+		<!-- Model comparison -->
+		<section class="flex flex-col gap-3">
+			<div class="flex flex-col gap-0.5">
+				<h2 class="text-muted-foreground text-sm font-semibold tracking-wide uppercase">
+					Model Comparison
+				</h2>
+				<p class="text-muted-foreground text-xs">
+					Sort by any column to compare usage, cost, ratings, and speed.
+				</p>
+			</div>
+			<div class="bg-card border-border overflow-x-auto rounded-lg border">
+				<table class="w-full">
+					<thead>
+						<tr class="border-border border-b">
+							<th class="px-5 pt-4 pb-3 text-left">
+								<button
+									type="button"
+									onclick={() => toggleSort('model')}
+									class="hover:text-foreground text-muted-foreground flex items-center gap-1 text-xs font-semibold tracking-wide uppercase"
+								>
+									Model
+									{#if sortColumn === 'model'}
+										{#if sortDirection === 'asc'}
+											<ArrowUpIcon class="size-3" />
 										{:else}
-											<span class="text-muted-foreground text-sm">N/A</span>
+											<ArrowDownIcon class="size-3" />
 										{/if}
-									</td>
-									<td class="py-3 pr-4">
-										<div class="flex items-center justify-center gap-2">
-											<div class="flex items-center gap-1">
-												<ThumbsUpIcon class="size-4 text-green-500" />
-												<span class="text-sm">{stat.thumbsUpCount}</span>
-											</div>
-											<div class="flex items-center gap-1">
-												<ThumbsDownIcon class="size-4 text-red-500" />
-												<span class="text-sm">{stat.thumbsDownCount}</span>
-											</div>
-											<span class="text-muted-foreground text-sm">
-												({getThumbsRatio(stat.thumbsUpCount, stat.thumbsDownCount)})
-											</span>
+									{/if}
+								</button>
+							</th>
+							<th class="px-3 pt-4 pb-3 text-center">
+								<button
+									type="button"
+									onclick={() => toggleSort('rating')}
+									class="hover:text-foreground text-muted-foreground mx-auto flex items-center gap-1 text-xs font-semibold tracking-wide uppercase"
+								>
+									Rating
+									{#if sortColumn === 'rating'}
+										{#if sortDirection === 'asc'}
+											<ArrowUpIcon class="size-3" />
+										{:else}
+											<ArrowDownIcon class="size-3" />
+										{/if}
+									{/if}
+								</button>
+							</th>
+							<th class="px-3 pt-4 pb-3 text-center">
+								<button
+									type="button"
+									onclick={() => toggleSort('uses')}
+									class="hover:text-foreground text-muted-foreground mx-auto flex items-center gap-1 text-xs font-semibold tracking-wide uppercase"
+								>
+									Uses
+									{#if sortColumn === 'uses'}
+										{#if sortDirection === 'asc'}
+											<ArrowUpIcon class="size-3" />
+										{:else}
+											<ArrowDownIcon class="size-3" />
+										{/if}
+									{/if}
+								</button>
+							</th>
+							<th class="px-3 pt-4 pb-3 text-center">
+								<button
+									type="button"
+									onclick={() => toggleSort('cost')}
+									class="hover:text-foreground text-muted-foreground mx-auto flex items-center gap-1 text-xs font-semibold tracking-wide uppercase"
+								>
+									Avg Cost
+									{#if sortColumn === 'cost'}
+										{#if sortDirection === 'asc'}
+											<ArrowUpIcon class="size-3" />
+										{:else}
+											<ArrowDownIcon class="size-3" />
+										{/if}
+									{/if}
+								</button>
+							</th>
+							<th class="px-3 pt-4 pb-3 text-center">
+								<button
+									type="button"
+									onclick={() => toggleSort('thumbsRatio')}
+									class="hover:text-foreground text-muted-foreground mx-auto flex items-center gap-1 text-xs font-semibold tracking-wide uppercase"
+								>
+									Thumbs Up
+									{#if sortColumn === 'thumbsRatio'}
+										{#if sortDirection === 'asc'}
+											<ArrowUpIcon class="size-3" />
+										{:else}
+											<ArrowDownIcon class="size-3" />
+										{/if}
+									{/if}
+								</button>
+							</th>
+							<th class="px-3 pt-4 pb-3 text-center">
+								<button
+									type="button"
+									onclick={() => toggleSort('speed')}
+									class="hover:text-foreground text-muted-foreground mx-auto flex items-center gap-1 text-xs font-semibold tracking-wide uppercase"
+								>
+									Speed (t/s)
+									{#if sortColumn === 'speed'}
+										{#if sortDirection === 'asc'}
+											<ArrowUpIcon class="size-3" />
+										{:else}
+											<ArrowDownIcon class="size-3" />
+										{/if}
+									{/if}
+								</button>
+							</th>
+							<th class="px-3 pt-4 pb-3 text-center">
+								<span
+									class="text-muted-foreground text-xs font-semibold tracking-wide uppercase"
+									>Top Categories</span
+								>
+							</th>
+							<th class="px-5 pt-4 pb-3 text-center">
+								<span
+									class="text-muted-foreground text-xs font-semibold tracking-wide uppercase"
+									>Errors</span
+								>
+							</th>
+						</tr>
+					</thead>
+					<tbody>
+						{#each sortedStats as stat}
+							<tr class="border-border border-b last:border-b-0">
+								<td class="px-5 py-3">
+									<div>
+										<div class="font-medium" title={stat.modelId}>{stat.modelId}</div>
+										<div class="text-muted-foreground text-xs">{stat.provider}</div>
+									</div>
+								</td>
+								<td class="px-3 py-3 text-center">
+									<div class="flex items-center justify-center gap-1">
+										{#if stat.avgRating !== null}
+											<StarIcon class="size-4 fill-yellow-500 text-yellow-500" />
+											<span class="tabular-nums">{stat.avgRating.toFixed(2)}</span>
+										{:else}
+											<span class="text-muted-foreground">N/A</span>
+										{/if}
+									</div>
+								</td>
+								<td class="px-3 py-3 text-center tabular-nums">{stat.totalMessages}</td>
+								<td class="px-3 py-3 text-center tabular-nums">
+									{#if !isNaN(stat.totalCost) && stat.totalMessages > 0}
+										{formatCost(stat.totalCost / stat.totalMessages)}
+									{:else}
+										<span class="text-muted-foreground text-sm">N/A</span>
+									{/if}
+								</td>
+								<td class="px-3 py-3">
+									<div class="flex items-center justify-center gap-2">
+										<div class="flex items-center gap-1">
+											<ThumbsUpIcon class="size-4 text-green-500" />
+											<span class="text-sm tabular-nums">{stat.thumbsUpCount}</span>
 										</div>
-									</td>
-									<td class="py-3 pr-4 text-center">
-										{#if stat.avgTokens !== null && stat.avgTokens !== undefined && stat.avgResponseTime && stat.avgResponseTime > 0}
-											{@const tps = getTokensPerSecond(stat)}
-											<span>{tps.toFixed(1)}</span>
-										{:else}
-											<span class="text-muted-foreground text-sm">N/A</span>
-										{/if}
-									</td>
-									<td class="py-3 pr-4">
-										{#if getTopCategories(stat).length > 0}
-											{@const topCategories = getTopCategories(stat)}
-											<div class="flex flex-wrap items-center justify-center gap-1">
-												{#each topCategories as category}
-													{@const Icon = getCategoryIcon(category.name)}
-													<span
-														class="bg-primary/10 text-primary inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs"
-														title={`${category.name}: ${category.count}`}
-													>
-														<Icon class="size-3" />
-														{category.name}
-														<span class="text-muted-foreground">{category.count}</span>
-													</span>
-												{/each}
-											</div>
-										{:else}
-											<span class="text-muted-foreground text-sm">—</span>
-										{/if}
-									</td>
-									<td class="py-3 text-center">
-										<span
-											class={cn('text-sm', {
-												'text-destructive': stat.errorCount > 0,
-												'text-muted-foreground': stat.errorCount === 0,
-											})}
-										>
-											{stat.errorCount}
+										<div class="flex items-center gap-1">
+											<ThumbsDownIcon class="size-4 text-red-500" />
+											<span class="text-sm tabular-nums">{stat.thumbsDownCount}</span>
+										</div>
+										<span class="text-muted-foreground text-sm">
+											({getThumbsRatio(stat.thumbsUpCount, stat.thumbsDownCount)})
 										</span>
-									</td>
-								</tr>
-							{/each}
-						</tbody>
-					</table>
-				</div>
+									</div>
+								</td>
+								<td class="px-3 py-3 text-center tabular-nums">
+									{#if stat.avgTokens !== null && stat.avgTokens !== undefined && stat.avgResponseTime && stat.avgResponseTime > 0}
+										{@const tps = getTokensPerSecond(stat)}
+										<span>{tps.toFixed(1)}</span>
+									{:else}
+										<span class="text-muted-foreground text-sm">N/A</span>
+									{/if}
+								</td>
+								<td class="px-3 py-3">
+									{#if getTopCategories(stat).length > 0}
+										{@const topCategories = getTopCategories(stat)}
+										<div class="flex flex-wrap items-center justify-center gap-1">
+											{#each topCategories as category}
+												{@const Icon = getCategoryIcon(category.name)}
+												<span
+													class="bg-primary/10 text-primary inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs"
+													title={`${category.name}: ${category.count}`}
+												>
+													<Icon class="size-3" />
+													{category.name}
+													<span class="text-muted-foreground">{category.count}</span>
+												</span>
+											{/each}
+										</div>
+									{:else}
+										<span class="text-muted-foreground text-sm">—</span>
+									{/if}
+								</td>
+								<td class="px-5 py-3 text-center">
+									<span
+										class={cn('text-sm tabular-nums', {
+											'text-destructive': stat.errorCount > 0,
+											'text-muted-foreground': stat.errorCount === 0,
+										})}
+									>
+										{stat.errorCount}
+									</span>
+								</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
 			</div>
-		</div>
+		</section>
 	{:else}
-		<div class="bg-card flex flex-col items-center justify-center rounded-lg border p-12">
-			<MessageSquareIcon class="text-muted-foreground mb-4 size-16" />
-			<h2 class="mb-2 text-xl font-semibold">No Data Yet</h2>
-			<p class="text-muted-foreground text-center">
-				Start chatting with AI models to see performance analytics here.
-			</p>
+		<div
+			class="bg-card border-border flex flex-col items-center justify-center gap-3 rounded-lg border p-12"
+		>
+			<MessageSquareIcon class="text-muted-foreground size-12 opacity-50" />
+			<div class="flex flex-col items-center gap-1">
+				<h2 class="text-lg font-semibold">No Data Yet</h2>
+				<p class="text-muted-foreground text-center text-sm">
+					Start chatting with AI models to see performance analytics here.
+				</p>
+			</div>
 		</div>
 	{/if}
 </div>

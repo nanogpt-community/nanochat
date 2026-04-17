@@ -10,14 +10,13 @@
 	import { cn } from '$lib/utils/utils';
 	import { Toggle } from 'melt/builders';
 	import { ResultAsync } from 'neverthrow';
-	import PlusIcon from '~icons/lucide/plus';
-	import XIcon from '~icons/lucide/x';
+	import CheckIcon from '~icons/lucide/check';
 	import TicketIcon from '~icons/lucide/ticket';
 	import ImageIcon from '~icons/lucide/image';
 	import VideoIcon from '~icons/lucide/video';
 	import type { UserKeyStatus } from '$lib/api';
 	import ModelCard from './model-card.svelte';
-	import { supportsImages, supportsReasoning, supportsVideo } from '$lib/utils/model-capabilities';
+	import { supportsVideo } from '$lib/utils/model-capabilities';
 
 	const nanoGPTKeyQuery = useCachedQuery<UserKeyStatus>(api.user_keys.get, {
 		provider: Provider.NanoGPT,
@@ -26,12 +25,6 @@
 	const hasNanoGPTKey = $derived(nanoGPTKeyQuery.data?.hasKey ?? false);
 
 	let search = $state('');
-
-	const nanoGPTToggle = new Toggle({
-		value: true,
-		// TODO: enable this if and when when we use multiple providers
-		disabled: true,
-	});
 
 	const subscriptionToggle = new Toggle({
 		value: false,
@@ -51,6 +44,11 @@
 	const allNanoGPTModelsEnabled = $derived(nanoGPTModelCollection.every((model) => model.enabled));
 	const someNanoGPTModelsEnabled = $derived(
 		nanoGPTModelCollection.some((model) => model.enabled)
+	);
+	const enabledCount = $derived(nanoGPTModelCollection.filter((m) => m.enabled).length);
+	const totalCount = $derived(nanoGPTModelCollection.length);
+	const activeFilterCount = $derived(
+		(subscriptionToggle.value ? 1 : 0) + (imageToggle.value ? 1 : 0) + (videoToggle.value ? 1 : 0)
 	);
 
 	async function setAllNanoGPTModels(enabled: boolean) {
@@ -137,55 +135,103 @@
 	<title>Models | nanochat</title>
 </svelte:head>
 
-<h1 class="text-2xl font-bold">Available Models</h1>
-<h2 class="text-muted-foreground mt-2 text-sm">
-	Choose which models appear in your model selector. This won't affect existing conversations.
-</h2>
-
-<div class="mt-4 flex flex-col gap-2">
-	<Search bind:value={search} placeholder="Search models" />
-	<div class="flex place-items-center gap-2">
-		<button
-			{...nanoGPTToggle.trigger}
-			aria-label="NanoGPT"
-			class="group text-primary-foreground bg-primary aria-[pressed=false]:border-border border-primary aria-[pressed=false]:bg-background flex place-items-center gap-1 rounded-full border px-2 py-1 text-xs transition-all disabled:cursor-not-allowed disabled:opacity-50"
+<div class="flex flex-wrap items-start justify-between gap-4">
+	<div class="flex flex-col gap-1">
+		<h1 class="text-2xl font-bold tracking-tight">Available Models</h1>
+		<p class="text-muted-foreground text-sm">
+			Choose which models appear in your model selector. This won't affect existing conversations.
+		</p>
+	</div>
+	<div class="flex items-center gap-2">
+		<span
+			class="border-border bg-card text-muted-foreground inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium tabular-nums"
 		>
-			NanoGPT
-			<XIcon class="inline size-3 group-aria-[pressed=false]:hidden" />
-			<PlusIcon class="inline size-3 group-aria-[pressed=true]:hidden" />
-		</button>
+			<span class="text-foreground font-semibold">{enabledCount}</span>
+			<span>of</span>
+			<span>{totalCount}</span>
+			<span>enabled</span>
+		</span>
+	</div>
+</div>
+
+<!-- Search + Filters -->
+<div class="mt-6 flex flex-col gap-3">
+	<Search bind:value={search} placeholder="Search models by name…" />
+
+	<div class="flex flex-wrap items-center gap-2">
+		<span class="text-muted-foreground mr-1 text-xs font-medium">Filters:</span>
+
 		<button
 			{...subscriptionToggle.trigger}
 			aria-label="Subscription Only"
-			class="group text-primary-foreground aria-[pressed=false]:border-border aria-[pressed=false]:bg-background aria-[pressed=false]:text-foreground flex place-items-center gap-1 rounded-full border border-yellow-500 bg-yellow-500 px-2 py-1 text-xs transition-all"
+			class={cn(
+				'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors',
+				subscriptionToggle.value
+					? 'border-yellow-500/60 bg-yellow-500/15 text-yellow-700 dark:text-yellow-300'
+					: 'border-border bg-background text-muted-foreground hover:bg-accent hover:text-foreground'
+			)}
 		>
-			<TicketIcon class="inline size-3" />
+			{#if subscriptionToggle.value}
+				<CheckIcon class="size-3" />
+			{:else}
+				<TicketIcon class="size-3" />
+			{/if}
 			Subscription
-			<XIcon class="inline size-3 group-aria-[pressed=false]:hidden" />
-			<PlusIcon class="inline size-3 group-aria-[pressed=true]:hidden" />
 		</button>
+
 		<button
 			{...imageToggle.trigger}
 			aria-label="Image Models Only"
-			class="group text-primary-foreground aria-[pressed=false]:border-border aria-[pressed=false]:bg-background aria-[pressed=false]:text-foreground flex place-items-center gap-1 rounded-full border border-violet-500 bg-violet-500 px-2 py-1 text-xs transition-all"
+			class={cn(
+				'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors',
+				imageToggle.value
+					? 'border-violet-500/60 bg-violet-500/15 text-violet-700 dark:text-violet-300'
+					: 'border-border bg-background text-muted-foreground hover:bg-accent hover:text-foreground'
+			)}
 		>
-			<ImageIcon class="inline size-3" />
+			{#if imageToggle.value}
+				<CheckIcon class="size-3" />
+			{:else}
+				<ImageIcon class="size-3" />
+			{/if}
 			Image
-			<XIcon class="inline size-3 group-aria-[pressed=false]:hidden" />
-			<PlusIcon class="inline size-3 group-aria-[pressed=true]:hidden" />
 		</button>
+
 		<button
 			{...videoToggle.trigger}
 			aria-label="Video Models Only"
-			class="group text-primary-foreground aria-[pressed=false]:border-border aria-[pressed=false]:bg-background aria-[pressed=false]:text-foreground flex place-items-center gap-1 rounded-full border border-blue-500 bg-blue-500 px-2 py-1 text-xs transition-all"
+			class={cn(
+				'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors',
+				videoToggle.value
+					? 'border-blue-500/60 bg-blue-500/15 text-blue-700 dark:text-blue-300'
+					: 'border-border bg-background text-muted-foreground hover:bg-accent hover:text-foreground'
+			)}
 		>
-			<VideoIcon class="inline size-3" />
+			{#if videoToggle.value}
+				<CheckIcon class="size-3" />
+			{:else}
+				<VideoIcon class="size-3" />
+			{/if}
 			Video
-			<XIcon class="inline size-3 group-aria-[pressed=false]:hidden" />
-			<PlusIcon class="inline size-3 group-aria-[pressed=true]:hidden" />
 		</button>
+
+		{#if activeFilterCount > 0}
+			<button
+				type="button"
+				onclick={() => {
+					subscriptionToggle.value = false;
+					imageToggle.value = false;
+					videoToggle.value = false;
+				}}
+				class="text-muted-foreground hover:text-foreground ml-1 text-xs underline-offset-4 hover:underline"
+			>
+				Clear filters
+			</button>
+		{/if}
 	</div>
-	<div class="flex items-center gap-2">
+
+	<!-- Bulk actions -->
+	<div class="border-border flex flex-wrap items-center gap-2 border-t pt-3">
 		<Button
 			variant="outline"
 			size="sm"
@@ -205,7 +251,7 @@
 			Disable all
 		</Button>
 		<Button
-			variant="outline"
+			variant="ghost"
 			size="sm"
 			onclick={resetNanoGPTModels}
 			loading={bulkToggleState === 'reset'}
@@ -216,24 +262,52 @@
 	</div>
 </div>
 
-{#if nanoGPTModels.length > 0}
-	<div class="mt-4 flex flex-col gap-4">
-		<div>
-			<h3 class="text-lg font-bold">NanoGPT</h3>
-			<p class="text-muted-foreground text-sm">Access to premium models via NanoGPT.</p>
-			{#if !hasNanoGPTKey}
-				<p class="text-muted-foreground mt-1 text-xs">
-					<a href="/account/api-keys#nanogpt" class="text-primary underline">Add an API key</a> to get
-					started.
-				</p>
+<!-- Model list -->
+<div class="mt-6">
+	{#if nanoGPTModels.length === 0}
+		<div
+			class="border-border text-muted-foreground flex flex-col items-center gap-2 rounded-lg border border-dashed p-10 text-center"
+		>
+			<p class="text-sm font-medium">No models match your filters.</p>
+			{#if search || activeFilterCount > 0}
+				<button
+					type="button"
+					class="text-primary text-xs hover:underline"
+					onclick={() => {
+						search = '';
+						subscriptionToggle.value = false;
+						imageToggle.value = false;
+						videoToggle.value = false;
+					}}
+				>
+					Reset search and filters
+				</button>
 			{/if}
 		</div>
-		<div class="relative">
-			<div class="flex flex-col gap-4 overflow-hidden">
+	{:else}
+		<div class="flex flex-col gap-3">
+			<div class="flex items-baseline justify-between">
+				<div class="flex flex-col gap-0.5">
+					<h3 class="text-muted-foreground text-sm font-semibold tracking-wide uppercase">
+						NanoGPT
+					</h3>
+					<p class="text-muted-foreground text-xs">
+						{nanoGPTModels.length} model{nanoGPTModels.length === 1 ? '' : 's'} · Access to premium
+						models via NanoGPT.
+						{#if !hasNanoGPTKey}
+							<a href="/account/api-keys#nanogpt" class="text-primary ml-1 underline">
+								Add an API key
+							</a> to get started.
+						{/if}
+					</p>
+				</div>
+			</div>
+
+			<div class="bg-card border-border divide-border divide-y overflow-hidden rounded-lg border">
 				{#each nanoGPTModels as model (model.id)}
 					<ModelCard provider={Provider.NanoGPT} {model} enabled={model.enabled} />
 				{/each}
 			</div>
 		</div>
-	</div>
-{/if}
+	{/if}
+</div>

@@ -46,15 +46,15 @@
 	<title>API Keys | nanochat</title>
 </svelte:head>
 
-<div>
-	<h1 class="text-2xl font-bold">API Keys</h1>
-	<h2 class="text-muted-foreground mt-2 text-sm">
+<div class="flex flex-col gap-1">
+	<h1 class="text-2xl font-bold tracking-tight">API Keys</h1>
+	<p class="text-muted-foreground text-sm">
 		Bring your own API keys for select models. Messages sent using your API keys will not count
 		towards your monthly limits.
-	</h2>
+	</p>
 </div>
 
-<div class="mt-8 flex flex-col gap-4">
+<div class="mt-6 flex flex-col gap-4">
 	{#each allProviders as provider (provider)}
 		<!-- only do NanoGPT for now -->
 		{#if provider === Provider.NanoGPT}

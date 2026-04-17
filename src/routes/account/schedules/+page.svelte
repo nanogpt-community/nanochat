@@ -7,7 +7,6 @@
 	import type { Assistant, Project, ScheduledTask, UserSettings } from '$lib/api';
 	import { Provider } from '$lib/types';
 	import Button from '$lib/components/ui/button/button.svelte';
-	import * as Card from '$lib/components/ui/card';
 	import Input from '$lib/components/ui/input/input.svelte';
 	import Textarea from '$lib/components/ui/textarea/textarea.svelte';
 	import Label from '$lib/components/ui/label/label.svelte';
@@ -46,6 +45,7 @@
 	});
 
 	let editingId = $state<string | null>(null);
+	let showForm = $state(false);
 	let isSubmitting = $state(false);
 
 	// Form state
@@ -79,6 +79,7 @@
 
 	function startCreate() {
 		editingId = null;
+		showForm = true;
 		formName = '';
 		formDescription = '';
 		formMessage = '';
@@ -196,6 +197,7 @@
 
 	function startEdit(task: ScheduledTask) {
 		editingId = task.id;
+		showForm = true;
 		formName = task.name;
 		formDescription = task.description ?? '';
 		formMessage = (task.payload as any)?.message ?? '';
@@ -231,6 +233,7 @@
 
 	function cancelForm() {
 		editingId = null;
+		showForm = false;
 		formName = '';
 		formDescription = '';
 		formMessage = '';
@@ -383,23 +386,37 @@
 	<title>Schedules | nanochat</title>
 </svelte:head>
 
-<h1 class="text-2xl font-bold">Scheduled Tasks</h1>
-<h2 class="text-muted-foreground mt-2 text-sm">
-	Create cron-style tasks that run in your timezone ({userTimezone}).
-</h2>
+<div class="flex flex-wrap items-start justify-between gap-4">
+	<div class="flex flex-col gap-1">
+		<h1 class="text-2xl font-bold tracking-tight">Scheduled Tasks</h1>
+		<p class="text-muted-foreground text-sm">
+			Create cron-style tasks that run in your timezone ({userTimezone}).
+		</p>
+	</div>
+	{#if !showForm}
+		<Button onclick={startCreate}>
+			<Plus class="mr-2 size-4" />
+			New Schedule
+		</Button>
+	{/if}
+</div>
 
-<div class="mt-6 flex flex-col gap-6">
-	<Card.Root>
-		<Card.Header>
-			<Card.Title>{editingId ? 'Edit Schedule' : 'Create Schedule'}</Card.Title>
-			<Card.Description>Run prompts on a recurring schedule.</Card.Description>
-		</Card.Header>
-		<Card.Content class="grid gap-4">
-			<div class="grid gap-2">
+<div class="mt-6 flex flex-col gap-8">
+	<!-- Create / Edit form -->
+	{#if showForm}
+		<section class="flex flex-col gap-3">
+			<div class="flex flex-col gap-0.5">
+				<h2 class="text-muted-foreground text-sm font-semibold tracking-wide uppercase">
+					{editingId ? 'Edit Schedule' : 'Create Schedule'}
+				</h2>
+				<p class="text-muted-foreground text-xs">Run prompts on a recurring schedule.</p>
+			</div>
+			<div class="bg-card border-border flex flex-col gap-4 rounded-lg border p-5">
+			<div class="flex flex-col gap-2">
 				<Label for="schedule-name">Name</Label>
 				<Input id="schedule-name" bind:value={formName} placeholder="Daily summary" />
 			</div>
-			<div class="grid gap-2">
+			<div class="flex flex-col gap-2">
 				<Label for="schedule-description">Description (optional)</Label>
 				<Textarea
 					id="schedule-description"
@@ -408,7 +425,7 @@
 					placeholder="Optional notes about this task"
 				/>
 			</div>
-			<div class="grid gap-2">
+			<div class="flex flex-col gap-2">
 				<Label for="schedule-message">Prompt</Label>
 				<Textarea
 					id="schedule-message"
@@ -417,208 +434,233 @@
 					placeholder="Write the prompt to run on schedule"
 				/>
 			</div>
-			<div class="grid gap-2">
-				<Label for="schedule-model">Model</Label>
-				<select
-					id="schedule-model"
-					class="border-input bg-background rounded-md border px-3 py-2 text-sm"
-					bind:value={formModelId}
-				>
-					<option value="" disabled>Select a model</option>
-					{#each enabledModels as model}
-						<option value={model.value}>{model.label}</option>
-					{/each}
-				</select>
-			</div>
-			<div class="grid gap-2">
-				<Label for="schedule-assistant">Assistant (optional)</Label>
-				<select
-					id="schedule-assistant"
-					class="border-input bg-background rounded-md border px-3 py-2 text-sm"
-					bind:value={formAssistantId}
-				>
-					<option value="">None</option>
-					{#each assistantsQuery.data ?? [] as assistant}
-						<option value={assistant.id}>{assistant.name}</option>
-					{/each}
-				</select>
-			</div>
-			<div class="grid gap-2">
-				<Label for="schedule-project">Project (optional)</Label>
-				<select
-					id="schedule-project"
-					class="border-input bg-background rounded-md border px-3 py-2 text-sm"
-					bind:value={formProjectId}
-				>
-					<option value="">None</option>
-					{#each projectsQuery.data ?? [] as project}
-						<option value={project.id}>{project.name}</option>
-					{/each}
-				</select>
-			</div>
-			<div class="grid gap-2">
-				<Label for="schedule-search-mode">Web Search</Label>
-				<select
-					id="schedule-search-mode"
-					class="border-input bg-background rounded-md border px-3 py-2 text-sm"
-					bind:value={formWebSearchMode}
-				>
-					<option value="off">Off</option>
-					<option value="standard">Standard</option>
-					<option value="deep">Deep</option>
-				</select>
-			</div>
-			{#if formWebSearchMode !== 'off'}
-				<div class="grid gap-2">
-					<Label for="schedule-search-provider">Web Search Provider</Label>
+			<div class="grid gap-4 md:grid-cols-2">
+				<div class="flex flex-col gap-2">
+					<Label for="schedule-model">Model</Label>
 					<select
-						id="schedule-search-provider"
-						class="border-input bg-background rounded-md border px-3 py-2 text-sm"
-						bind:value={formWebSearchProvider}
+						id="schedule-model"
+						class="border-input bg-background h-10 rounded-md border px-3 py-2 text-sm"
+						bind:value={formModelId}
 					>
-						<option value="linkup">Linkup</option>
-						<option value="tavily">Tavily</option>
-						<option value="exa">Exa</option>
-						<option value="kagi">Kagi</option>
-						<option value="perplexity">Perplexity</option>
-						<option value="valyu">Valyu</option>
-						<option value="brave">Brave</option>
-						<option value="brave-pro">Brave Pro</option>
-						<option value="brave-research">Brave Research</option>
+						<option value="" disabled>Select a model</option>
+						{#each enabledModels as model}
+							<option value={model.value}>{model.label}</option>
+						{/each}
 					</select>
 				</div>
-			{/if}
-			<div class="grid gap-2">
-				<Label for="schedule-reasoning">Reasoning Effort</Label>
-				<select
-					id="schedule-reasoning"
-					class="border-input bg-background rounded-md border px-3 py-2 text-sm"
-					bind:value={formReasoningEffort}
-				>
-					<option value="">Default</option>
-					<option value="low">Low</option>
-					<option value="medium">Medium</option>
-					<option value="high">High</option>
-				</select>
-			</div>
-			<div class="grid gap-2">
-				<Label for="schedule-type">Schedule Type</Label>
-				<select
-					id="schedule-type"
-					class="border-input bg-background rounded-md border px-3 py-2 text-sm"
-					bind:value={formScheduleType}
-				>
-					<option value="cron">Cron Expression</option>
-					<option value="interval">Interval</option>
-					<option value="once">One-time</option>
-				</select>
-			</div>
-			{#if formScheduleType === 'cron'}
-				<div class="grid gap-2">
-					<Label for="schedule-cron">Cron Expression</Label>
-					<Input
-						id="schedule-cron"
-						bind:value={formCron}
-						placeholder="0 9 * * *"
-					/>
+				<div class="flex flex-col gap-2">
+					<Label for="schedule-assistant">Assistant (optional)</Label>
+					<select
+						id="schedule-assistant"
+						class="border-input bg-background h-10 rounded-md border px-3 py-2 text-sm"
+						bind:value={formAssistantId}
+					>
+						<option value="">None</option>
+						{#each assistantsQuery.data ?? [] as assistant}
+							<option value={assistant.id}>{assistant.name}</option>
+						{/each}
+					</select>
 				</div>
-			{:else if formScheduleType === 'interval'}
-				<div class="grid gap-2">
-					<Label>Interval</Label>
-					<div class="flex items-center gap-2">
-						<Input type="number" min="1" bind:value={formIntervalValue} class="w-[120px]" />
+				<div class="flex flex-col gap-2">
+					<Label for="schedule-project">Project (optional)</Label>
+					<select
+						id="schedule-project"
+						class="border-input bg-background h-10 rounded-md border px-3 py-2 text-sm"
+						bind:value={formProjectId}
+					>
+						<option value="">None</option>
+						{#each projectsQuery.data ?? [] as project}
+							<option value={project.id}>{project.name}</option>
+						{/each}
+					</select>
+				</div>
+				<div class="flex flex-col gap-2">
+					<Label for="schedule-reasoning">Reasoning Effort</Label>
+					<select
+						id="schedule-reasoning"
+						class="border-input bg-background h-10 rounded-md border px-3 py-2 text-sm"
+						bind:value={formReasoningEffort}
+					>
+						<option value="">Default</option>
+						<option value="low">Low</option>
+						<option value="medium">Medium</option>
+						<option value="high">High</option>
+					</select>
+				</div>
+				<div class="flex flex-col gap-2">
+					<Label for="schedule-search-mode">Web Search</Label>
+					<select
+						id="schedule-search-mode"
+						class="border-input bg-background h-10 rounded-md border px-3 py-2 text-sm"
+						bind:value={formWebSearchMode}
+					>
+						<option value="off">Off</option>
+						<option value="standard">Standard</option>
+						<option value="deep">Deep</option>
+					</select>
+				</div>
+				{#if formWebSearchMode !== 'off'}
+					<div class="flex flex-col gap-2">
+						<Label for="schedule-search-provider">Web Search Provider</Label>
 						<select
-							class="border-input bg-background rounded-md border px-3 py-2 text-sm"
-							bind:value={formIntervalUnit}
+							id="schedule-search-provider"
+							class="border-input bg-background h-10 rounded-md border px-3 py-2 text-sm"
+							bind:value={formWebSearchProvider}
 						>
-							<option value="minutes">Minutes</option>
-							<option value="hours">Hours</option>
-							<option value="days">Days</option>
+							<option value="linkup">Linkup</option>
+							<option value="tavily">Tavily</option>
+							<option value="exa">Exa</option>
+							<option value="kagi">Kagi</option>
+							<option value="perplexity">Perplexity</option>
+							<option value="valyu">Valyu</option>
+							<option value="brave">Brave</option>
+							<option value="brave-pro">Brave Pro</option>
+							<option value="brave-research">Brave Research</option>
 						</select>
 					</div>
+				{/if}
+				<div class="flex flex-col gap-2">
+					<Label for="schedule-type">Schedule Type</Label>
+					<select
+						id="schedule-type"
+						class="border-input bg-background h-10 rounded-md border px-3 py-2 text-sm"
+						bind:value={formScheduleType}
+					>
+						<option value="cron">Cron Expression</option>
+						<option value="interval">Interval</option>
+						<option value="once">One-time</option>
+					</select>
 				</div>
-			{:else}
-				<div class="grid gap-2">
-					<Label for="schedule-run-at">Run At</Label>
-					<Input id="schedule-run-at" type="datetime-local" bind:value={formRunAt} />
-				</div>
-			{/if}
+				{#if formScheduleType === 'cron'}
+					<div class="flex flex-col gap-2">
+						<Label for="schedule-cron">Cron Expression</Label>
+						<Input id="schedule-cron" bind:value={formCron} placeholder="0 9 * * *" />
+					</div>
+				{:else if formScheduleType === 'interval'}
+					<div class="flex flex-col gap-2">
+						<Label for="schedule-interval">Interval</Label>
+						<div class="flex items-center gap-2">
+							<Input
+								id="schedule-interval"
+								type="number"
+								min="1"
+								bind:value={formIntervalValue}
+								class="w-[120px]"
+							/>
+							<select
+								class="border-input bg-background h-10 rounded-md border px-3 py-2 text-sm"
+								bind:value={formIntervalUnit}
+							>
+								<option value="minutes">Minutes</option>
+								<option value="hours">Hours</option>
+								<option value="days">Days</option>
+							</select>
+						</div>
+					</div>
+				{:else}
+					<div class="flex flex-col gap-2">
+						<Label for="schedule-run-at">Run At</Label>
+						<Input id="schedule-run-at" type="datetime-local" bind:value={formRunAt} />
+					</div>
+				{/if}
+			</div>
 			<div class="flex items-center gap-2">
 				<input id="schedule-enabled" type="checkbox" bind:checked={formEnabled} />
 				<Label for="schedule-enabled">Enabled</Label>
 			</div>
-		</Card.Content>
-		<Card.Footer class="flex items-center justify-between">
-			<Button variant="ghost" onclick={cancelForm}>Cancel</Button>
-			<Button onclick={handleSubmit} disabled={isSubmitting}>
-				{#if isSubmitting}
-					<LoaderCircle class="mr-2 size-4 animate-spin" />
-					Saving...
-				{:else}
-					<Save class="mr-2 size-4" />
-					Save
-				{/if}
-			</Button>
-		</Card.Footer>
-	</Card.Root>
-
-	<Card.Root>
-		<Card.Header class="flex flex-row items-center justify-between">
-			<div>
-				<Card.Title>Your Schedules</Card.Title>
-				<Card.Description>Manage scheduled tasks and runs.</Card.Description>
+			<div class="border-border flex items-center justify-between border-t pt-4">
+				<Button variant="ghost" onclick={cancelForm}>Cancel</Button>
+				<Button onclick={handleSubmit} disabled={isSubmitting}>
+					{#if isSubmitting}
+						<LoaderCircle class="mr-2 size-4 animate-spin" />
+						Saving...
+					{:else}
+						<Save class="mr-2 size-4" />
+						Save
+					{/if}
+				</Button>
 			</div>
-			<Button onclick={startCreate}>
-				<Plus class="mr-2 size-4" />
-				New
-			</Button>
-		</Card.Header>
-		<Card.Content class="grid gap-4">
-			{#if isLoading}
-				<div class="flex items-center gap-2 text-sm text-muted-foreground">
-					<LoaderCircle class="size-4 animate-spin" />
-					Loading schedules...
-				</div>
-			{:else if tasksList.length === 0}
-				<p class="text-sm text-muted-foreground">No scheduled tasks yet.</p>
-			{:else}
+		</div>
+	</section>
+	{/if}
+
+	<!-- Schedules list -->
+	<section class="flex flex-col gap-3">
+		<div class="flex flex-col gap-0.5">
+			<h2 class="text-muted-foreground text-sm font-semibold tracking-wide uppercase">
+				Your Schedules
+			</h2>
+			<p class="text-muted-foreground text-xs">Manage scheduled tasks and runs.</p>
+		</div>
+
+		{#if isLoading}
+			<div class="bg-card border-border text-muted-foreground flex items-center gap-2 rounded-lg border p-5 text-sm">
+				<LoaderCircle class="size-4 animate-spin" />
+				Loading schedules...
+			</div>
+		{:else if tasksList.length === 0}
+			<div
+				class="border-border text-muted-foreground rounded-lg border border-dashed p-8 text-center text-sm"
+			>
+				No schedules yet. Create one to get started.
+			</div>
+		{:else}
+			<div class="bg-card border-border divide-border divide-y rounded-lg border">
 				{#each tasksList as task}
-					<div class="border-border rounded-lg border p-4">
-						<div class="flex items-start justify-between gap-4">
-							<div class="space-y-1">
-								<div class="text-base font-semibold">{task.name}</div>
-								{#if task.description}
-									<div class="text-sm text-muted-foreground">{task.description}</div>
+					<div class="flex flex-wrap items-start justify-between gap-4 p-5">
+						<div class="flex min-w-0 flex-1 flex-col gap-1">
+							<div class="flex flex-wrap items-center gap-2">
+								<span class="font-medium">{task.name}</span>
+								{#if task.enabled}
+									<span
+										class="inline-flex items-center gap-1 rounded-full bg-green-500/10 px-2 py-0.5 text-xs font-medium text-green-700 dark:text-green-300"
+									>
+										Active
+									</span>
+								{:else}
+									<span
+										class="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300"
+									>
+										Paused
+									</span>
 								{/if}
-								<div class="text-xs text-muted-foreground">{formatSchedule(task)}</div>
-								<div class="text-xs text-muted-foreground">
-									Next run: {formatDate(task.nextRunAt)} • Last run: {formatDate(task.lastRunAt)}
-								</div>
-								{#if task.lastRunStatus === 'error' && task.lastRunError}
-									<div class="text-xs text-red-500">Last error: {task.lastRunError}</div>
+								{#if task.lastRunStatus === 'error'}
+									<span
+										class="bg-destructive/10 text-destructive inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium"
+									>
+										Failed
+									</span>
 								{/if}
 							</div>
-							<div class="flex flex-col gap-2">
-								<Button size="sm" variant="outline" onclick={() => toggleEnabled(task)}>
-									{task.enabled ? 'Disable' : 'Enable'}
-								</Button>
-								<Button size="sm" variant="outline" onclick={() => runNow(task)}>
-									<Play class="mr-2 size-3" />
-									Run now
-								</Button>
-								<div class="flex gap-2">
-									<Button size="icon" variant="ghost" onclick={() => startEdit(task)}>
-										<Pencil class="size-4" />
-									</Button>
-									<Button size="icon" variant="ghost" onclick={() => handleDelete(task.id)}>
-										<Trash class="size-4" />
-									</Button>
-								</div>
-							</div>
+							{#if task.description}
+								<span class="text-muted-foreground text-sm">{task.description}</span>
+							{/if}
+							<span class="text-muted-foreground text-xs">{formatSchedule(task)}</span>
+							<span class="text-muted-foreground text-xs">
+								Next run: {formatDate(task.nextRunAt)} • Last run: {formatDate(task.lastRunAt)}
+							</span>
+							{#if task.lastRunStatus === 'error' && task.lastRunError}
+								<span class="text-destructive text-xs">Last error: {task.lastRunError}</span>
+							{/if}
+						</div>
+						<div class="flex flex-wrap items-center gap-2">
+							<Button size="sm" variant="outline" onclick={() => toggleEnabled(task)}>
+								{task.enabled ? 'Disable' : 'Enable'}
+							</Button>
+							<Button size="sm" variant="outline" onclick={() => runNow(task)}>
+								<Play class="mr-2 size-3" />
+								Run now
+							</Button>
+							<Button size="icon" variant="ghost" onclick={() => startEdit(task)}>
+								<Pencil class="size-4" />
+							</Button>
+							<Button size="icon" variant="ghost" onclick={() => handleDelete(task.id)}>
+								<Trash class="size-4" />
+							</Button>
 						</div>
 					</div>
 				{/each}
-			{/if}
-		</Card.Content>
-	</Card.Root>
+			</div>
+		{/if}
+	</section>
 </div>

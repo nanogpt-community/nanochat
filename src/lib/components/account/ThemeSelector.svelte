@@ -127,28 +127,47 @@
 	}
 </script>
 
-<div class="flex flex-col gap-4">
-	<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+<div class="flex flex-col gap-5">
+	<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
 		<!-- Auto (System Default) Option -->
 		<button
 			type="button"
 			onclick={() => selectTheme(null)}
 			disabled={saving}
-			class="border-input hover:bg-accent relative flex flex-col gap-2 rounded-lg border p-4 text-left transition-colors disabled:opacity-50 {currentTheme ===
+			class="group relative overflow-hidden rounded-lg border text-left transition-all disabled:opacity-50 {currentTheme ===
 			null
-				? 'ring-ring ring-2'
-				: ''}"
+				? 'border-primary ring-primary/20 ring-2'
+				: 'border-border hover:border-primary/50'}"
 		>
-			<div class="flex items-center justify-between">
-				<span class="font-medium">Auto</span>
-				{#if currentTheme === null}
-					<CheckIcon class="text-primary h-5 w-5" />
-				{/if}
+			<!-- Preview: half-light / half-dark split -->
+			<div class="relative h-20 w-full overflow-hidden">
+				<div class="absolute inset-0 flex">
+					<div class="flex w-1/2 items-center justify-center bg-white">
+						<div class="flex flex-col gap-1">
+							<div class="h-1.5 w-10 rounded-full bg-slate-300"></div>
+							<div class="h-1.5 w-7 rounded-full bg-slate-200"></div>
+						</div>
+					</div>
+					<div class="flex w-1/2 items-center justify-center bg-slate-900">
+						<div class="flex flex-col gap-1">
+							<div class="h-1.5 w-10 rounded-full bg-slate-600"></div>
+							<div class="h-1.5 w-7 rounded-full bg-slate-700"></div>
+						</div>
+					</div>
+				</div>
 			</div>
-			<p class="text-muted-foreground text-sm">System default light/dark theme</p>
-			<div class="mt-2 flex gap-2">
-				<div class="h-8 w-12 rounded border border-gray-300 bg-white"></div>
-				<div class="h-8 w-12 rounded border border-gray-700 bg-gray-900"></div>
+			<div class="flex items-center justify-between gap-2 border-t border-inherit p-3">
+				<div class="flex min-w-0 flex-col">
+					<span class="truncate text-sm font-medium">Auto</span>
+					<span class="text-muted-foreground text-xs">Follow system</span>
+				</div>
+				{#if currentTheme === null}
+					<div
+						class="bg-primary text-primary-foreground flex size-5 shrink-0 items-center justify-center rounded-full"
+					>
+						<CheckIcon class="size-3" />
+					</div>
+				{/if}
 			</div>
 		</button>
 
@@ -158,62 +177,85 @@
 				type="button"
 				onclick={() => selectTheme(theme.id)}
 				disabled={saving}
-				class="border-input hover:bg-accent relative flex flex-col gap-2 rounded-lg border p-4 text-left transition-colors disabled:opacity-50 {currentTheme ===
+				class="group relative overflow-hidden rounded-lg border text-left transition-all disabled:opacity-50 {currentTheme ===
 				theme.id
-					? 'ring-ring ring-2'
-					: ''}"
+					? 'border-primary ring-primary/20 ring-2'
+					: 'border-border hover:border-primary/50'}"
 			>
-				<div class="flex items-center justify-between">
-					<span class="font-medium">{theme.name}</span>
-					{#if currentTheme === theme.id}
-						<CheckIcon class="text-primary h-5 w-5" />
-					{/if}
-				</div>
-				<p class="text-muted-foreground text-xs capitalize">{theme.mode} theme</p>
-				<div class="mt-2 flex gap-1">
+				<!-- Preview: mini UI mockup using theme colors -->
+				<div
+					class="relative h-20 w-full overflow-hidden"
+					style="background-color: {theme.colors.background};"
+				>
+					<!-- Sidebar strip -->
 					<div
-						class="h-8 w-8 rounded border"
-						style="background-color: {theme.colors.background}; border-color: {theme.colors
-							.border};"
-					></div>
-					<div
-						class="h-8 w-8 rounded border"
-						style="background-color: {theme.colors.primary}; border-color: {theme.colors.border};"
-					></div>
-					<div
-						class="h-8 w-8 rounded border"
-						style="background-color: {theme.colors.accent}; border-color: {theme.colors.border};"
-					></div>
-					<div
-						class="h-8 w-8 rounded border"
+						class="absolute top-0 bottom-0 left-0 w-1/4 border-r"
 						style="background-color: {theme.colors.sidebar}; border-color: {theme.colors.border};"
 					></div>
+					<!-- Content area with accent + primary "pills" -->
+					<div class="absolute top-3 right-3 flex flex-col gap-1.5">
+						<div
+							class="h-2 w-16 rounded-full"
+							style="background-color: {theme.colors.primary};"
+						></div>
+						<div
+							class="h-2 w-12 rounded-full opacity-80"
+							style="background-color: {theme.colors.accent};"
+						></div>
+						<div class="h-1.5 w-10 rounded-full opacity-40" style="background-color: {theme.colors.border};"></div>
+					</div>
+				</div>
+				<div class="flex items-center justify-between gap-2 border-t border-inherit p-3">
+					<div class="flex min-w-0 flex-col">
+						<span class="truncate text-sm font-medium">{theme.name}</span>
+						<span class="text-muted-foreground text-xs capitalize">{theme.mode}</span>
+					</div>
+					{#if currentTheme === theme.id}
+						<div
+							class="bg-primary text-primary-foreground flex size-5 shrink-0 items-center justify-center rounded-full"
+						>
+							<CheckIcon class="size-3" />
+						</div>
+					{/if}
 				</div>
 			</button>
 		{/each}
 	</div>
 
 	{#if currentThemeData || currentTheme === null}
-		<div class="border-border space-y-3 rounded-lg border p-3">
-			<p class="text-muted-foreground text-sm">Customize this theme&apos;s key accents.</p>
+		<div class="border-border bg-muted/30 flex flex-col gap-3 rounded-lg border p-4">
+			<div class="flex flex-col gap-0.5">
+				<p class="text-sm font-medium">Custom Accents</p>
+				<p class="text-muted-foreground text-xs">Override this theme's primary and accent colors.</p>
+			</div>
 
 			<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
 				<div class="flex flex-col gap-2">
-					<label for="theme-primary-color" class="text-sm font-medium">Primary</label>
+					<label for="theme-primary-color" class="text-muted-foreground text-xs font-medium">
+						Primary
+					</label>
 					<div class="flex items-center gap-2">
-						<input
-							id="theme-primary-color"
-							type="color"
-							value={primarySwatch}
-							onchange={handlePrimaryColorChange}
-							disabled={saving}
-							class="border-border h-9 w-16 cursor-pointer rounded border p-0.5"
-							aria-label="Primary color"
-						/>
+						<label
+							for="theme-primary-color"
+							class="border-border relative size-9 shrink-0 cursor-pointer overflow-hidden rounded-md border"
+							style="background-color: {primarySwatch};"
+						>
+							<input
+								id="theme-primary-color"
+								type="color"
+								value={primarySwatch}
+								onchange={handlePrimaryColorChange}
+								disabled={saving}
+								class="absolute inset-0 size-full cursor-pointer opacity-0"
+								aria-label="Primary color"
+							/>
+						</label>
+						<span class="font-mono text-xs uppercase tabular-nums">{primarySwatch}</span>
 						<Button
 							type="button"
-							variant="outline"
+							variant="ghost"
 							size="sm"
+							class="ml-auto"
 							disabled={saving}
 							onclick={resetPrimaryColor}
 						>
@@ -222,21 +264,31 @@
 					</div>
 				</div>
 				<div class="flex flex-col gap-2">
-					<label for="theme-accent-color" class="text-sm font-medium">Accent</label>
+					<label for="theme-accent-color" class="text-muted-foreground text-xs font-medium">
+						Accent
+					</label>
 					<div class="flex items-center gap-2">
-						<input
-							id="theme-accent-color"
-							type="color"
-							value={accentSwatch}
-							onchange={handleAccentColorChange}
-							disabled={saving}
-							class="border-border h-9 w-16 cursor-pointer rounded border p-0.5"
-							aria-label="Accent color"
-						/>
+						<label
+							for="theme-accent-color"
+							class="border-border relative size-9 shrink-0 cursor-pointer overflow-hidden rounded-md border"
+							style="background-color: {accentSwatch};"
+						>
+							<input
+								id="theme-accent-color"
+								type="color"
+								value={accentSwatch}
+								onchange={handleAccentColorChange}
+								disabled={saving}
+								class="absolute inset-0 size-full cursor-pointer opacity-0"
+								aria-label="Accent color"
+							/>
+						</label>
+						<span class="font-mono text-xs uppercase tabular-nums">{accentSwatch}</span>
 						<Button
 							type="button"
-							variant="outline"
+							variant="ghost"
 							size="sm"
+							class="ml-auto"
 							disabled={saving}
 							onclick={resetAccentColor}
 						>
@@ -248,7 +300,7 @@
 		</div>
 	{:else}
 		<p class="text-muted-foreground text-sm">
-			Switch to a concrete theme to customize primary and accent colours.
+			Switch to a concrete theme to customize primary and accent colors.
 		</p>
 	{/if}
 </div>

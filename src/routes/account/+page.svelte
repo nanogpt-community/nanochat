@@ -8,22 +8,22 @@
 	import { Switch } from '$lib/components/ui/switch';
 	import { Input } from '$lib/components/ui/input';
 	import { Button } from '$lib/components/ui/button';
-	import {
-		Root as Card,
-		Content as CardContent,
-		Description as CardDescription,
-		Header as CardHeader,
-		Title as CardTitle,
-	} from '$lib/components/ui/card';
 	import PasskeySettings from '$lib/components/account/PasskeySettings.svelte';
 	import { callModal } from '$lib/components/ui/modal/global-modal.svelte';
-	import ChevronDown from '~icons/lucide/chevron-down';
-	import ChevronRight from '~icons/lucide/chevron-right';
 	import Trash2 from '~icons/lucide/trash-2';
 	import FolderX from '~icons/lucide/folder-x';
+	import EyeOffIcon from '~icons/lucide/eye-off';
+	import BrainIcon from '~icons/lucide/brain';
+	import Volume2Icon from '~icons/lucide/volume-2';
+	import PlugIcon from '~icons/lucide/plug';
+	import ShieldIcon from '~icons/lucide/shield';
+	import DatabaseIcon from '~icons/lucide/database';
+	import CheckIcon from '~icons/lucide/check';
+	import AlertTriangleIcon from '~icons/lucide/alert-triangle';
 	import { models } from '$lib/state/models.svelte';
 	import { settings as localSettings } from '$lib/state/settings.svelte';
 	import { Provider } from '$lib/types.js';
+	import { cn } from '$lib/utils/utils';
 
 	let { data } = $props();
 	const settings = useCachedQuery<UserSettings>(api.user_settings.get, {});
@@ -238,12 +238,57 @@
 	let karakeepSaving = $state(false);
 	let karakeepTestStatus = $state<'idle' | 'testing' | 'success' | 'error'>('idle');
 	let karakeepTestMessage = $state('');
-	let karakeepExpanded = $state(false);
-	let deleteAllChatsExpanded = $state(false);
 	let deleteAllChatsDeleting = $state(false);
-	let clearUploadsExpanded = $state(false);
 	let clearUploadsClearing = $state(false);
 	const hasSavedKarakeepApiKey = $derived(settings.data?.hasKarakeepApiKey ?? false);
+
+	type SectionId = 'general' | 'ai' | 'audio' | 'integrations' | 'data' | 'security';
+	let activeSection = $state<SectionId>('general');
+	const sections: {
+		id: SectionId;
+		label: string;
+		description: string;
+		icon: typeof EyeOffIcon;
+	}[] = [
+		{
+			id: 'general',
+			label: 'General',
+			description: 'Privacy and timezone preferences.',
+			icon: EyeOffIcon,
+		},
+		{
+			id: 'ai',
+			label: 'AI & Memory',
+			description: 'Memory, automatic features, and the models used for background tasks.',
+			icon: BrainIcon,
+		},
+		{
+			id: 'audio',
+			label: 'Audio',
+			description: 'Text-to-speech and speech-to-text preferences.',
+			icon: Volume2Icon,
+		},
+		{
+			id: 'integrations',
+			label: 'Integrations',
+			description: 'Connect external services to extend nanochat.',
+			icon: PlugIcon,
+		},
+		{
+			id: 'data',
+			label: 'Data',
+			description: 'Manage uploaded files and conversation history.',
+			icon: DatabaseIcon,
+		},
+		{
+			id: 'security',
+			label: 'Security',
+			description: 'Passkeys and authentication methods.',
+			icon: ShieldIcon,
+		},
+	];
+	const currentSection = $derived(sections.find((s) => s.id === activeSection) ?? sections[0]!);
+	const CurrentSectionIcon = $derived(currentSection.icon);
 
 	$effect(() => {
 		if (settings.data?.karakeepUrl !== undefined) karakeepUrl = settings.data.karakeepUrl ?? '';
@@ -761,567 +806,490 @@
 	<title>Account | nanochat</title>
 </svelte:head>
 
-<h1 class="text-2xl font-bold">Account Settings</h1>
-<h2 class="text-muted-foreground mt-2 text-sm">Configure the settings for your account.</h2>
+<!-- Section navigation: segmented control style -->
+<div class="scrollbar-hide overflow-x-auto">
+	<div
+		class="bg-muted/50 border-border inline-flex min-w-full items-center gap-0.5 rounded-lg border p-1"
+		role="tablist"
+	>
+		{#each sections as section (section.id)}
+			{@const Icon = section.icon}
+			{@const isActive = activeSection === section.id}
+			<button
+				type="button"
+				role="tab"
+				aria-selected={isActive}
+				onclick={() => (activeSection = section.id)}
+				class={cn(
+					'flex shrink-0 items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium whitespace-nowrap transition-all',
+					isActive
+						? 'bg-background text-foreground shadow-sm'
+						: 'text-muted-foreground hover:text-foreground'
+				)}
+			>
+				<Icon class={cn('size-4', isActive ? 'text-primary' : '')} />
+				{section.label}
+			</button>
+		{/each}
+	</div>
+</div>
 
-<div class="mt-6 flex flex-col gap-6">
-	<!-- Privacy & Display -->
-	<Card>
-		<CardHeader>
-			<CardTitle>Privacy & Display</CardTitle>
-			<CardDescription>Control how your personal information appears.</CardDescription>
-		</CardHeader>
-		<CardContent class="grid gap-4">
-			<div class="flex place-items-center justify-between">
-				<div class="flex flex-col gap-1">
-					<span class="font-medium">Hide Personal Information</span>
-					<span class="text-muted-foreground text-sm"
-						>Blur your name and avatar in the sidebar.</span
-					>
-				</div>
-				<Switch bind:value={() => privacyMode, togglePrivacyMode} />
-			</div>
-			<div class="grid gap-2">
-				<div class="flex flex-col gap-1">
-					<span class="font-medium">Timezone</span>
-					<span class="text-muted-foreground text-sm">
-						Used for scheduled tasks and date/time variables in prompts.
-					</span>
-				</div>
-				<div class="flex flex-wrap items-center gap-2">
-					<Input
-						id="timezone"
-						list="timezone-options"
-						placeholder={browserTimezone || 'UTC'}
-						bind:value={timezone}
-						class="w-[260px]"
-					/>
-					<Button onclick={saveTimezone} disabled={timezoneSaving}>
-						{timezoneSaving ? 'Saving...' : 'Save'}
-					</Button>
-					<Button
-						variant="ghost"
-						onclick={() => {
-							timezone = browserTimezone;
-							saveTimezone();
-						}}
-						disabled={timezoneSaving || !browserTimezone}
-					>
-						Use browser timezone
-					</Button>
-				</div>
-				<datalist id="timezone-options">
-					{#each timezoneOptions as tz}
-						<option value={tz}></option>
-					{/each}
-				</datalist>
-			</div>
-		</CardContent>
-	</Card>
+<!-- Section header -->
+<div class="mt-6 flex items-center gap-3">
+	<div
+		class="bg-primary/10 text-primary flex size-10 shrink-0 items-center justify-center rounded-lg"
+	>
+		<CurrentSectionIcon class="size-5" />
+	</div>
+	<div class="flex min-w-0 flex-col">
+		<h1 class="text-xl font-bold tracking-tight">{currentSection.label}</h1>
+		<p class="text-muted-foreground text-sm">{currentSection.description}</p>
+	</div>
+</div>
 
-	<!-- Memory -->
-	<Card>
-		<CardHeader>
-			<CardTitle>Memory</CardTitle>
-			<CardDescription>Configure how the AI remembers conversation context.</CardDescription>
-		</CardHeader>
-		<CardContent class="grid gap-4">
-			<div class="flex place-items-center justify-between">
-				<div class="flex flex-col gap-1">
-					<span class="font-medium">Context Memory</span>
-					<span class="text-muted-foreground text-sm"
-						>Compress long conversations for better context retention.</span
-					>
-				</div>
-				<Switch bind:value={() => contextMemoryEnabled, toggleContextMemory} />
-			</div>
-			<div class="flex place-items-center justify-between">
-				<div class="flex flex-col gap-1">
-					<span class="font-medium">Persistent Memory</span>
-					<span class="text-muted-foreground text-sm"
-						>Remember facts about you across different conversations.</span
-					>
-				</div>
-				<Switch bind:value={() => persistentMemoryEnabled, togglePersistentMemory} />
-			</div>
-		</CardContent>
-	</Card>
-
-	<!-- AI Features -->
-	<Card>
-		<CardHeader>
-			<CardTitle>AI Features</CardTitle>
-			<CardDescription>Control automatic AI capabilities and enhancements.</CardDescription>
-		</CardHeader>
-		<CardContent class="grid gap-4">
-			<div class="flex place-items-center justify-between">
-				<div class="flex flex-col gap-1">
-					<span class="font-medium">YouTube Transcripts</span>
-					<span class="text-muted-foreground text-sm"
-						>Automatically fetch YouTube video transcripts ($0.01 each).</span
-					>
-				</div>
-				<Switch bind:value={() => youtubeTranscriptsEnabled, toggleYoutubeTranscripts} />
-			</div>
-			<div class="flex place-items-center justify-between">
-				<div class="flex flex-col gap-1">
-					<span class="font-medium">Web Scraping</span>
-					<span class="text-muted-foreground text-sm"
-						>Automatically scrape web page content when URLs are detected.</span
-					>
-				</div>
-				<Switch bind:value={() => webScrapingEnabled, toggleWebScraping} />
-			</div>
-			<div class="flex place-items-center justify-between">
-				<div class="flex flex-col gap-1">
-					<span class="font-medium">Nano-GPT MCP</span>
-					<span class="text-muted-foreground text-sm">
-						Supports Vision, YouTube Transcripts, Web Scraping, Nano-GPT Balance, Image Generation,
-						and Model Lists.
-					</span>
-					{#if data.restrictions?.mcpDisabled}
-						<span class="text-xs text-amber-600 dark:text-amber-400"
-							>Not available when using server API key with subscription-only mode.</span
+<div class="mt-6">
+	{#if activeSection === 'general'}
+		<section class="flex flex-col gap-4">
+			<div class="bg-card border-border rounded-lg border">
+				<div class="flex items-center justify-between gap-4 p-5">
+					<div class="flex min-w-0 flex-col gap-1">
+						<span class="font-medium">Hide Personal Information</span>
+						<span class="text-muted-foreground text-sm"
+							>Blur your name and avatar in the sidebar.</span
 						>
-					{/if}
+					</div>
+					<Switch bind:value={() => privacyMode, togglePrivacyMode} />
 				</div>
-				<Switch
-					bind:value={() => mcpEnabled, toggleMcp}
-					disabled={data.restrictions?.mcpDisabled}
-				/>
-			</div>
-			<div class="flex place-items-center justify-between">
-				<div class="flex flex-col gap-1">
-					<span class="font-medium">Follow-up Questions</span>
-					<span class="text-muted-foreground text-sm"
-						>Show suggested follow-up questions after each response.</span
-					>
-				</div>
-				<Switch bind:value={() => followUpQuestionsEnabled, toggleFollowUpQuestions} />
-			</div>
-			<div class="flex place-items-center justify-between">
-				<div class="flex flex-col gap-1">
-					<span class="font-medium">Suggested Prompts</span>
-					<span class="text-muted-foreground text-sm"
-						>Show suggested prompts on the home screen.</span
-					>
-				</div>
-				<Switch bind:value={() => suggestedPromptsEnabled, toggleSuggestedPrompts} />
-			</div>
-		</CardContent>
-	</Card>
-
-	<!-- Model Preferences -->
-	<Card>
-		<CardHeader>
-			<CardTitle>Model Preferences</CardTitle>
-			<CardDescription>Choose which models are used for automatic tasks.</CardDescription>
-		</CardHeader>
-		<CardContent class="grid gap-4">
-			<div class="flex flex-col gap-2">
-				<label
-					class="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-				>
-					Chat Title Generation Model
-					<select
-						class="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus:ring-ring mt-2 flex h-10 w-full items-center justify-between rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-						value={titleModelId}
-						onchange={(e) => updateTitleModel(e.currentTarget.value)}
-					>
-						<option value="">Default (GLM-4.5-Air)</option>
-						{#each enabledModels as model}
-							<option value={model.value}>{model.label}</option>
-						{/each}
-					</select>
-				</label>
-				<p class="text-muted-foreground text-xs">
-					Select the model used to generate chat titles.
-				</p>
-			</div>
-
-			{#if titleSupportsProviderSelection && titleModelProviders.length > 0}
-				<div class="flex flex-col gap-2">
-					<label
-						class="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-					>
-						Chat Title Generation Provider
-						<select
-							class="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus:ring-ring mt-2 flex h-10 w-full items-center justify-between rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-							value={titleProviderId}
-							onchange={(e) => updateTitleProvider(e.currentTarget.value)}
-						>
-							<option value="">Auto (Platform Default)</option>
-							{#each titleModelProviders as provider}
-								<option value={provider.provider}>
-									{formatProviderName(provider.provider)} ({formatPrice(provider.pricing)})
-								</option>
+				<div class="border-border border-t p-5">
+					<div class="flex flex-col gap-3">
+						<div class="flex flex-col gap-1">
+							<span class="font-medium">Timezone</span>
+							<span class="text-muted-foreground text-sm">
+								Used for scheduled tasks and date/time variables in prompts.
+							</span>
+						</div>
+						<div class="flex flex-wrap items-center gap-2">
+							<Input
+								id="timezone"
+								list="timezone-options"
+								placeholder={browserTimezone || 'UTC'}
+								bind:value={timezone}
+								class="w-full max-w-[320px]"
+							/>
+							<Button onclick={saveTimezone} disabled={timezoneSaving} size="sm">
+								{timezoneSaving ? 'Saving…' : 'Save'}
+							</Button>
+							<Button
+								variant="ghost"
+								size="sm"
+								onclick={() => {
+									timezone = browserTimezone;
+									saveTimezone();
+								}}
+								disabled={timezoneSaving || !browserTimezone}
+							>
+								Use browser timezone
+							</Button>
+						</div>
+						<datalist id="timezone-options">
+							{#each timezoneOptions as tz}
+								<option value={tz}></option>
 							{/each}
-						</select>
-					</label>
+						</datalist>
+					</div>
+				</div>
+			</div>
+		</section>
+	{:else if activeSection === 'ai'}
+		<section class="flex flex-col gap-6">
+			<!-- Memory -->
+			<div class="flex flex-col gap-3">
+				<div class="flex flex-col gap-0.5">
+					<h3 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Memory</h3>
+					<p class="text-muted-foreground text-xs">How the AI remembers conversation context.</p>
+				</div>
+				<div class="bg-card border-border divide-border divide-y rounded-lg border">
+					<div class="flex items-center justify-between gap-4 p-5">
+						<div class="flex flex-col gap-1">
+							<span class="font-medium">Context Memory</span>
+							<span class="text-muted-foreground text-sm"
+								>Compress long conversations for better context retention.</span
+							>
+						</div>
+						<Switch bind:value={() => contextMemoryEnabled, toggleContextMemory} />
+					</div>
+					<div class="flex items-center justify-between gap-4 p-5">
+						<div class="flex flex-col gap-1">
+							<span class="font-medium">Persistent Memory</span>
+							<span class="text-muted-foreground text-sm"
+								>Remember facts about you across different conversations.</span
+							>
+						</div>
+						<Switch bind:value={() => persistentMemoryEnabled, togglePersistentMemory} />
+					</div>
+				</div>
+			</div>
+
+			<!-- Features -->
+			<div class="flex flex-col gap-3">
+				<div class="flex flex-col gap-0.5">
+					<h3 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+						Features
+					</h3>
+					<p class="text-muted-foreground text-xs">Automatic AI capabilities and enhancements.</p>
+				</div>
+				<div class="bg-card border-border divide-border divide-y rounded-lg border">
+					<div class="flex items-center justify-between gap-4 p-5">
+						<div class="flex flex-col gap-1">
+							<span class="font-medium">YouTube Transcripts</span>
+							<span class="text-muted-foreground text-sm"
+								>Automatically fetch YouTube video transcripts ($0.01 each).</span
+							>
+						</div>
+						<Switch bind:value={() => youtubeTranscriptsEnabled, toggleYoutubeTranscripts} />
+					</div>
+					<div class="flex items-center justify-between gap-4 p-5">
+						<div class="flex flex-col gap-1">
+							<span class="font-medium">Web Scraping</span>
+							<span class="text-muted-foreground text-sm"
+								>Automatically scrape web page content when URLs are detected.</span
+							>
+						</div>
+						<Switch bind:value={() => webScrapingEnabled, toggleWebScraping} />
+					</div>
+					<div class="flex items-center justify-between gap-4 p-5">
+						<div class="flex min-w-0 flex-col gap-1">
+							<span class="font-medium">Nano-GPT MCP</span>
+							<span class="text-muted-foreground text-sm">
+								Vision, YouTube Transcripts, Web Scraping, Nano-GPT Balance, Image Generation, and
+								Model Lists.
+							</span>
+							{#if data.restrictions?.mcpDisabled}
+								<span class="text-xs text-amber-600 dark:text-amber-400"
+									>Not available when using server API key with subscription-only mode.</span
+								>
+							{/if}
+						</div>
+						<Switch
+							bind:value={() => mcpEnabled, toggleMcp}
+							disabled={data.restrictions?.mcpDisabled}
+						/>
+					</div>
+					<div class="flex items-center justify-between gap-4 p-5">
+						<div class="flex flex-col gap-1">
+							<span class="font-medium">Follow-up Questions</span>
+							<span class="text-muted-foreground text-sm"
+								>Show suggested follow-up questions after each response.</span
+							>
+						</div>
+						<Switch bind:value={() => followUpQuestionsEnabled, toggleFollowUpQuestions} />
+					</div>
+					<div class="flex items-center justify-between gap-4 p-5">
+						<div class="flex flex-col gap-1">
+							<span class="font-medium">Suggested Prompts</span>
+							<span class="text-muted-foreground text-sm"
+								>Show suggested prompts on the home screen.</span
+							>
+						</div>
+						<Switch bind:value={() => suggestedPromptsEnabled, toggleSuggestedPrompts} />
+					</div>
+				</div>
+			</div>
+
+			<!-- Model preferences -->
+			<div class="flex flex-col gap-3">
+				<div class="flex flex-col gap-0.5">
+					<h3 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+						Automatic Tasks
+					</h3>
 					<p class="text-muted-foreground text-xs">
-						Select the specific backend provider for the title model.
+						Which model handles background tasks like titles and suggestions.
 					</p>
 				</div>
-			{/if}
+				<div class="bg-card border-border rounded-lg border p-5">
+					<div class="grid gap-5 md:grid-cols-2">
+						<div class="flex flex-col gap-2">
+							<label for="title-model" class="text-sm font-medium">Chat Title Model</label>
+							<select
+								id="title-model"
+								class="border-input bg-background focus:ring-ring flex h-10 w-full items-center rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-offset-2 focus:outline-none"
+								value={titleModelId}
+								onchange={(e) => updateTitleModel(e.currentTarget.value)}
+							>
+								<option value="">Default (GLM-4.5-Air)</option>
+								{#each enabledModels as model}
+									<option value={model.value}>{model.label}</option>
+								{/each}
+							</select>
+							{#if titleSupportsProviderSelection && titleModelProviders.length > 0}
+								<select
+									class="border-input bg-background focus:ring-ring mt-1 flex h-10 w-full items-center rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-offset-2 focus:outline-none"
+									value={titleProviderId}
+									onchange={(e) => updateTitleProvider(e.currentTarget.value)}
+								>
+									<option value="">Provider: Auto</option>
+									{#each titleModelProviders as provider}
+										<option value={provider.provider}>
+											{formatProviderName(provider.provider)} ({formatPrice(provider.pricing)})
+										</option>
+									{/each}
+								</select>
+							{/if}
+							<p class="text-muted-foreground text-xs">Generates chat titles.</p>
+						</div>
 
-			<div class="flex flex-col gap-2">
-				<label
-					class="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-				>
-					Follow-up Questions Model
-					<select
-						class="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus:ring-ring mt-2 flex h-10 w-full items-center justify-between rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-						value={followUpModelId}
-						onchange={(e) => updateFollowUpModel(e.currentTarget.value)}
-					>
-						<option value="">Default (GLM-4.5-Air)</option>
-						{#each enabledModels as model}
-							<option value={model.value}>{model.label}</option>
-						{/each}
-					</select>
-				</label>
-				<p class="text-muted-foreground text-xs">
-					Select the model used to generate follow-up questions.
-				</p>
-			</div>
-
-			{#if followUpSupportsProviderSelection && followUpModelProviders.length > 0}
-				<div class="flex flex-col gap-2">
-					<label
-						class="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-					>
-						Follow-up Questions Provider
-						<select
-							class="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus:ring-ring mt-2 flex h-10 w-full items-center justify-between rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-							value={followUpProviderId}
-							onchange={(e) => updateFollowUpProvider(e.currentTarget.value)}
-						>
-							<option value="">Auto (Platform Default)</option>
-							{#each followUpModelProviders as provider}
-								<option value={provider.provider}>
-									{formatProviderName(provider.provider)} ({formatPrice(provider.pricing)})
-								</option>
-							{/each}
-						</select>
-					</label>
-					<p class="text-muted-foreground text-xs">
-						Select the specific backend provider for the follow-up model.
-					</p>
+						<div class="flex flex-col gap-2">
+							<label for="followup-model" class="text-sm font-medium">Follow-up Model</label>
+							<select
+								id="followup-model"
+								class="border-input bg-background focus:ring-ring flex h-10 w-full items-center rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-offset-2 focus:outline-none"
+								value={followUpModelId}
+								onchange={(e) => updateFollowUpModel(e.currentTarget.value)}
+							>
+								<option value="">Default (GLM-4.5-Air)</option>
+								{#each enabledModels as model}
+									<option value={model.value}>{model.label}</option>
+								{/each}
+							</select>
+							{#if followUpSupportsProviderSelection && followUpModelProviders.length > 0}
+								<select
+									class="border-input bg-background focus:ring-ring mt-1 flex h-10 w-full items-center rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-offset-2 focus:outline-none"
+									value={followUpProviderId}
+									onchange={(e) => updateFollowUpProvider(e.currentTarget.value)}
+								>
+									<option value="">Provider: Auto</option>
+									{#each followUpModelProviders as provider}
+										<option value={provider.provider}>
+											{formatProviderName(provider.provider)} ({formatPrice(provider.pricing)})
+										</option>
+									{/each}
+								</select>
+							{/if}
+							<p class="text-muted-foreground text-xs">Generates follow-up questions.</p>
+						</div>
+					</div>
 				</div>
-			{/if}
-		</CardContent>
-	</Card>
-
-	<!-- Audio -->
-	<Card>
-		<CardHeader>
-			<CardTitle>Audio</CardTitle>
-			<CardDescription>Configure text-to-speech and speech-to-text settings.</CardDescription>
-		</CardHeader>
-		<CardContent class="grid gap-4">
-			<h4 class="font-medium">Text to Speech</h4>
-			<div class="flex flex-col gap-2">
-				<label
-					class="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-				>
-					Model
-					<select
-						class="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus:ring-ring mt-2 flex h-10 w-full items-center justify-between rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-						bind:value={localSettings.ttsModel}
-						onchange={() => {
-							if (localSettings.ttsModel?.startsWith('Eleven'))
-								localSettings.ttsVoice = 'Rachel';
-							else if (localSettings.ttsModel?.startsWith('Kokoro'))
-								localSettings.ttsVoice = 'af_bella';
-							else localSettings.ttsVoice = 'alloy';
-						}}
-					>
-						{#each ttsModels as model}
-							<option value={model.value}>{model.label}</option>
-						{/each}
-					</select>
-				</label>
-				<p class="text-muted-foreground text-xs">
-					Choose a TTS model. Pricing varies significantly.
-				</p>
 			</div>
-
-			<div class="flex flex-col gap-2">
-				<label
-					class="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-				>
-					Voice
-					<select
-						class="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus:ring-ring mt-2 flex h-10 w-full items-center justify-between rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-						bind:value={localSettings.ttsVoice}
-					>
-						{#each availableVoices as voice}
-							<option value={voice.value}>{voice.label}</option>
-						{/each}
-					</select>
-				</label>
-				<p class="text-muted-foreground text-xs">
-					Select the voice used for reading messages aloud.
-				</p>
-			</div>
-
-			<div class="flex flex-col gap-2">
-				<div class="flex justify-between">
-					<label for="tts-speed" class="text-sm leading-none font-medium">Speed</label>
-					<span class="text-muted-foreground text-xs">{localSettings.ttsSpeed}x</span>
+		</section>
+	{:else if activeSection === 'audio'}
+		<section class="flex flex-col gap-6">
+			<!-- Text to Speech -->
+			<div class="flex flex-col gap-3">
+				<div class="flex flex-col gap-0.5">
+					<h3 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+						Text to Speech
+					</h3>
+					<p class="text-muted-foreground text-xs">Read messages aloud with your chosen voice.</p>
 				</div>
-				<input
-					id="tts-speed"
-					type="range"
-					min="0.25"
-					max="4.0"
-					step="0.05"
-					class="accent-primary h-2 w-full cursor-pointer appearance-none rounded-lg bg-gray-200 dark:bg-gray-700"
-					bind:value={localSettings.ttsSpeed}
-				/>
+				<div class="bg-card border-border rounded-lg border p-5">
+					<div class="grid gap-5 md:grid-cols-2">
+						<div class="flex flex-col gap-2">
+							<label for="tts-model" class="text-sm font-medium">Model</label>
+							<select
+								id="tts-model"
+								class="border-input bg-background focus:ring-ring flex h-10 w-full items-center rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-offset-2 focus:outline-none"
+								bind:value={localSettings.ttsModel}
+								onchange={() => {
+									if (localSettings.ttsModel?.startsWith('Eleven'))
+										localSettings.ttsVoice = 'Rachel';
+									else if (localSettings.ttsModel?.startsWith('Kokoro'))
+										localSettings.ttsVoice = 'af_bella';
+									else localSettings.ttsVoice = 'alloy';
+								}}
+							>
+								{#each ttsModels as model}
+									<option value={model.value}>{model.label}</option>
+								{/each}
+							</select>
+						</div>
+						<div class="flex flex-col gap-2">
+							<label for="tts-voice" class="text-sm font-medium">Voice</label>
+							<select
+								id="tts-voice"
+								class="border-input bg-background focus:ring-ring flex h-10 w-full items-center rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-offset-2 focus:outline-none"
+								bind:value={localSettings.ttsVoice}
+							>
+								{#each availableVoices as voice}
+									<option value={voice.value}>{voice.label}</option>
+								{/each}
+							</select>
+						</div>
+					</div>
+					<div class="mt-5 flex flex-col gap-2">
+						<div class="flex items-center justify-between">
+							<label for="tts-speed" class="text-sm font-medium">Speed</label>
+							<span class="text-muted-foreground text-xs tabular-nums">{localSettings.ttsSpeed}x</span>
+						</div>
+						<input
+							id="tts-speed"
+							type="range"
+							min="0.25"
+							max="4.0"
+							step="0.05"
+							class="accent-primary h-2 w-full cursor-pointer appearance-none rounded-lg bg-gray-200 dark:bg-gray-700"
+							bind:value={localSettings.ttsSpeed}
+						/>
+					</div>
+				</div>
 			</div>
 
-			<div class="border-t pt-4">
-				<h4 class="mb-3 font-medium">Speech to Text</h4>
-				<div class="flex flex-col gap-2">
-					<label
-						class="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-					>
-						Model
+			<!-- Speech to Text -->
+			<div class="flex flex-col gap-3">
+				<div class="flex flex-col gap-0.5">
+					<h3 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+						Speech to Text
+					</h3>
+					<p class="text-muted-foreground text-xs">Transcribe your voice into messages.</p>
+				</div>
+				<div class="bg-card border-border rounded-lg border p-5">
+					<div class="flex flex-col gap-2">
+						<label for="stt-model" class="text-sm font-medium">Model</label>
 						<select
-							class="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus:ring-ring mt-2 flex h-10 w-full items-center justify-between rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+							id="stt-model"
+							class="border-input bg-background focus:ring-ring flex h-10 w-full max-w-md items-center rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-offset-2 focus:outline-none"
 							bind:value={localSettings.sttModel}
 						>
 							{#each sttModels as model}
 								<option value={model.value}>{model.label}</option>
 							{/each}
 						</select>
-					</label>
-					<p class="text-muted-foreground text-xs">
-						Choose an STT model for voice transcription.
-					</p>
+					</div>
 				</div>
 			</div>
-		</CardContent>
-	</Card>
-
-	<!-- Karakeep Integration Section (Collapsible) -->
-	<Card>
-		<button
-			type="button"
-			class="w-full text-left"
-			onclick={() => (karakeepExpanded = !karakeepExpanded)}
-		>
-			<CardHeader class="hover:bg-muted/50 cursor-pointer rounded-t-lg transition-colors">
-				<div class="flex items-center justify-between">
-					<div>
-						<CardTitle>Karakeep Integration</CardTitle>
-						<CardDescription>
-							Configure your Karakeep instance to save chats as bookmarks.
-						</CardDescription>
+		</section>
+	{:else if activeSection === 'integrations'}
+		<section class="flex flex-col gap-4">
+			<div class="bg-card border-border rounded-lg border">
+				<div class="border-border flex flex-col gap-1 border-b p-5">
+					<h3 class="font-medium">Karakeep</h3>
+					<p class="text-muted-foreground text-sm">
+						Save chats as bookmarks to your Karakeep instance.
+					</p>
+				</div>
+				<div class="grid gap-4 p-5">
+					<div class="grid gap-4 md:grid-cols-2">
+						<div class="flex flex-col gap-2">
+							<label for="karakeep-url" class="text-sm font-medium">URL</label>
+							<Input
+								id="karakeep-url"
+								type="url"
+								placeholder="https://karakeep.example.com"
+								bind:value={karakeepUrl}
+							/>
+						</div>
+						<div class="flex flex-col gap-2">
+							<label for="karakeep-api-key" class="text-sm font-medium">
+								API Key
+								{#if hasSavedKarakeepApiKey}
+									<span class="text-muted-foreground ml-1 font-normal">(saved)</span>
+								{/if}
+							</label>
+							<Input
+								id="karakeep-api-key"
+								type="password"
+								placeholder={
+									hasSavedKarakeepApiKey ? 'Enter a new key to replace' : 'Your API key'
+								}
+								bind:value={karakeepApiKey}
+							/>
+						</div>
 					</div>
-					<div class="text-muted-foreground">
-						{#if karakeepExpanded}
-							<ChevronDown class="h-5 w-5" />
-						{:else}
-							<ChevronRight class="h-5 w-5" />
-						{/if}
-					</div>
-				</div>
-			</CardHeader>
-		</button>
 
-		{#if karakeepExpanded}
-			<CardContent class="grid gap-4 pt-0">
-				<div class="flex flex-col gap-2">
-					<label for="karakeep-url" class="text-sm font-medium">Karakeep URL</label>
-					<Input
-						id="karakeep-url"
-						type="url"
-						placeholder="https://karakeep.example.com"
-						bind:value={karakeepUrl}
-					/>
-					<span class="text-muted-foreground text-xs">The URL of your Karakeep instance</span>
-				</div>
-
-				<div class="flex flex-col gap-2">
-					<label for="karakeep-api-key" class="text-sm font-medium">API Key</label>
-					<Input
-						id="karakeep-api-key"
-						type="password"
-						placeholder={
-							hasSavedKarakeepApiKey
-								? 'Saved key on file. Enter a new key to replace it.'
-								: 'Enter your Karakeep API key'
-						}
-						bind:value={karakeepApiKey}
-					/>
-					<span class="text-muted-foreground text-xs">
-						{#if hasSavedKarakeepApiKey}
-							A key is already stored securely. Leave this blank to keep it unchanged.
-						{:else}
-							Your Karakeep API authentication key
-						{/if}
-					</span>
-				</div>
-
-				<div class="flex gap-2">
-					<Button onclick={saveKarakeepSettings} disabled={karakeepSaving}>
-						{karakeepSaving ? 'Saving...' : 'Save Settings'}
-					</Button>
-					<Button
-						variant="outline"
-						onclick={testKarakeepConnection}
-						disabled={karakeepTestStatus === 'testing'}
-					>
-						{karakeepTestStatus === 'testing' ? 'Testing...' : 'Test Connection'}
-					</Button>
-					{#if hasSavedKarakeepApiKey}
-						<Button variant="outline" onclick={clearKarakeepApiKey} disabled={karakeepSaving}>
-							Clear Saved Key
+					<div class="flex flex-wrap gap-2">
+						<Button size="sm" onclick={saveKarakeepSettings} disabled={karakeepSaving}>
+							{karakeepSaving ? 'Saving…' : 'Save'}
 						</Button>
+						<Button
+							size="sm"
+							variant="outline"
+							onclick={testKarakeepConnection}
+							disabled={karakeepTestStatus === 'testing'}
+						>
+							{karakeepTestStatus === 'testing' ? 'Testing…' : 'Test Connection'}
+						</Button>
+						{#if hasSavedKarakeepApiKey}
+							<Button
+								size="sm"
+								variant="ghost"
+								onclick={clearKarakeepApiKey}
+								disabled={karakeepSaving}
+							>
+								Clear Saved Key
+							</Button>
+						{/if}
+					</div>
+
+					{#if karakeepTestStatus !== 'idle' && karakeepTestMessage}
+						<div
+							class="flex items-start gap-2 rounded-md border p-3 text-sm {karakeepTestStatus ===
+							'success'
+								? 'border-green-500/40 bg-green-500/10 text-green-700 dark:text-green-300'
+								: 'border-destructive/40 bg-destructive/10 text-destructive'}"
+						>
+							{#if karakeepTestStatus === 'success'}
+								<CheckIcon class="mt-0.5 size-4 shrink-0" />
+							{:else}
+								<AlertTriangleIcon class="mt-0.5 size-4 shrink-0" />
+							{/if}
+							<span>{karakeepTestMessage}</span>
+						</div>
 					{/if}
 				</div>
-
-				{#if karakeepTestStatus !== 'idle' && karakeepTestMessage}
-					<div
-						class="rounded-md p-3 text-sm {karakeepTestStatus === 'success'
-							? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300'
-							: 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300'}"
-					>
-						{karakeepTestMessage}
-					</div>
-				{/if}
-			</CardContent>
-		{/if}
-	</Card>
-
-	<!-- Clear Uploads Section (Collapsible) -->
-	<Card>
-		<button
-			type="button"
-			class="w-full text-left"
-			onclick={() => (clearUploadsExpanded = !clearUploadsExpanded)}
-		>
-			<CardHeader class="hover:bg-muted/50 cursor-pointer rounded-t-lg transition-colors">
-				<div class="flex items-center justify-between">
-					<div>
-						<CardTitle>Clear Uploads</CardTitle>
-						<CardDescription>
-							Remove uploaded files from old chats to free up storage.
-						</CardDescription>
-					</div>
-					<div class="text-muted-foreground">
-						{#if clearUploadsExpanded}
-							<ChevronDown class="h-5 w-5" />
-						{:else}
-							<ChevronRight class="h-5 w-5" />
-						{/if}
-					</div>
-				</div>
-			</CardHeader>
-		</button>
-
-		{#if clearUploadsExpanded}
-			<CardContent class="pt-0">
-				<div class="flex flex-col gap-4">
-					<div class="rounded-md border border-amber-500/50 bg-amber-500/10 p-4">
-						<div class="flex items-start gap-3">
-							<FolderX class="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
-							<div class="flex flex-col gap-2">
-								<p class="font-medium text-amber-700 dark:text-amber-300">
-									This will delete all uploaded files
-								</p>
-								<p class="text-muted-foreground text-sm">
-									Useful for clearing uploads from old or deleted chats. This includes:
-								</p>
-								<ul class="text-muted-foreground ml-1 list-inside list-disc space-y-1 text-sm">
-									<li>Images uploaded to conversations</li>
-									<li>Documents (PDFs, text files, etc.)</li>
-									<li>Any other uploaded attachments</li>
-								</ul>
-							</div>
+			</div>
+		</section>
+	{:else if activeSection === 'data'}
+		<section class="flex flex-col gap-4">
+			<div class="bg-card border-border rounded-lg border">
+				<div class="flex flex-wrap items-center justify-between gap-4 p-5">
+					<div class="flex min-w-0 items-start gap-3">
+						<div class="bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-md p-2">
+							<FolderX class="size-5" />
+						</div>
+						<div class="flex flex-col gap-1">
+							<span class="font-medium">Clear All Uploads</span>
+							<span class="text-muted-foreground text-sm">
+								Remove images, PDFs, and other attachments from every chat.
+							</span>
 						</div>
 					</div>
-
 					<Button
 						variant="outline"
+						size="sm"
 						onclick={clearAllUploads}
 						disabled={clearUploadsClearing}
-						class="w-full sm:w-auto"
 					>
-						{#if clearUploadsClearing}
-							Clearing...
-						{:else}
-							Clear All Uploads
-						{/if}
+						{clearUploadsClearing ? 'Clearing…' : 'Clear Uploads'}
 					</Button>
 				</div>
-			</CardContent>
-		{/if}
-	</Card>
+			</div>
 
-	<!-- Delete All Chats Section (Collapsible) -->
-	<Card>
-		<button
-			type="button"
-			class="w-full text-left"
-			onclick={() => (deleteAllChatsExpanded = !deleteAllChatsExpanded)}
-		>
-			<CardHeader class="hover:bg-muted/50 cursor-pointer rounded-t-lg transition-colors">
-				<div class="flex items-center justify-between">
-					<div>
-						<CardTitle class="text-destructive">Delete All Chats</CardTitle>
-						<CardDescription>
-							Permanently delete all your conversations and messages.
-						</CardDescription>
-					</div>
-					<div class="text-muted-foreground">
-						{#if deleteAllChatsExpanded}
-							<ChevronDown class="h-5 w-5" />
-						{:else}
-							<ChevronRight class="h-5 w-5" />
-						{/if}
-					</div>
-				</div>
-			</CardHeader>
-		</button>
-
-		{#if deleteAllChatsExpanded}
-			<CardContent class="pt-0">
-				<div class="flex flex-col gap-4">
-					<div class="border-destructive/50 bg-destructive/10 rounded-md border p-4">
-						<div class="flex items-start gap-3">
-							<Trash2 class="text-destructive mt-0.5 h-5 w-5 shrink-0" />
-							<div class="flex flex-col gap-2">
-								<p class="text-destructive font-medium">Warning: This action cannot be undone</p>
-								<p class="text-muted-foreground text-sm">This will permanently delete:</p>
-								<ul class="text-muted-foreground ml-1 list-inside list-disc space-y-1 text-sm">
-									<li>All your conversations</li>
-									<li>All messages within those conversations</li>
-									<li>Any associated data and context</li>
-								</ul>
-							</div>
+			<div class="border-destructive/30 bg-destructive/[0.03] rounded-lg border">
+				<div class="flex flex-wrap items-center justify-between gap-4 p-5">
+					<div class="flex min-w-0 items-start gap-3">
+						<div class="bg-destructive/10 text-destructive rounded-md p-2">
+							<Trash2 class="size-5" />
+						</div>
+						<div class="flex flex-col gap-1">
+							<span class="text-destructive font-medium">Delete All Chats</span>
+							<span class="text-muted-foreground text-sm">
+								Permanently delete every conversation, message, and associated context.
+							</span>
 						</div>
 					</div>
-
 					<Button
 						variant="destructive"
+						size="sm"
 						onclick={deleteAllChats}
 						disabled={deleteAllChatsDeleting}
-						class="w-full sm:w-auto"
 					>
-						{#if deleteAllChatsDeleting}
-							Deleting...
-						{:else}
-							Delete All Chats
-						{/if}
+						{deleteAllChatsDeleting ? 'Deleting…' : 'Delete All Chats'}
 					</Button>
 				</div>
-			</CardContent>
-		{/if}
-	</Card>
-
-	<!-- Passkeys Section -->
-	<PasskeySettings passkeys={data.passkeys || []} />
+			</div>
+		</section>
+	{:else if activeSection === 'security'}
+		<section class="flex flex-col gap-4">
+			<PasskeySettings passkeys={data.passkeys || []} />
+		</section>
+	{/if}
 </div>

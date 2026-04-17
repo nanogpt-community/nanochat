@@ -7,7 +7,6 @@
 	import { Provider } from '$lib/types';
 	import type { Assistant, UserEnabledModel } from '$lib/api';
 	import Button from '$lib/components/ui/button/button.svelte';
-	import * as Card from '$lib/components/ui/card';
 	import Input from '$lib/components/ui/input/input.svelte';
 	import Textarea from '$lib/components/ui/textarea/textarea.svelte';
 	import Label from '$lib/components/ui/label/label.svelte';
@@ -186,86 +185,102 @@
 </script>
 
 <svelte:head>
-	<title>Assistants | Settings</title>
+	<title>Assistants | nanochat</title>
 </svelte:head>
 
-<div class="space-y-6">
-	<div class="flex items-center justify-between">
-		<div>
-			<h3 class="text-lg font-medium">Assistants</h3>
-			<p class="text-muted-foreground text-sm">
-				Create and manage system prompts to customize your AI assistant's persona and behavior.
-			</p>
-		</div>
-		{#if !isCreating && !editingId}
-			<Button onclick={startCreate} size="sm" class="gap-2">
-				<Plus class="size-4" />
-				Create New
-			</Button>
-		{/if}
+<div class="flex flex-wrap items-start justify-between gap-4">
+	<div class="flex flex-col gap-1">
+		<h1 class="text-2xl font-bold tracking-tight">Assistants</h1>
+		<p class="text-muted-foreground text-sm">
+			Create and manage system prompts to customize your AI assistant's persona and behavior.
+		</p>
 	</div>
+	{#if !isCreating && !editingId}
+		<Button onclick={startCreate} size="sm" class="gap-2">
+			<Plus class="size-4" />
+			Create New
+		</Button>
+	{/if}
+</div>
 
+<div class="mt-6 flex flex-col gap-6">
 	{#if isCreating || editingId}
-		<Card.Root class="border-border/50 bg-card/50 backdrop-blur-sm">
-			<Card.Header class="pb-4">
-				<Card.Title class="text-xl">{isCreating ? 'Create Assistant' : 'Edit Assistant'}</Card.Title
-				>
-				<p class="text-muted-foreground text-sm">
+		<section class="flex flex-col gap-3">
+			<div class="flex flex-col gap-0.5">
+				<h2 class="text-muted-foreground text-sm font-semibold tracking-wide uppercase">
+					{isCreating ? 'Create Assistant' : 'Edit Assistant'}
+				</h2>
+				<p class="text-muted-foreground text-xs">
 					{isCreating
 						? 'Set up a new AI assistant with a custom persona.'
 						: "Update your assistant's name and system prompt."}
 				</p>
-			</Card.Header>
-			<Card.Content class="space-y-6">
-				<div class="space-y-3">
+			</div>
+			<div class="bg-card border-border flex flex-col gap-6 rounded-lg border p-5">
+				<div class="flex flex-col gap-2">
 					<Label for="name" class="text-sm font-medium">Name</Label>
 					<Input
 						id="name"
 						bind:value={formName}
 						placeholder="e.g. Coding Expert"
-						class="bg-background/50 border-border/50 focus:border-primary/50 h-11 transition-colors"
 					/>
 					<p class="text-muted-foreground text-xs">Give your assistant a memorable name.</p>
 				</div>
-				<div class="space-y-3">
+				<div class="flex flex-col gap-2">
 					<Label for="prompt" class="text-sm font-medium">System Prompt</Label>
 					<Textarea
 						id="prompt"
 						bind:value={formSystemPrompt}
 						placeholder="You are a helpful assistant that..."
-						class="bg-background/50 border-border/50 focus:border-primary/50 min-h-[180px] w-full min-w-[400px] resize leading-relaxed transition-colors"
+						class="min-h-[180px] w-full resize leading-relaxed"
 					/>
-					<div class="text-muted-foreground space-y-1 text-xs">
+					<div class="text-muted-foreground flex flex-col gap-1 text-xs">
 						<p>Define your assistant's personality, expertise, and how it should respond.</p>
-						<details class="mt-2">
-							<summary class="hover:text-foreground cursor-pointer transition-colors">Available variables</summary>
-							<div class="bg-muted/30 mt-2 space-y-1 rounded-md p-3 font-mono text-xs">
-								<div><code class="text-primary">{'{cur_date}'}</code> - Current date (YYYY-MM-DD)</div>
-								<div><code class="text-primary">{'{cur_time}'}</code> - Current time (HH:MM:SS)</div>
-								<div><code class="text-primary">{'{cur_datetime}'}</code> - Current date and time (ISO format)</div>
-								<div><code class="text-primary">{'{model_name}'}</code> - Name of the AI model</div>
+						<details class="mt-1">
+							<summary class="hover:text-foreground cursor-pointer transition-colors"
+								>Available variables</summary
+							>
+							<div class="bg-muted/30 mt-2 flex flex-col gap-1 rounded-md p-3 font-mono text-xs">
+								<div>
+									<code class="text-primary">{'{cur_date}'}</code> - Current date (YYYY-MM-DD)
+								</div>
+								<div>
+									<code class="text-primary">{'{cur_time}'}</code> - Current time (HH:MM:SS)
+								</div>
+								<div>
+									<code class="text-primary">{'{cur_datetime}'}</code> - Current date and time (ISO
+									format)
+								</div>
+								<div>
+									<code class="text-primary">{'{model_name}'}</code> - Name of the AI model
+								</div>
 								<div><code class="text-primary">{'{model_id}'}</code> - ID of the AI model</div>
-								<div><code class="text-primary">{'{provider}'}</code> - Provider name (e.g., 'nanogpt')</div>
-								<div><code class="text-primary">{'{user_name}'}</code> - Name of the current user</div>
+								<div>
+									<code class="text-primary">{'{provider}'}</code> - Provider name (e.g., 'nanogpt')
+								</div>
+								<div>
+									<code class="text-primary">{'{user_name}'}</code> - Name of the current user
+								</div>
 							</div>
 						</details>
 					</div>
 				</div>
 
-				<!-- Default Settings Section -->
-				<div class="border-border/30 mt-6 border-t pt-6">
-					<h4 class="mb-4 text-sm font-medium">Default Settings</h4>
-					<p class="text-muted-foreground mb-4 text-xs">
-						These settings will be applied automatically when you switch to this assistant.
-					</p>
+				<div class="border-border flex flex-col gap-4 border-t pt-5">
+					<div class="flex flex-col gap-0.5">
+						<h3 class="text-sm font-medium">Default Settings</h3>
+						<p class="text-muted-foreground text-xs">
+							These settings will be applied automatically when you switch to this assistant.
+						</p>
+					</div>
 
 					<div class="grid gap-4 sm:grid-cols-3">
-						<div class="space-y-2">
+						<div class="flex flex-col gap-2">
 							<Label for="defaultModel" class="text-sm font-medium">Default Model</Label>
 							<select
 								id="defaultModel"
 								bind:value={formDefaultModelId}
-								class="bg-background/50 border-border/50 focus:border-primary/50 h-10 w-full rounded-md border px-3 text-sm transition-colors focus:outline-none"
+								class="border-input bg-background h-10 w-full rounded-md border px-3 text-sm focus:outline-none"
 							>
 								<option value="">None</option>
 								{#each enabledModels as model (model.id)}
@@ -276,12 +291,12 @@
 							</select>
 						</div>
 
-						<div class="space-y-2">
+						<div class="flex flex-col gap-2">
 							<Label for="defaultSearchMode" class="text-sm font-medium">Web Search</Label>
 							<select
 								id="defaultSearchMode"
 								bind:value={formDefaultWebSearchMode}
-								class="bg-background/50 border-border/50 focus:border-primary/50 h-10 w-full rounded-md border px-3 text-sm transition-colors focus:outline-none"
+								class="border-input bg-background h-10 w-full rounded-md border px-3 text-sm focus:outline-none"
 							>
 								<option value="">None</option>
 								<option value="off">Off</option>
@@ -290,12 +305,12 @@
 							</select>
 						</div>
 
-						<div class="space-y-2">
+						<div class="flex flex-col gap-2">
 							<Label for="defaultSearchProvider" class="text-sm font-medium">Search Provider</Label>
 							<select
 								id="defaultSearchProvider"
 								bind:value={formDefaultWebSearchProvider}
-								class="bg-background/50 border-border/50 focus:border-primary/50 h-10 w-full rounded-md border px-3 text-sm transition-colors focus:outline-none"
+								class="border-input bg-background h-10 w-full rounded-md border px-3 text-sm focus:outline-none"
 							>
 								<option value="">None</option>
 								<option value="linkup">Linkup</option>
@@ -311,13 +326,13 @@
 						</div>
 					</div>
 
-					<div class="mt-4 grid gap-4 sm:grid-cols-3">
-						<div class="space-y-2">
+					<div class="grid gap-4 sm:grid-cols-3">
+						<div class="flex flex-col gap-2">
 							<Label for="defaultExaDepth" class="text-sm font-medium">Exa Depth</Label>
 							<select
 								id="defaultExaDepth"
 								bind:value={formDefaultWebSearchExaDepth}
-								class="bg-background/50 border-border/50 focus:border-primary/50 h-10 w-full rounded-md border px-3 text-sm transition-colors focus:outline-none"
+								class="border-input bg-background h-10 w-full rounded-md border px-3 text-sm focus:outline-none"
 							>
 								<option value="">None</option>
 								<option value="fast">Fast</option>
@@ -328,12 +343,12 @@
 							<p class="text-muted-foreground text-xs">For Exa provider only</p>
 						</div>
 
-						<div class="space-y-2">
+						<div class="flex flex-col gap-2">
 							<Label for="defaultContextSize" class="text-sm font-medium">Context Size</Label>
 							<select
 								id="defaultContextSize"
 								bind:value={formDefaultWebSearchContextSize}
-								class="bg-background/50 border-border/50 focus:border-primary/50 h-10 w-full rounded-md border px-3 text-sm transition-colors focus:outline-none"
+								class="border-input bg-background h-10 w-full rounded-md border px-3 text-sm focus:outline-none"
 							>
 								<option value="">None</option>
 								<option value="low">Low</option>
@@ -343,12 +358,12 @@
 							<p class="text-muted-foreground text-xs">Search result context amount</p>
 						</div>
 
-						<div class="space-y-2">
+						<div class="flex flex-col gap-2">
 							<Label for="defaultKagiSource" class="text-sm font-medium">Kagi Source</Label>
 							<select
 								id="defaultKagiSource"
 								bind:value={formDefaultWebSearchKagiSource}
-								class="bg-background/50 border-border/50 focus:border-primary/50 h-10 w-full rounded-md border px-3 text-sm transition-colors focus:outline-none"
+								class="border-input bg-background h-10 w-full rounded-md border px-3 text-sm focus:outline-none"
 							>
 								<option value="">None</option>
 								<option value="web">Web</option>
@@ -359,13 +374,15 @@
 						</div>
 					</div>
 
-					<div class="mt-4 grid gap-4 sm:grid-cols-3">
-						<div class="space-y-2">
-							<Label for="defaultValyuSearchType" class="text-sm font-medium">Valyu Search Type</Label>
+					<div class="grid gap-4 sm:grid-cols-3">
+						<div class="flex flex-col gap-2">
+							<Label for="defaultValyuSearchType" class="text-sm font-medium"
+								>Valyu Search Type</Label
+							>
 							<select
 								id="defaultValyuSearchType"
 								bind:value={formDefaultWebSearchValyuSearchType}
-								class="bg-background/50 border-border/50 focus:border-primary/50 h-10 w-full rounded-md border px-3 text-sm transition-colors focus:outline-none"
+								class="border-input bg-background h-10 w-full rounded-md border px-3 text-sm focus:outline-none"
 							>
 								<option value="">None</option>
 								<option value="all">All (web + proprietary)</option>
@@ -375,97 +392,114 @@
 						</div>
 					</div>
 				</div>
-			</Card.Content>
-			<Card.Footer class="border-border/30 flex justify-end gap-3 border-t pt-4">
-				<Button variant="ghost" onclick={cancelForm} disabled={isSubmitting}>Cancel</Button>
-				<Button onclick={handleSubmit} disabled={isSubmitting || !formName} class="min-w-[100px]">
-					{#if isSubmitting}
-						<LoaderCircle class="mr-2 size-4 animate-spin" />
-						Saving...
-					{:else}
-						<Save class="mr-2 size-4" />
-						Save
-					{/if}
-				</Button>
-			</Card.Footer>
-		</Card.Root>
+
+				<div class="border-border flex justify-end gap-3 border-t pt-4">
+					<Button variant="ghost" onclick={cancelForm} disabled={isSubmitting}>Cancel</Button>
+					<Button
+						onclick={handleSubmit}
+						disabled={isSubmitting || !formName}
+						class="min-w-[100px]"
+					>
+						{#if isSubmitting}
+							<LoaderCircle class="mr-2 size-4 animate-spin" />
+							Saving...
+						{:else}
+							<Save class="mr-2 size-4" />
+							Save
+						{/if}
+					</Button>
+				</div>
+			</div>
+		</section>
 	{/if}
 
-	{#if isLoading}
-		<div class="flex justify-center p-8">
-			<LoaderCircle class="text-muted-foreground size-6 animate-spin" />
+	<section class="flex flex-col gap-3">
+		<div class="flex flex-col gap-0.5">
+			<h2 class="text-muted-foreground text-sm font-semibold tracking-wide uppercase">
+				Your Assistants
+			</h2>
+			<p class="text-muted-foreground text-xs">
+				Switch between personas or set a default for new chats.
+			</p>
 		</div>
-	{:else}
-		<div class="grid gap-4">
-			{#each assistants as assistant (assistant.id)}
-				<Card.Root
-					class="border-border/50 bg-card/30 hover:bg-card/50 transition-all {editingId ===
-					assistant.id
-						? 'border-primary ring-primary/20 ring-1'
-						: ''}"
-				>
-					<Card.Header class="flex flex-row items-center justify-between space-y-0 pb-3">
-						<div class="flex items-center gap-2">
-							<Card.Title class="text-base font-semibold">
-								{assistant.name}
-							</Card.Title>
-							{#if assistant.isDefault}
-								<span
-									class="bg-primary/10 text-primary rounded-full px-2 py-0.5 text-xs font-medium"
-									>Default</span
-								>
-							{/if}
-						</div>
-						{#if !isCreating && !editingId}
-							<div class="flex gap-1">
-								{#if !assistant.isDefault}
-									<Button
-										variant="ghost"
-										size="icon"
-										class="text-muted-foreground size-8 transition-colors hover:bg-amber-500/10 hover:text-amber-500"
-										onclick={() => handleSetDefault(assistant.id)}
-										title="Set as default"
+
+		{#if isLoading}
+			<div class="flex justify-center p-8">
+				<LoaderCircle class="text-muted-foreground size-6 animate-spin" />
+			</div>
+		{:else if assistants.length === 0}
+			<div
+				class="border-border text-muted-foreground rounded-lg border border-dashed p-8 text-center text-sm"
+			>
+				No assistants yet. Create one to get started.
+			</div>
+		{:else}
+			<div class="bg-card border-border divide-border divide-y rounded-lg border">
+				{#each assistants as assistant (assistant.id)}
+					<div
+						class="flex flex-col gap-3 p-5 {editingId === assistant.id
+							? 'bg-primary/5'
+							: ''}"
+					>
+						<div class="flex items-center justify-between gap-4">
+							<div class="flex min-w-0 items-center gap-2">
+								<span class="truncate text-base font-semibold">{assistant.name}</span>
+								{#if assistant.isDefault}
+									<span
+										class="bg-primary/10 text-primary rounded-full px-2 py-0.5 text-xs font-medium"
+										>Default</span
 									>
-										<Star class="size-4" />
-										<span class="sr-only">Set as Default</span>
-									</Button>
-								{/if}
-								<Button
-									variant="ghost"
-									size="icon"
-									class="hover:bg-primary/10 hover:text-primary size-8 transition-colors"
-									onclick={() => startEdit(assistant)}
-								>
-									<Pencil class="size-4" />
-									<span class="sr-only">Edit</span>
-								</Button>
-								{#if !assistant.isDefault}
-									<Button
-										variant="ghost"
-										size="icon"
-										class="text-muted-foreground hover:text-destructive hover:bg-destructive/10 size-8 transition-colors"
-										onclick={() => handleDelete(assistant.id)}
-									>
-										<Trash class="size-4" />
-										<span class="sr-only">Delete</span>
-									</Button>
 								{/if}
 							</div>
-						{/if}
-					</Card.Header>
-					<Card.Content class="pt-0">
+							{#if !isCreating && !editingId}
+								<div class="flex gap-1">
+									{#if !assistant.isDefault}
+										<Button
+											variant="ghost"
+											size="icon"
+											class="text-muted-foreground size-8 hover:bg-amber-500/10 hover:text-amber-500"
+											onclick={() => handleSetDefault(assistant.id)}
+											title="Set as default"
+										>
+											<Star class="size-4" />
+											<span class="sr-only">Set as Default</span>
+										</Button>
+									{/if}
+									<Button
+										variant="ghost"
+										size="icon"
+										class="hover:bg-primary/10 hover:text-primary size-8"
+										onclick={() => startEdit(assistant)}
+									>
+										<Pencil class="size-4" />
+										<span class="sr-only">Edit</span>
+									</Button>
+									{#if !assistant.isDefault}
+										<Button
+											variant="ghost"
+											size="icon"
+											class="text-muted-foreground hover:text-destructive hover:bg-destructive/10 size-8"
+											onclick={() => handleDelete(assistant.id)}
+										>
+											<Trash class="size-4" />
+											<span class="sr-only">Delete</span>
+										</Button>
+									{/if}
+								</div>
+							{/if}
+						</div>
 						{#if assistant.systemPrompt}
 							<p
-								class="text-muted-foreground bg-muted/30 border-border/30 line-clamp-3 rounded-lg border p-3 font-mono text-sm"
+								class="text-muted-foreground bg-muted/30 border-border line-clamp-3 rounded-md border p-3 font-mono text-sm"
 							>
 								{assistant.systemPrompt}
 							</p>
 						{:else}
 							<p class="text-muted-foreground/60 text-sm italic">No system prompt configured</p>
 						{/if}
-					</Card.Content>
-				</Card.Root>
-			{/each}
-		</div>
-	{/if}
+					</div>
+				{/each}
+			</div>
+		{/if}
+	</section>
 </div>

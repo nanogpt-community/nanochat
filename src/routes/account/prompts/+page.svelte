@@ -7,7 +7,6 @@
 	import type { Prompt, UserEnabledModel } from '$lib/api';
 	import { extractVariables, highlightVariables } from '$lib/utils/prompt-variables';
 	import Button from '$lib/components/ui/button/button.svelte';
-	import * as Card from '$lib/components/ui/card';
 	import Input from '$lib/components/ui/input/input.svelte';
 	import Textarea from '$lib/components/ui/textarea/textarea.svelte';
 	import Label from '$lib/components/ui/label/label.svelte';
@@ -205,71 +204,81 @@
 </script>
 
 <svelte:head>
-	<title>Prompts | Settings</title>
+	<title>Prompts | nanochat</title>
 </svelte:head>
 
-<div class="space-y-6">
-	<div class="flex items-center justify-between">
-		<div>
-			<h3 class="text-lg font-medium">Prompts</h3>
-			<p class="text-muted-foreground text-sm">
-				Create reusable prompt templates with variables. Use <kbd class="bg-muted rounded px-1 text-xs">Ctrl+P</kbd> in chat to quickly apply them.
-			</p>
-		</div>
-		{#if !isCreating && !editingId}
-			<Button onclick={startCreate} size="sm" class="gap-2">
-				<Plus class="size-4" />
-				Create New
-			</Button>
-		{/if}
+<div class="flex flex-wrap items-start justify-between gap-4">
+	<div class="flex flex-col gap-1">
+		<h1 class="text-2xl font-bold tracking-tight">Prompts</h1>
+		<p class="text-muted-foreground text-sm">
+			Create reusable prompt templates with variables. Use
+			<kbd class="bg-muted rounded px-1 text-xs">Ctrl+P</kbd>
+			in chat to quickly apply them.
+		</p>
 	</div>
+	{#if !isCreating && !editingId}
+		<Button onclick={startCreate} size="sm" class="gap-2">
+			<Plus class="size-4" />
+			Create New
+		</Button>
+	{/if}
+</div>
 
+<div class="mt-6 flex flex-col gap-6">
 	{#if isCreating || editingId}
-		<Card.Root class="border-border/50 bg-card/50 backdrop-blur-sm">
-			<Card.Header class="pb-4">
-				<Card.Title class="text-xl">{isCreating ? 'Create Prompt' : 'Edit Prompt'}</Card.Title>
-				<p class="text-muted-foreground text-sm">
+		<section class="flex flex-col gap-3">
+			<div class="flex flex-col gap-0.5">
+				<h2 class="text-muted-foreground text-sm font-semibold tracking-wide uppercase">
+					{isCreating ? 'Create Prompt' : 'Edit Prompt'}
+				</h2>
+				<p class="text-muted-foreground text-xs">
 					{isCreating
 						? 'Create a new reusable prompt template.'
 						: 'Update your prompt template.'}
 				</p>
-			</Card.Header>
-			<Card.Content class="space-y-6">
+			</div>
+			<div class="bg-card border-border flex flex-col gap-6 rounded-lg border p-5">
 				<div class="grid gap-4 sm:grid-cols-2">
-					<div class="space-y-3">
+					<div class="flex flex-col gap-2">
 						<Label for="name" class="text-sm font-medium">Name</Label>
 						<Input
 							id="name"
 							bind:value={formName}
 							placeholder="e.g. Summarize Article"
-							class="bg-background/50 border-border/50 focus:border-primary/50 h-11 transition-colors"
 						/>
 					</div>
-					<div class="space-y-3">
+					<div class="flex flex-col gap-2">
 						<Label for="description" class="text-sm font-medium">Description (optional)</Label>
 						<Input
 							id="description"
 							bind:value={formDescription}
 							placeholder="Brief description of what this prompt does"
-							class="bg-background/50 border-border/50 focus:border-primary/50 h-11 transition-colors"
 						/>
 					</div>
 				</div>
 
-				<div class="space-y-3">
+				<div class="flex flex-col gap-2">
 					<Label for="content" class="text-sm font-medium">Prompt Content</Label>
 					<Textarea
 						id="content"
 						bind:value={formContent}
 						placeholder={'Summarize the following text in {{style}} style:\n\n{{text}}'}
-						class="bg-background/50 border-border/50 focus:border-primary/50 min-h-[200px] w-full min-w-[400px] resize font-mono leading-relaxed transition-colors"
+						class="min-h-[200px] w-full resize font-mono leading-relaxed"
 					/>
 					<div class="text-muted-foreground space-y-1 text-xs">
-						<p>Use <code class="text-primary">{'{{variable_name}}'}</code> for user-defined variables that will be filled in when using the prompt.</p>
-						<p>Use <code class="text-primary">{'{{variable_name:default}}'}</code> to provide a default value.</p>
+						<p>
+							Use <code class="text-primary">{'{{variable_name}}'}</code> for user-defined variables that
+							will be filled in when using the prompt.
+						</p>
+						<p>
+							Use <code class="text-primary">{'{{variable_name:default}}'}</code> to provide a default
+							value.
+						</p>
 						<details class="mt-2">
-							<summary class="hover:text-foreground cursor-pointer transition-colors">System variables (auto-substituted)</summary>
-							<div class="bg-muted/30 mt-2 space-y-1 rounded-md p-3 font-mono text-xs">
+							<summary class="hover:text-foreground cursor-pointer transition-colors">
+								System variables (auto-substituted)
+							</summary>
+							<div class="bg-muted/40 mt-2 space-y-1 rounded-md p-3 font-mono text-xs">
 								<div><code class="text-primary">{'{cur_date}'}</code> - Current date (YYYY-MM-DD)</div>
 								<div><code class="text-primary">{'{cur_time}'}</code> - Current time (HH:MM:SS)</div>
 								<div><code class="text-primary">{'{cur_datetime}'}</code> - Current date and time</div>
@@ -280,36 +289,40 @@
 				</div>
 
 				{#if formVariables.length > 0}
-					<div class="space-y-3">
+					<div class="flex flex-col gap-3">
 						<div class="flex items-center gap-2">
 							<Variable class="text-primary size-4" />
 							<Label class="text-sm font-medium">Detected Variables</Label>
 						</div>
-						<div class="bg-muted/30 border-border/30 space-y-4 rounded-lg border p-4">
+						<div class="border-border flex flex-col gap-4 rounded-lg border p-4">
 							{#each formVariables as variable, index (variable.name)}
 								<div class="grid gap-3 sm:grid-cols-3">
-									<div>
+									<div class="flex flex-col gap-1">
 										<Label class="text-muted-foreground text-xs">Variable Name</Label>
-										<div class="bg-background/50 text-foreground mt-1 rounded border px-3 py-2 font-mono text-sm">
+										<div
+											class="bg-background text-foreground rounded border px-3 py-2 font-mono text-sm"
+										>
 											{variable.name}
 										</div>
 									</div>
-									<div>
+									<div class="flex flex-col gap-1">
 										<Label class="text-muted-foreground text-xs">Default Value</Label>
 										<Input
 											value={variable.defaultValue ?? ''}
-											oninput={(e) => updateVariable(index, 'defaultValue', e.currentTarget.value)}
+											oninput={(e) =>
+												updateVariable(index, 'defaultValue', e.currentTarget.value)}
 											placeholder="Optional default"
-											class="bg-background/50 mt-1 h-9 text-sm"
+											class="h-9 text-sm"
 										/>
 									</div>
-									<div>
+									<div class="flex flex-col gap-1">
 										<Label class="text-muted-foreground text-xs">Description</Label>
 										<Input
 											value={variable.description ?? ''}
-											oninput={(e) => updateVariable(index, 'description', e.currentTarget.value)}
+											oninput={(e) =>
+												updateVariable(index, 'description', e.currentTarget.value)}
 											placeholder="Optional description"
-											class="bg-background/50 mt-1 h-9 text-sm"
+											class="h-9 text-sm"
 										/>
 									</div>
 								</div>
@@ -318,20 +331,21 @@
 					</div>
 				{/if}
 
-				<!-- Settings Section -->
-				<div class="border-border/30 mt-6 border-t pt-6">
-					<h4 class="mb-4 text-sm font-medium">Default Settings</h4>
-					<p class="text-muted-foreground mb-4 text-xs">
-						These settings will be applied when you use this prompt.
-					</p>
-
+				<!-- Default settings -->
+				<div class="border-border flex flex-col gap-3 border-t pt-5">
+					<div class="flex flex-col gap-0.5">
+						<h3 class="text-sm font-medium">Default Settings</h3>
+						<p class="text-muted-foreground text-xs">
+							These settings will be applied when you use this prompt.
+						</p>
+					</div>
 					<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-						<div class="space-y-2">
+						<div class="flex flex-col gap-2">
 							<Label for="appendMode" class="text-sm font-medium">Insert Mode</Label>
 							<select
 								id="appendMode"
 								bind:value={formAppendMode}
-								class="bg-background/50 border-border/50 focus:border-primary/50 h-10 w-full rounded-md border px-3 text-sm transition-colors focus:outline-none"
+								class="border-input bg-background h-10 w-full rounded-md border px-3 text-sm focus:outline-none"
 							>
 								<option value="replace">Replace input</option>
 								<option value="prepend">Prepend to input</option>
@@ -339,28 +353,28 @@
 							</select>
 						</div>
 
-						<div class="space-y-2">
+						<div class="flex flex-col gap-2">
 							<Label for="defaultModel" class="text-sm font-medium">Default Model</Label>
 							<select
 								id="defaultModel"
 								bind:value={formDefaultModelId}
-								class="bg-background/50 border-border/50 focus:border-primary/50 h-10 w-full rounded-md border px-3 text-sm transition-colors focus:outline-none"
+								class="border-input bg-background h-10 w-full rounded-md border px-3 text-sm focus:outline-none"
 							>
 								<option value="">None</option>
 								{#each enabledModels as model (model.id)}
-									<option value={model.modelId}
-										>{model.modelId.split('/').pop() ?? model.modelId}</option
-									>
+									<option value={model.modelId}>
+										{model.modelId.split('/').pop() ?? model.modelId}
+									</option>
 								{/each}
 							</select>
 						</div>
 
-						<div class="space-y-2">
+						<div class="flex flex-col gap-2">
 							<Label for="defaultSearchMode" class="text-sm font-medium">Web Search</Label>
 							<select
 								id="defaultSearchMode"
 								bind:value={formDefaultWebSearchMode}
-								class="bg-background/50 border-border/50 focus:border-primary/50 h-10 w-full rounded-md border px-3 text-sm transition-colors focus:outline-none"
+								class="border-input bg-background h-10 w-full rounded-md border px-3 text-sm focus:outline-none"
 							>
 								<option value="">None</option>
 								<option value="off">Off</option>
@@ -369,12 +383,12 @@
 							</select>
 						</div>
 
-						<div class="space-y-2">
+						<div class="flex flex-col gap-2">
 							<Label for="defaultSearchProvider" class="text-sm font-medium">Search Provider</Label>
 							<select
 								id="defaultSearchProvider"
 								bind:value={formDefaultWebSearchProvider}
-								class="bg-background/50 border-border/50 focus:border-primary/50 h-10 w-full rounded-md border px-3 text-sm transition-colors focus:outline-none"
+								class="border-input bg-background h-10 w-full rounded-md border px-3 text-sm focus:outline-none"
 							>
 								<option value="">None</option>
 								<option value="linkup">Linkup</option>
@@ -390,115 +404,119 @@
 						</div>
 					</div>
 				</div>
-			</Card.Content>
-			<Card.Footer class="border-border/30 flex justify-end gap-3 border-t pt-4">
-				<Button variant="ghost" onclick={cancelForm} disabled={isSubmitting}>Cancel</Button>
-				<Button onclick={handleSubmit} disabled={isSubmitting || !formName || !formContent} class="min-w-[100px]">
-					{#if isSubmitting}
-						<LoaderCircle class="mr-2 size-4 animate-spin" />
-						Saving...
-					{:else}
-						<Save class="mr-2 size-4" />
-						Save
-					{/if}
-				</Button>
-			</Card.Footer>
-		</Card.Root>
+
+				<div class="border-border flex justify-end gap-3 border-t pt-4">
+					<Button variant="ghost" onclick={cancelForm} disabled={isSubmitting}>Cancel</Button>
+					<Button
+						onclick={handleSubmit}
+						disabled={isSubmitting || !formName || !formContent}
+						class="min-w-[100px]"
+					>
+						{#if isSubmitting}
+							<LoaderCircle class="mr-2 size-4 animate-spin" />
+							Saving...
+						{:else}
+							<Save class="mr-2 size-4" />
+							Save
+						{/if}
+					</Button>
+				</div>
+			</div>
+		</section>
 	{/if}
 
-	{#if isLoading}
-		<div class="flex justify-center p-8">
-			<LoaderCircle class="text-muted-foreground size-6 animate-spin" />
+	<section class="flex flex-col gap-3">
+		<div class="flex flex-col gap-0.5">
+			<h2 class="text-muted-foreground text-sm font-semibold tracking-wide uppercase">
+				Your Prompts
+			</h2>
+			<p class="text-muted-foreground text-xs">All of your saved prompt templates.</p>
 		</div>
-	{:else if promptsList.length === 0 && !isCreating}
-		<Card.Root class="border-border/50 bg-card/30">
-			<Card.Content class="flex flex-col items-center justify-center py-12">
-				<Variable class="text-muted-foreground/50 mb-4 size-12" />
-				<p class="text-muted-foreground mb-4 text-center">
-					No prompts yet. Create your first reusable prompt template.
-				</p>
-				<Button onclick={startCreate} size="sm" class="gap-2">
-					<Plus class="size-4" />
-					Create Prompt
-				</Button>
-			</Card.Content>
-		</Card.Root>
-	{:else}
-		<div class="grid gap-4">
-			{#each promptsList as prompt (prompt.id)}
-				<Card.Root
-					class="border-border/50 bg-card/30 hover:bg-card/50 transition-all {editingId ===
-					prompt.id
-						? 'border-primary ring-primary/20 ring-1'
-						: ''}"
-				>
-					<Card.Header class="flex flex-row items-start justify-between space-y-0 pb-3">
-						<div class="flex-1">
-							<div class="flex items-center gap-2">
-								<Card.Title class="text-base font-semibold">
-									{prompt.name}
-								</Card.Title>
-								{#if prompt.variables && prompt.variables.length > 0}
-									<span class="bg-primary/10 text-primary rounded-full px-2 py-0.5 text-xs font-medium">
-										{prompt.variables.length} variable{prompt.variables.length > 1 ? 's' : ''}
-									</span>
+
+		{#if isLoading}
+			<div class="flex justify-center p-8">
+				<LoaderCircle class="text-muted-foreground size-6 animate-spin" />
+			</div>
+		{:else if promptsList.length === 0 && !isCreating}
+			<div
+				class="border-border text-muted-foreground rounded-lg border border-dashed p-8 text-center text-sm"
+			>
+				No prompts yet. Create one to get started.
+			</div>
+		{:else}
+			<div class="bg-card border-border divide-border divide-y rounded-lg border">
+				{#each promptsList as prompt (prompt.id)}
+					<div
+						class="flex flex-col gap-3 p-5 {editingId === prompt.id
+							? 'bg-primary/5'
+							: ''}"
+					>
+						<div class="flex items-start justify-between gap-4">
+							<div class="flex min-w-0 flex-1 flex-col gap-1">
+								<div class="flex flex-wrap items-center gap-2">
+									<span class="font-medium">{prompt.name}</span>
+									{#if prompt.variables && prompt.variables.length > 0}
+										<span
+											class="bg-primary/10 text-primary rounded-full px-2 py-0.5 text-xs font-medium"
+										>
+											{prompt.variables.length} variable{prompt.variables.length > 1 ? 's' : ''}
+										</span>
+									{/if}
+								</div>
+								{#if prompt.description}
+									<p class="text-muted-foreground text-sm">{prompt.description}</p>
 								{/if}
 							</div>
-							{#if prompt.description}
-								<p class="text-muted-foreground mt-1 text-sm">{prompt.description}</p>
+							{#if !isCreating && !editingId}
+								<div class="flex gap-1">
+									<Button
+										variant="ghost"
+										size="icon"
+										class="size-8"
+										onclick={() => startEdit(prompt)}
+									>
+										<Pencil class="size-4" />
+										<span class="sr-only">Edit</span>
+									</Button>
+									<Button
+										variant="ghost"
+										size="icon"
+										class="text-muted-foreground hover:text-destructive size-8"
+										onclick={() => handleDelete(prompt.id)}
+									>
+										<Trash class="size-4" />
+										<span class="sr-only">Delete</span>
+									</Button>
+								</div>
 							{/if}
 						</div>
-						{#if !isCreating && !editingId}
-							<div class="flex gap-1">
-								<Button
-									variant="ghost"
-									size="icon"
-									class="hover:bg-primary/10 hover:text-primary size-8 transition-colors"
-									onclick={() => startEdit(prompt)}
-								>
-									<Pencil class="size-4" />
-									<span class="sr-only">Edit</span>
-								</Button>
-								<Button
-									variant="ghost"
-									size="icon"
-									class="text-muted-foreground hover:text-destructive hover:bg-destructive/10 size-8 transition-colors"
-									onclick={() => handleDelete(prompt.id)}
-								>
-									<Trash class="size-4" />
-									<span class="sr-only">Delete</span>
-								</Button>
-							</div>
-						{/if}
-					</Card.Header>
-					<Card.Content class="pt-0">
 						<p
-							class="text-muted-foreground bg-muted/30 border-border/30 line-clamp-3 rounded-lg border p-3 font-mono text-sm"
+							class="text-muted-foreground bg-muted/40 border-border line-clamp-3 rounded-md border p-3 font-mono text-sm"
 						>
 							{prompt.content}
 						</p>
-						{#if prompt.defaultModelId || prompt.defaultWebSearchMode}
-							<div class="text-muted-foreground mt-2 flex flex-wrap gap-2 text-xs">
+						{#if prompt.defaultModelId || prompt.defaultWebSearchMode || (prompt.appendMode && prompt.appendMode !== 'replace')}
+							<div class="text-muted-foreground flex flex-wrap gap-2 text-xs">
 								{#if prompt.defaultModelId}
-									<span class="bg-muted/50 rounded px-2 py-0.5">
+									<span class="bg-muted rounded px-2 py-0.5">
 										Model: {prompt.defaultModelId.split('/').pop()}
 									</span>
 								{/if}
 								{#if prompt.defaultWebSearchMode}
-									<span class="bg-muted/50 rounded px-2 py-0.5">
+									<span class="bg-muted rounded px-2 py-0.5">
 										Search: {prompt.defaultWebSearchMode}
 									</span>
 								{/if}
 								{#if prompt.appendMode && prompt.appendMode !== 'replace'}
-									<span class="bg-muted/50 rounded px-2 py-0.5">
+									<span class="bg-muted rounded px-2 py-0.5">
 										{prompt.appendMode === 'prepend' ? 'Prepends' : 'Appends'}
 									</span>
 								{/if}
 							</div>
 						{/if}
-					</Card.Content>
-				</Card.Root>
-			{/each}
-		</div>
-	{/if}
+					</div>
+				{/each}
+			</div>
+		{/if}
+	</section>
 </div>

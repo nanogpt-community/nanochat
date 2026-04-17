@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button';
-	import * as Card from '$lib/components/ui/card';
 	import { Input } from '$lib/components/ui/input';
 	import { toast } from 'svelte-sonner';
 	import KeyIcon from '~icons/lucide/key';
@@ -78,89 +77,94 @@
 	<title>Developer | nanochat</title>
 </svelte:head>
 
-<div>
-	<h1 class="text-2xl font-bold">Developer</h1>
-	<p class="text-muted-foreground mt-2 text-sm">
+<div class="flex flex-col gap-1">
+	<h1 class="text-2xl font-bold tracking-tight">Developer</h1>
+	<p class="text-muted-foreground text-sm">
 		Personal Access Tokens for API authentication. Use these keys with the
-		<code class="bg-muted rounded px-1">Authorization: Bearer &lt;KEY&gt;</code> header.
+		<code class="bg-muted rounded px-1 text-xs">Authorization: Bearer &lt;KEY&gt;</code> header.
 	</p>
 	<a
 		href={API_DOCS_URL}
 		target="_blank"
 		rel="noopener noreferrer"
-		class="text-primary hover:text-primary/80 mt-2 inline-flex items-center gap-1 text-sm font-medium underline-offset-4 hover:underline"
+		class="text-primary hover:text-primary/80 mt-1 inline-flex w-fit items-center gap-1 text-sm font-medium underline-offset-4 hover:underline"
 	>
 		View API Documentation
 		<ExternalLinkIcon class="size-4" />
 	</a>
 </div>
 
-<Card.Root class="mt-8">
-	<Card.Header>
-		<Card.Title>
-			<KeyIcon class="inline size-4" />
-			API Keys
-		</Card.Title>
-		<Card.Description>Generate and manage your personal access tokens.</Card.Description>
-	</Card.Header>
-	<Card.Content>
-		<!-- Create new key form -->
-		<div class="mb-6 flex gap-2">
-			<Input bind:value={newKeyName} placeholder="Key name (e.g., CLI Script)" class="flex-1" />
-			<Button onclick={createKey} disabled={creating || !newKeyName.trim()}>
-				<PlusIcon class="mr-1 size-4" />
-				Generate Key
-			</Button>
+<div class="mt-6 flex flex-col gap-6">
+	<!-- API Keys section -->
+	<section class="flex flex-col gap-3">
+		<div class="flex flex-col gap-0.5">
+			<h3 class="text-muted-foreground text-sm font-semibold tracking-wide uppercase">
+				Personal Access Tokens
+			</h3>
+			<p class="text-muted-foreground text-xs">Generate and manage your personal access tokens.</p>
 		</div>
 
-		<!-- Show newly created key (only visible once) -->
-		{#if newlyCreatedKey}
-			<div class="mb-6 rounded-lg border border-green-500 bg-green-500/10 p-4">
-				<p class="mb-2 text-sm font-medium text-green-600">
-					Key created! Copy it now - you won't be able to see it again.
-				</p>
-				<div class="flex items-center gap-2">
-					<code class="bg-muted flex-1 rounded p-2 font-mono text-sm">{newlyCreatedKey}</code>
-					<Button variant="outline" size="sm" onclick={() => copyKey(newlyCreatedKey!)}>
-						<CopyIcon class="size-4" />
-					</Button>
-				</div>
-				<Button variant="ghost" size="sm" class="mt-2" onclick={() => (newlyCreatedKey = null)}>
-					Dismiss
+		<div class="bg-card border-border flex flex-col gap-4 rounded-lg border p-5">
+			<div class="flex gap-2">
+				<Input bind:value={newKeyName} placeholder="Key name (e.g., CLI Script)" class="flex-1" />
+				<Button onclick={createKey} disabled={creating || !newKeyName.trim()}>
+					<PlusIcon class="mr-1 size-4" />
+					Generate Key
 				</Button>
 			</div>
-		{/if}
 
-		<!-- List of keys -->
-		{#if data.keys.length === 0}
-			<p class="text-muted-foreground text-center text-sm">No API keys yet.</p>
-		{:else}
-			<div class="space-y-3">
-				{#each data.keys as key (key.id)}
-					<div class="bg-muted/50 flex items-center justify-between rounded-lg p-3">
-						<div>
-							<p class="font-medium">{key.name}</p>
-							<p class="text-muted-foreground text-xs">
-								Created: {formatDate(key.createdAt)} • Last used: {formatDate(key.lastUsedAt)}
-							</p>
-						</div>
-						<Button variant="ghost" size="sm" onclick={() => deleteKey(key.id)}>
-							<TrashIcon class="size-4 text-red-500" />
+			{#if newlyCreatedKey}
+				<div class="rounded-lg border border-green-500/40 bg-green-500/10 p-4">
+					<p class="mb-2 text-sm font-medium text-green-700 dark:text-green-300">
+						Key created! Copy it now — you won't be able to see it again.
+					</p>
+					<div class="flex items-center gap-2">
+						<code class="bg-muted flex-1 rounded p-2 font-mono text-sm break-all">
+							{newlyCreatedKey}
+						</code>
+						<Button variant="outline" size="sm" onclick={() => copyKey(newlyCreatedKey!)}>
+							<CopyIcon class="size-4" />
 						</Button>
 					</div>
-				{/each}
-			</div>
-		{/if}
-	</Card.Content>
-</Card.Root>
+					<Button variant="ghost" size="sm" class="mt-2" onclick={() => (newlyCreatedKey = null)}>
+						Dismiss
+					</Button>
+				</div>
+			{/if}
 
-<!-- Usage example -->
-<Card.Root class="mt-4">
-	<Card.Header>
-		<Card.Title>Usage Example</Card.Title>
-	</Card.Header>
-	<Card.Content>
-		<pre class="bg-muted overflow-x-auto rounded-lg p-4 text-sm"><code
+			{#if data.keys.length === 0}
+				<div class="text-muted-foreground flex flex-col items-center gap-2 py-8 text-center">
+					<KeyIcon class="size-8 opacity-40" />
+					<p class="text-sm">No API keys yet.</p>
+				</div>
+			{:else}
+				<div class="divide-border border-border divide-y rounded-lg border">
+					{#each data.keys as key (key.id)}
+						<div class="flex items-center justify-between gap-4 p-4">
+							<div class="min-w-0 flex-1">
+								<p class="truncate font-medium">{key.name}</p>
+								<p class="text-muted-foreground text-xs">
+									Created {formatDate(key.createdAt)} · Last used {formatDate(key.lastUsedAt)}
+								</p>
+							</div>
+							<Button variant="ghost" size="sm" onclick={() => deleteKey(key.id)}>
+								<TrashIcon class="size-4 text-red-500" />
+							</Button>
+						</div>
+					{/each}
+				</div>
+			{/if}
+		</div>
+	</section>
+
+	<!-- Usage example -->
+	<section class="flex flex-col gap-3">
+		<div class="flex flex-col gap-0.5">
+			<h3 class="text-muted-foreground text-sm font-semibold tracking-wide uppercase">
+				Usage Example
+			</h3>
+		</div>
+		<pre class="bg-card border-border overflow-x-auto rounded-lg border p-4 text-sm"><code
 				>curl -X POST https://your-domain.com/api/generate-message \
   -H "Authorization: Bearer nc_your_api_key_here" \
   -H "Content-Type: application/json" \
@@ -169,5 +173,5 @@
     "model_id": "gpt-4o"
   {'}'}'</code
 			></pre>
-	</Card.Content>
-</Card.Root>
+	</section>
+</div>
