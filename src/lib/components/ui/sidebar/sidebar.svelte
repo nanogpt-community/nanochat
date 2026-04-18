@@ -42,7 +42,7 @@
 	const OPEN_THRESHOLD_X = 48; // how far right the finger must travel
 	const CANCEL_ANGLE = 1.2; // dy/dx ratio above which we treat it as a scroll
 
-	let gripEl: HTMLDivElement | undefined = $state();
+	let gripEl: HTMLButtonElement | undefined = $state();
 	let gesturing = $state(false);
 	let gestureStartX = 0;
 	let gestureStartY = 0;
