@@ -58,6 +58,7 @@
 {#if open}
 	<div
 		class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+		style="padding: max(0.5rem, env(safe-area-inset-top)) max(0.5rem, env(safe-area-inset-right)) max(0.5rem, env(safe-area-inset-bottom)) max(0.5rem, env(safe-area-inset-left));"
 		onclick={handleClose}
 		onkeydown={(e) => {
 			if (e.key === 'Enter' || e.key === ' ') handleClose();
@@ -69,16 +70,18 @@
 	>
 		<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 		<div
-			class="bg-background text-foreground mx-4 flex max-h-[90vh] max-w-4xl flex-col rounded-2xl border shadow-2xl"
+			class="bg-background text-foreground flex max-h-[100dvh] w-full max-w-4xl flex-col rounded-2xl border shadow-2xl sm:max-h-[90dvh]"
 			onclick={(e) => e.stopPropagation()}
 			onkeydown={(e) => e.stopPropagation()}
 			role="document"
 			tabindex="-1"
 		>
 			<!-- Header -->
-			<div class="flex items-center justify-between border-b p-4">
-				<h2 id="document-title" class="truncate text-lg font-semibold">{fileName}</h2>
-				<div class="flex items-center gap-2">
+			<div class="flex items-center justify-between gap-2 border-b p-3 sm:p-4">
+				<h2 id="document-title" class="min-w-0 flex-1 truncate text-base font-semibold sm:text-lg">
+					{fileName}
+				</h2>
+				<div class="flex shrink-0 items-center gap-1 sm:gap-2">
 					<Button variant="ghost" size="icon" onclick={handleDownload} title="Download">
 						<DownloadIcon class="size-4" />
 					</Button>
@@ -92,12 +95,15 @@
 			</div>
 
 			<!-- Content -->
-			<div class="flex-1 overflow-auto p-4">
+			<div class="scroll-momentum flex-1 overflow-auto overscroll-contain p-3 sm:p-4">
 				{#if fileType === 'pdf' && safeDocumentUrl}
-					<iframe src={safeDocumentUrl} class="h-[70vh] w-full rounded-lg border" title={fileName}
+					<iframe
+						src={safeDocumentUrl}
+						class="h-[60dvh] w-full rounded-lg border sm:h-[70vh]"
+						title={fileName}
 					></iframe>
 				{:else if fileType === 'markdown' || fileType === 'text'}
-					<div class="bg-muted rounded-lg border p-4">
+					<div class="bg-muted rounded-lg border p-3 sm:p-4">
 						<pre class="font-mono text-sm break-words whitespace-pre-wrap">{content}</pre>
 					</div>
 				{/if}

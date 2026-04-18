@@ -64,12 +64,16 @@
 		</div>
 	</div>
 
-	<div class="mt-2 flex items-center justify-center">
+	<div
+		class="mt-2 flex max-h-[75dvh] items-center justify-center overflow-auto sm:max-h-[60vh]"
+		style="touch-action: pinch-zoom;"
+	>
 		{#if safeImageUrl}
 			<img
 				src={safeImageUrl}
 				alt={fileName}
-				class="max-h-[60vh] max-w-full rounded-lg object-contain"
+				class="max-w-full rounded-lg object-contain"
+				draggable="false"
 			/>
 		{/if}
 	</div>

@@ -124,7 +124,10 @@
 	}
 </script>
 
-<div class="container mx-auto max-w-[1200px] px-4 pt-6 pb-24">
+<div
+	class="container mx-auto max-w-[1200px] px-4 pb-24"
+	style="padding-top: max(1.5rem, env(safe-area-inset-top)); padding-bottom: calc(6rem + env(safe-area-inset-bottom)); padding-left: max(1rem, env(safe-area-inset-left)); padding-right: max(1rem, env(safe-area-inset-right));"
+>
 	<header class="flex place-items-center justify-between">
 		<Button href={backToChat} variant="ghost" class="flex place-items-center gap-2 text-sm">
 			<ArrowLeftIcon class="size-4" />

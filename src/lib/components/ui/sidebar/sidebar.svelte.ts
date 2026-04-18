@@ -1,11 +1,16 @@
 import { IsMobile } from '$lib/hooks/is-mobile.svelte';
 import { Context } from 'runed';
+import { page } from '$app/state';
+import { browser } from '$app/environment';
+import { untrack } from 'svelte';
 
 const SIDEBAR_WIDTH_STORAGE_KEY = 'nanochat-sidebar-width';
 const SIDEBAR_OPEN_STORAGE_KEY = 'nanochat-sidebar-open';
 const DEFAULT_SIDEBAR_WIDTH = 280;
 const MIN_SIDEBAR_WIDTH = 200;
 const MAX_SIDEBAR_WIDTH = 460;
+/* Mobile drawer is sized relative to viewport so short screens still look right */
+const MOBILE_SIDEBAR_WIDTH = 320;
 
 function clampSidebarWidth(width: number): number {
 	const clampedWidth = Number.isFinite(width)
@@ -54,9 +59,42 @@ export class SidebarRootState {
 		$effect(() => {
 			this.persistOpen(this.open);
 		});
+
+		// Auto-close the mobile drawer whenever the user navigates to a new
+		// conversation. Without this, tapping a chat on mobile leaves the
+		// drawer covering the new conversation and the user has to close it
+		// manually every time. We only track the URL inputs here — the
+		// openMobile / isMobile reads are untracked so the effect doesn't
+		// retrigger the moment the user opens the drawer.
+		$effect(() => {
+			// Track these so the effect re-runs on navigation.
+			const _p = page.url.pathname;
+			const _s = page.url.search;
+			void _p;
+			void _s;
+			untrack(() => {
+				if (browser && this.isMobile.current && this.openMobile) {
+					this.openMobile = false;
+				}
+			});
+		});
+
+		// Close the mobile drawer on Escape key from anywhere.
+		$effect(() => {
+			if (!browser) return;
+			const handler = (e: KeyboardEvent) => {
+				if (e.key === 'Escape' && this.isMobile.current && this.openMobile) {
+					this.openMobile = false;
+				}
+			};
+			document.addEventListener('keydown', handler);
+			return () => document.removeEventListener('keydown', handler);
+		});
 	}
 
+	/** Effective drawer width. Mobile uses a viewport-aware size so it doesn't feel cramped. */
 	showSidebar = $derived(this.isMobile.current ? this.openMobile : this.open);
+	effectiveWidth = $derived(this.isMobile.current ? MOBILE_SIDEBAR_WIDTH : this.width);
 
 	persistWidth(width: number) {
 		if (typeof localStorage === 'undefined') return;
@@ -108,6 +146,10 @@ export class SidebarControlState {
 	constructor(readonly root: SidebarRootState) {
 		this.closeMobile = this.closeMobile.bind(this);
 		this.toggle = this.toggle.bind(this);
+	}
+
+	get isMobile() {
+		return this.root.isMobile.current;
 	}
 
 	closeMobile() {

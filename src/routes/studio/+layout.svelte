@@ -19,13 +19,50 @@
 <Sidebar.Root bind:open={sidebarOpen} class="bg-sidebar fill-device-height overflow-clip">
 	<AppSidebar bind:searchModalOpen />
 
-	<Sidebar.Inset class="relative fill-device-height overflow-y-auto">
+	<Sidebar.Inset class="relative fill-device-height overflow-clip">
+		<!-- Mobile header: fixed bar respecting iOS safe-area. The studio page's
+		     own wrapper reserves matching top padding so the composer-pinned-to-
+		     bottom layout continues to fill the viewport correctly. -->
+		<div
+			class="bg-background/85 border-border safe-area-pt safe-area-pl safe-area-pr fixed inset-x-0 top-0 z-40 flex items-center gap-2 border-b px-2 pb-2 backdrop-blur-lg md:hidden"
+		>
+			<Sidebar.Trigger class="tap-target flex size-10 items-center justify-center rounded-lg">
+				<PanelLeftIcon class="size-5" />
+			</Sidebar.Trigger>
+			<div class="min-w-0 flex-1 text-center">
+				<h1 class="truncate text-sm font-medium">Studio</h1>
+			</div>
+			<div class="flex items-center gap-1">
+				<DropdownMenu.Root>
+					<DropdownMenu.Trigger
+						class="tap-target hover:bg-secondary flex size-10 items-center justify-center rounded-lg transition-colors"
+						aria-label="Menu"
+					>
+						<EllipsisVerticalIcon class="size-5" />
+					</DropdownMenu.Trigger>
+					<DropdownMenu.Content align="end">
+						<DropdownMenu.Item onclick={() => (window.location.href = '/account')}>
+							<Settings2Icon class="mr-2 size-4" />
+							<span>Settings</span>
+						</DropdownMenu.Item>
+						<ThemeToggle
+							label="Theme"
+							wrapperClass="flex items-center justify-between px-2 py-1.5 text-sm"
+							variant="ghost"
+							class="size-6"
+						/>
+					</DropdownMenu.Content>
+				</DropdownMenu.Root>
+			</div>
+		</div>
+
 		{#if !sidebarOpen}
+			<!-- Desktop header - top left -->
 			<div
 				class={cn(
-					'bg-sidebar/50 fixed top-4 left-4 z-50 flex w-fit rounded-lg p-1 backdrop-blur-lg transition-all duration-300 ease-in-out',
+					'bg-sidebar/50 fixed top-4 left-4 z-50 hidden w-fit rounded-lg p-1 backdrop-blur-lg transition-all duration-300 ease-in-out md:flex',
 					{
-						'hidden md:flex': sidebarOpen,
+						'md:left-(--sidebar-width)': sidebarOpen,
 					}
 				)}
 			>
@@ -40,56 +77,28 @@
 			</div>
 		{/if}
 
-		{#if !sidebarOpen}
-			<div
-				class={cn(
-					'bg-sidebar/50 fixed top-4 right-4 z-50 flex rounded-lg p-1 backdrop-blur-lg',
-					{
-						'hidden md:flex': sidebarOpen,
-					}
-				)}
-			>
-				<div class="hidden items-center gap-1 md:flex">
-					<Tooltip>
-						{#snippet trigger(tooltip)}
-							<Button
-								variant="ghost"
-								size="icon"
-								class="size-8"
-								href="/account"
-								{...tooltip.trigger}
-							>
-								<Settings2Icon />
-							</Button>
-						{/snippet}
-						Settings
-					</Tooltip>
-					<ThemeToggle variant="ghost" class="size-8" />
-				</div>
-
-				<div class="flex items-center md:hidden">
-					<DropdownMenu.Root>
-						<DropdownMenu.Trigger
-							class="hover:bg-secondary/80 flex size-8 items-center justify-center rounded-lg transition-colors"
+		<!-- Desktop header - top right -->
+		<div
+			class="bg-sidebar/50 fixed top-4 right-4 z-50 hidden rounded-lg p-1 backdrop-blur-lg md:flex"
+		>
+			<div class="flex items-center gap-1">
+				<Tooltip>
+					{#snippet trigger(tooltip)}
+						<Button
+							variant="ghost"
+							size="icon"
+							class="size-8"
+							href="/account"
+							{...tooltip.trigger}
 						>
-							<EllipsisVerticalIcon class="size-5" />
-						</DropdownMenu.Trigger>
-						<DropdownMenu.Content align="end">
-							<DropdownMenu.Item onclick={() => (window.location.href = '/account')}>
-								<Settings2Icon class="mr-2 size-4" />
-								<span>Settings</span>
-							</DropdownMenu.Item>
-							<ThemeToggle
-								label="Theme"
-								wrapperClass="flex items-center justify-between px-2 py-1.5 text-sm"
-								variant="ghost"
-								class="size-6"
-							/>
-						</DropdownMenu.Content>
-					</DropdownMenu.Root>
-				</div>
+							<Settings2Icon />
+						</Button>
+					{/snippet}
+					Settings
+				</Tooltip>
+				<ThemeToggle variant="ghost" class="size-8" />
 			</div>
-		{/if}
+		</div>
 		<div class="fill-device-height flex flex-col">
 			{@render children()}
 		</div>

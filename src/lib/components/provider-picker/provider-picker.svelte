@@ -149,7 +149,7 @@
 				{#snippet trigger(tooltip)}
 					<div class="flex items-center gap-1.5" {...tooltip.trigger}>
 						<ServerIcon class="text-muted-foreground size-3.5" />
-						<span class="max-w-[80px] truncate">{currentProviderName}</span>
+						<span class="hidden max-w-[80px] truncate sm:inline">{currentProviderName}</span>
 						<ChevronDownIcon class="text-muted-foreground size-3" />
 					</div>
 				{/snippet}

@@ -227,27 +227,40 @@
 	});
 </script>
 
-<Sidebar.Sidebar class="flex flex-col overflow-clip p-2">
+<Sidebar.Sidebar class="safe-area-pt safe-area-pl flex flex-col overflow-clip p-2">
 	<div class="flex place-items-center justify-between py-2">
-		<div>
-			<Tooltip>
-				{#snippet trigger(tooltip)}
-					<Sidebar.Trigger {...tooltip.trigger}>
-						<PanelLeftIcon />
-					</Sidebar.Trigger>
-				{/snippet}
-				Toggle Sidebar ({cmdOrCtrl} + B)
-			</Tooltip>
-		</div>
-		<span class="text-center font-sans text-xl font-bold tracking-tight">nanochat</span>
-		<div class="size-9"></div>
+		{#if controls.isMobile}
+			<!-- Mobile: logo on left, close button on right. -->
+			<span class="pl-2 font-sans text-xl font-bold tracking-tight">nanochat</span>
+			<button
+				type="button"
+				class="hover:bg-sidebar-accent text-sidebar-foreground/70 hover:text-sidebar-foreground tap-target flex items-center justify-center rounded-lg transition-colors"
+				aria-label="Close sidebar"
+				onclick={controls.closeMobile}
+			>
+				<XIcon class="size-5" />
+			</button>
+		{:else}
+			<div>
+				<Tooltip>
+					{#snippet trigger(tooltip)}
+						<Sidebar.Trigger class="md:size-9" {...tooltip.trigger}>
+							<PanelLeftIcon />
+						</Sidebar.Trigger>
+					{/snippet}
+					Toggle Sidebar ({cmdOrCtrl} + B)
+				</Tooltip>
+			</div>
+			<span class="text-center font-sans text-xl font-bold tracking-tight">nanochat</span>
+			<div class="size-9"></div>
+		{/if}
 	</div>
 	<div class="mt-2 flex w-full flex-col gap-2 px-2">
 		<Tooltip>
 			{#snippet trigger(tooltip)}
 				<a
 					href="/chat"
-					class="bg-primary text-primary-foreground font-fake-proxima w-full rounded-lg px-4 py-3 text-center text-sm font-semibold tracking-[-0.01em] transition-all duration-200 hover:opacity-90"
+					class="bg-primary text-primary-foreground font-fake-proxima w-full rounded-lg px-4 py-3.5 text-center text-sm font-semibold tracking-[-0.01em] transition-all duration-200 hover:opacity-90 active:scale-[0.98] md:py-3"
 					{...tooltip.trigger}
 					onclick={controls.closeMobile}
 				>
@@ -257,32 +270,30 @@
 			New Chat ({cmdOrCtrl} + Shift + O)
 		</Tooltip>
 	</div>
-	<div class="mt-2 flex w-full flex-col gap-2 px-2">
+	<div class="mt-2 grid grid-cols-2 gap-2 px-2 md:flex md:flex-col">
 		<Tooltip>
 			{#snippet trigger(tooltip)}
 				<a
 					href="/studio"
-					class="bg-secondary text-secondary-foreground font-fake-proxima hover:bg-secondary/80 flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-semibold tracking-[-0.01em] transition-all duration-200"
+					class="bg-secondary text-secondary-foreground font-fake-proxima hover:bg-secondary/80 flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold tracking-[-0.01em] transition-all duration-200 active:scale-[0.98] md:py-3"
 					{...tooltip.trigger}
 					onclick={controls.closeMobile}
 				>
 					<ImageIcon class="size-4" />
-					Image Studio
+					<span class="truncate">Studio</span>
 				</a>
 			{/snippet}
 			Image Studio
 		</Tooltip>
-	</div>
-	<div class="mt-2 flex w-full flex-col gap-2 px-2">
 		<Tooltip>
 			{#snippet trigger(tooltip)}
 				<a
 					href="/gallery"
-					class="text-secondary-foreground/70 hover:text-secondary-foreground font-fake-proxima hover:bg-secondary/40 flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium tracking-[-0.01em] transition-all duration-200"
+					class="bg-secondary/40 text-secondary-foreground/80 hover:text-secondary-foreground font-fake-proxima hover:bg-secondary/60 flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium tracking-[-0.01em] transition-all duration-200 active:scale-[0.98] md:py-2"
 					{...tooltip.trigger}
 					onclick={controls.closeMobile}
 				>
-					My Stuff
+					<span class="truncate">My Stuff</span>
 				</a>
 			{/snippet}
 			My Stuff
@@ -291,7 +302,7 @@
 	<div class="mt-2 flex w-full flex-col gap-2 px-2">
 		<button
 			type="button"
-			class="text-muted-foreground/70 hover:text-foreground bg-secondary/20 hover:border-border flex items-center gap-2 rounded-lg border border-transparent px-3 py-2 text-sm transition-all"
+			class="text-muted-foreground/70 hover:text-foreground bg-secondary/20 hover:border-border flex items-center gap-2 rounded-lg border border-transparent px-3 py-2.5 text-sm transition-all md:py-2"
 			onclick={() => (searchModalOpen = true)}
 		>
 			<SearchIcon class="size-4" />
@@ -441,7 +452,7 @@
 		<div
 			class="from-sidebar pointer-events-none absolute top-0 right-0 left-0 z-10 h-4 bg-gradient-to-b to-transparent"
 		></div>
-		<div class="flex flex-1 flex-col overflow-y-auto py-2">
+		<div class="scroll-momentum flex flex-1 flex-col overflow-y-auto overscroll-contain py-2">
 			{#each templateConversations as group, index (group.key)}
 				{@const IconComponent = group.icon}
 				{#if group.conversations.length > 0}
@@ -469,7 +480,7 @@
 									}
 								)}
 							>
-								<div class="truncate rounded-lg py-2 pr-4 pl-3 whitespace-nowrap">
+								<div class="truncate rounded-lg py-2.5 pr-4 pl-3 whitespace-nowrap md:py-2">
 									{#if conversation.branchedFrom}
 										<Tooltip>
 											{#snippet trigger(tooltip)}
@@ -547,6 +558,8 @@
 									class={cn(
 										'pointer-events-none absolute inset-y-0.5 right-0 flex translate-x-full items-center gap-2 rounded-r-lg pr-2 pl-6 transition group-hover:pointer-events-auto group-hover:translate-0',
 										'to-sidebar-accent via-sidebar-accent bg-gradient-to-r from-transparent from-10% via-21% ',
+										// On touch devices there's no hover, so expose actions on the
+										// currently-active conversation row at minimum.
 										isActive && 'pointer-events-auto translate-x-0',
 									)}
 									class:hidden={editingConversationId === conversation.id}
@@ -712,5 +725,5 @@
 
 	<CreateProjectModal bind:open={createProjectModalOpen} />
 	<ProjectSettingsModal bind:open={projectSettingsOpen} bind:project={editingProject} />
-	<div class="h-safe-area-bottom"></div>
+	<div style="height: env(safe-area-inset-bottom);"></div>
 </Sidebar.Sidebar>

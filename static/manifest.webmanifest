@@ -1,0 +1,44 @@
+{
+	"name": "nanochat",
+	"short_name": "nanochat",
+	"description": "A fast, minimal, extensible AI chat UI.",
+	"start_url": "/chat",
+	"scope": "/",
+	"display": "standalone",
+	"orientation": "any",
+	"background_color": "#18161b",
+	"theme_color": "#18161b",
+	"categories": ["productivity", "utilities"],
+	"icons": [
+		{
+			"src": "/favicon.png",
+			"sizes": "192x192",
+			"type": "image/png",
+			"purpose": "any"
+		},
+		{
+			"src": "/favicon.png",
+			"sizes": "512x512",
+			"type": "image/png",
+			"purpose": "any maskable"
+		}
+	],
+	"shortcuts": [
+		{
+			"name": "New chat",
+			"short_name": "Chat",
+			"url": "/chat",
+			"icons": [{ "src": "/favicon.png", "sizes": "192x192" }]
+		},
+		{
+			"name": "Studio",
+			"short_name": "Studio",
+			"url": "/studio"
+		},
+		{
+			"name": "Gallery",
+			"short_name": "Gallery",
+			"url": "/gallery"
+		}
+	]
+}

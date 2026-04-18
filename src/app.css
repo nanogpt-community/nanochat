@@ -205,8 +205,61 @@
 
 @utility fill-device-height {
 	height: 100svh;
+	/* dvh reflects the *current* mobile viewport size (keyboard-aware); svh is a stable fallback */
+	height: 100dvh;
+}
 
-	/* min-height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom)); */
+/* Mobile-friendly min full height (prefers dvh so it reflows as the keyboard appears) */
+@utility min-fill-device-height {
+	min-height: 100svh;
+	min-height: 100dvh;
+}
+
+/* Safe-area padding utilities for notched devices (iOS, Android) */
+@utility safe-area-pb {
+	padding-bottom: env(safe-area-inset-bottom);
+}
+@utility safe-area-pt {
+	padding-top: env(safe-area-inset-top);
+}
+@utility safe-area-pl {
+	padding-left: env(safe-area-inset-left);
+}
+@utility safe-area-pr {
+	padding-right: env(safe-area-inset-right);
+}
+@utility safe-area-px {
+	padding-left: env(safe-area-inset-left);
+	padding-right: env(safe-area-inset-right);
+}
+@utility safe-area-py {
+	padding-top: env(safe-area-inset-top);
+	padding-bottom: env(safe-area-inset-bottom);
+}
+@utility safe-area-inset {
+	padding-top: env(safe-area-inset-top);
+	padding-right: env(safe-area-inset-right);
+	padding-bottom: env(safe-area-inset-bottom);
+	padding-left: env(safe-area-inset-left);
+}
+@utility safe-area-mb {
+	margin-bottom: env(safe-area-inset-bottom);
+}
+@utility safe-area-mt {
+	margin-top: env(safe-area-inset-top);
+}
+
+/* Ensures interactive element has at least the WCAG-recommended 44x44 tap target */
+@utility tap-target {
+	min-width: 44px;
+	min-height: 44px;
+}
+
+/* Lock body scroll when a mobile overlay is open */
+@utility no-body-scroll {
+	overflow: hidden;
+	touch-action: none;
+	overscroll-behavior: contain;
 }
 
 @layer base {
@@ -217,6 +270,9 @@
 	html {
 		/* Smaller base font on mobile for a compact feel */
 		font-size: 15px;
+		/* Prevent iOS text-size bump in landscape */
+		-webkit-text-size-adjust: 100%;
+		text-size-adjust: 100%;
 	}
 
 	@media (min-width: 768px) {
@@ -233,6 +289,21 @@
 
 	body {
 		@apply bg-background text-foreground fill-device-height w-full;
+		/* Reasonable mobile defaults */
+		-webkit-tap-highlight-color: transparent;
+		-webkit-font-smoothing: antialiased;
+		-moz-osx-font-smoothing: grayscale;
+		/* Prevent overscroll bounce stealing gestures from pinned panels */
+		overscroll-behavior-y: none;
+	}
+
+	/* Disable tap-flash only on real touch devices — keyboard users still need focus rings */
+	@media (hover: none) {
+		a,
+		button,
+		[role='button'] {
+			-webkit-tap-highlight-color: transparent;
+		}
 	}
 
 	/* Prevent iOS Safari auto-zoom on focus — triggered when font-size < 16px */
@@ -242,6 +313,43 @@
 		select {
 			font-size: 16px !important;
 		}
+	}
+
+	/* Make images/media inherently responsive */
+	img,
+	video,
+	canvas,
+	svg {
+		max-width: 100%;
+	}
+
+	/* Long-word wrapping so markdown content can't overflow on narrow screens.
+	   NB: we deliberately exclude <pre> blocks — code should stay on one line
+	   and scroll horizontally rather than wrap. */
+	p,
+	li,
+	h1,
+	h2,
+	h3,
+	h4,
+	h5,
+	h6 {
+		overflow-wrap: anywhere;
+		word-break: break-word;
+	}
+	/* Inline code (outside <pre>) wraps, but <pre><code> stays on one line. */
+	:not(pre) > code {
+		overflow-wrap: anywhere;
+		word-break: break-word;
+	}
+	pre {
+		overflow-x: auto;
+		max-width: 100%;
+	}
+
+	/* Only scrollable regions on mobile should use momentum scrolling */
+	.scroll-momentum {
+		-webkit-overflow-scrolling: touch;
 	}
 }
 
@@ -350,7 +458,10 @@
 	}
 
 	.modal-box {
-		@apply bg-background border-border col-start-1 row-start-1 max-h-screen w-11/12 max-w-[32rem] border p-6;
+		@apply bg-background border-border col-start-1 row-start-1 w-[calc(100%-1rem)] max-w-[32rem] border p-4 sm:w-11/12 sm:p-6;
+		max-height: calc(100dvh - 2rem);
+		/* Respect bottom safe area so the modal doesn't sit under a home indicator */
+		margin-bottom: env(safe-area-inset-bottom);
 		transition:
 			translate 0.3s ease-out,
 			scale 0.3s ease-out,
@@ -371,7 +482,7 @@
 
 		:where(.modal-box) {
 			@apply h-auto w-full max-w-none;
-			max-height: calc(100vh - 5em);
+			max-height: calc(100dvh - 5em);
 			translate: 0 -100%;
 			scale: 1;
 			--modal-tl: 0;
@@ -386,7 +497,7 @@
 
 		:where(.modal-box) {
 			@apply h-auto w-11/12 max-w-[32rem];
-			max-height: calc(100vh - 5em);
+			max-height: calc(100dvh - 5em);
 			translate: 0 2%;
 			scale: 98%;
 			--modal-tl: var(--radius-box);
@@ -401,7 +512,7 @@
 
 		:where(.modal-box) {
 			@apply h-auto w-full max-w-none;
-			max-height: calc(100vh - 5em);
+			max-height: calc(100dvh - 5em);
 			translate: 0 100%;
 			scale: 1;
 			--modal-tl: var(--radius-box);
@@ -529,10 +640,10 @@ pre:has(code) {
 
 pre button.copy {
 	position: absolute;
-	right: 12px;
-	top: 12px;
-	height: 32px;
-	width: 32px;
+	right: 8px;
+	top: 8px;
+	height: 40px;
+	width: 40px;
 	padding: 0;
 	display: flex;
 	align-items: center;
@@ -540,8 +651,17 @@ pre button.copy {
 	transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 	backdrop-filter: blur(8px);
 	-webkit-backdrop-filter: blur(8px);
+	/* Ensure comfortable tap target on touch devices */
+	touch-action: manipulation;
 
 	@apply bg-background/80 hover:bg-background border-border hover:border-border/60 hover:text-foreground rounded-md border shadow-sm hover:shadow-md;
+
+	@media (min-width: 768px) {
+		height: 32px;
+		width: 32px;
+		right: 12px;
+		top: 12px;
+	}
 
 	/* Improved hover and focus states */
 	&:hover {

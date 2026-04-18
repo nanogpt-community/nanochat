@@ -378,7 +378,9 @@
 {#if message.role !== 'system' && !(message.role === 'assistant' && safeContent.length === 0 && message.reasoning?.length === 0 && !message.error)}
 	<div
 		in:fly={{ y: 20, duration: 300, delay: message.role === 'assistant' ? 100 : 0 }}
-		class={cn('group flex flex-col gap-1', { 'max-w-[80%] self-end ': message.role === 'user' })}
+		class={cn('group flex min-w-0 flex-col gap-1', {
+			'max-w-[92%] self-end md:max-w-[80%]': message.role === 'user',
+		})}
 		{@attach (node) => {
 			return on(node, 'click', (e) => {
 				const el = e.target as HTMLElement;
@@ -589,7 +591,7 @@
 					<Button
 						size="icon"
 						variant="ghost"
-						class={cn('group order-2 size-7', { 'order-1': message.role === 'user' })}
+						class={cn('group order-2 size-9 md:size-7', { 'order-1': message.role === 'user' })}
 						onClickPromise={createBranchedConversation}
 						{...tooltip.trigger}
 					>
@@ -609,7 +611,7 @@
 						<Button
 							size="icon"
 							variant="ghost"
-							class={cn('group order-0 size-7')}
+							class={cn('group order-0 size-9 md:size-7')}
 							onclick={() => {
 								if (audioPlayer.isPlaying && audioPlayer.currentMessageId === message.id) {
 									audioPlayer.stop();
@@ -639,7 +641,7 @@
 						<Button
 							size="icon"
 							variant="ghost"
-							class="order-1 size-7"
+							class="order-1 size-9 md:size-7"
 							onclick={toggleStarred}
 							{...tooltip.trigger}
 						>
@@ -659,7 +661,7 @@
 				<Tooltip>
 					{#snippet trigger(tooltip)}
 						<CopyButton
-							class={cn('order-1 size-7', { 'order-2': message.role === 'user' })}
+							class={cn('order-1 size-9 md:size-7', { 'order-2': message.role === 'user' })}
 							text={safeContent}
 							onclick={() => logInteraction('copy')}
 							{...tooltip.trigger}
@@ -671,7 +673,7 @@
 			<DropdownMenu.Root>
 				<DropdownMenu.Trigger
 					class={cn(
-						'hover:bg-accent order-3 flex size-7 items-center justify-center rounded-md transition-colors',
+						'hover:bg-accent order-3 flex size-9 md:size-7 items-center justify-center rounded-md transition-colors',
 						{ 'order-3': message.role === 'user' }
 					)}
 				>

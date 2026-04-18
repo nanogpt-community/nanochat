@@ -404,7 +404,10 @@
 
 <!-- ==================== MOBILE LAYOUT ==================== -->
 {#if isMobile.current}
-	<div class="flex h-full flex-col">
+	<div
+		class="flex h-full flex-col"
+		style="padding-top: calc(3rem + env(safe-area-inset-top));"
+	>
 		<!-- Scrollable image results area -->
 		<div class="flex-1 overflow-y-auto">
 			{#if generations.length === 0 && !isGenerating}

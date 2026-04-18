@@ -284,7 +284,7 @@
 	const promptDockClass = $derived(
 		centerPromptInput
 			? 'top-1/2 -translate-y-1/2 pb-2'
-			: 'bottom-0 md:bottom-4 mt-auto pb-2 md:pb-0'
+			: 'bottom-0 md:bottom-4 mt-auto pb-[max(0.5rem,env(safe-area-inset-bottom))] md:pb-0'
 	);
 
 	// Import messages API to check for YouTube URLs
@@ -1177,7 +1177,6 @@
 
 <svelte:head>
 	<title>Chat | nanochat</title>
-	<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 </svelte:head>
 
 <svelte:window
@@ -1194,16 +1193,73 @@
 	<AppSidebar bind:searchModalOpen />
 
 	<Sidebar.Inset
-		class="bg-background md:border-border relative flex min-h-svh flex-1 flex-col overflow-clip transition-all duration-300 ease-in-out md:m-2 md:rounded-2xl md:border"
+		class="bg-background md:border-border min-fill-device-height relative flex flex-1 flex-col overflow-clip transition-all duration-300 ease-in-out md:m-2 md:rounded-2xl md:border"
 	>
+		<!-- Mobile header: a single sticky bar across the top that respects the iOS safe-area.
+		     Contains the sidebar trigger on the left, conversation title in the middle,
+		     and the overflow menu on the right. Desktop keeps the original floating buttons. -->
+		<div
+			class="bg-background/85 border-border safe-area-pt safe-area-pl safe-area-pr fixed inset-x-0 top-0 z-40 flex items-center gap-2 border-b px-2 pb-2 backdrop-blur-lg md:hidden"
+		>
+			<Sidebar.Trigger class="tap-target flex size-10 items-center justify-center rounded-lg">
+				<PanelLeftIcon class="size-5" />
+			</Sidebar.Trigger>
+			<div class="min-w-0 flex-1 text-center">
+				<h1 class="truncate text-sm font-medium">
+					{currentConversationQuery.data?.title ?? 'nanochat'}
+				</h1>
+			</div>
+			<div class="flex items-center gap-1">
+				<button
+					type="button"
+					onclick={openSearchModal}
+					class="tap-target hover:bg-secondary flex size-10 items-center justify-center rounded-lg transition-colors"
+					aria-label="Search"
+				>
+					<SearchIcon class="size-5" />
+				</button>
+				<DropdownMenu.Root>
+					<DropdownMenu.Trigger
+						class="tap-target hover:bg-secondary flex size-10 items-center justify-center rounded-lg transition-colors"
+						aria-label="Menu"
+					>
+						<EllipsisVerticalIcon class="size-5" />
+					</DropdownMenu.Trigger>
+					<DropdownMenu.Content align="end">
+						{#if page.params.id && currentConversationQuery.data}
+							<div class="flex flex-col gap-1 p-1">
+								<ExportButton
+									conversationId={page.params.id}
+									messages={safeRecentMessages}
+									conversation={currentConversationQuery.data}
+								/>
+								<ShareButton conversationId={page.params.id as Id<'conversations'>} />
+							</div>
+							<DropdownMenu.Separator />
+						{/if}
+						<DropdownMenu.Item onclick={() => goto('/account')}>
+							<Settings2Icon class="mr-2 size-4" />
+							<span>Settings</span>
+						</DropdownMenu.Item>
+						<ThemeToggle
+							label="Theme"
+							wrapperClass="flex items-center justify-between px-2 py-1.5 text-sm"
+							variant="ghost"
+							class="size-6"
+							settings={themeToggleSettings}
+						/>
+					</DropdownMenu.Content>
+				</DropdownMenu.Root>
+			</div>
+		</div>
+
 		{#if !sidebarOpen}
-			<!-- header - top left -->
+			<!-- Desktop header - top left -->
 			<div
 				class={cn(
-					'bg-sidebar/50 fixed top-4 left-4 z-50 flex w-fit rounded-lg p-1 backdrop-blur-lg transition-all duration-300 ease-in-out',
+					'bg-sidebar/50 fixed top-4 left-4 z-50 hidden w-fit rounded-lg p-1 backdrop-blur-lg transition-all duration-300 ease-in-out md:flex',
 					{
 						'md:left-(--sidebar-width)': sidebarOpen,
-						'hidden md:flex': sidebarOpen,
 					}
 				)}
 			>
@@ -1218,14 +1274,11 @@
 			</div>
 		{/if}
 
-		<!-- header - top right -->
-		<!-- header - top right -->
+		<!-- Desktop header - top right -->
 		<div
-			class={cn('bg-sidebar/50 fixed top-4 right-4 z-50 flex rounded-lg p-1 backdrop-blur-lg', {
-				'hidden md:flex': sidebarOpen,
-			})}
+			class="bg-sidebar/50 fixed top-4 right-4 z-50 hidden rounded-lg p-1 backdrop-blur-lg md:flex"
 		>
-			<div class="hidden items-center gap-1 md:flex">
+			<div class="flex items-center gap-1">
 				{#if page.params.id && currentConversationQuery.data}
 					<ExportButton
 						conversationId={page.params.id}
@@ -1259,50 +1312,16 @@
 				</Tooltip>
 				<ThemeToggle variant="ghost" class="size-8" settings={themeToggleSettings} />
 			</div>
-
-			<div class="flex items-center md:hidden">
-				<DropdownMenu.Root>
-					<DropdownMenu.Trigger
-						class="hover:bg-secondary/80 flex size-8 items-center justify-center rounded-lg transition-colors"
-					>
-						<EllipsisVerticalIcon class="size-5" />
-					</DropdownMenu.Trigger>
-					<DropdownMenu.Content align="end">
-						{#if page.params.id && currentConversationQuery.data}
-							<div class="flex flex-col gap-1 p-1">
-								<ExportButton
-									conversationId={page.params.id}
-									messages={safeRecentMessages}
-									conversation={currentConversationQuery.data}
-								/>
-								<ShareButton conversationId={page.params.id as Id<'conversations'>} />
-							</div>
-							<DropdownMenu.Separator />
-						{/if}
-						<DropdownMenu.Item onclick={openSearchModal}>
-							<SearchIcon class="mr-2 size-4" />
-							<span>Search</span>
-						</DropdownMenu.Item>
-						<DropdownMenu.Item onclick={() => goto('/account')}>
-							<Settings2Icon class="mr-2 size-4" />
-							<span>Settings</span>
-						</DropdownMenu.Item>
-						<ThemeToggle
-							label="Theme"
-							wrapperClass="flex items-center justify-between px-2 py-1.5 text-sm"
-							variant="ghost"
-							class="size-6"
-							settings={themeToggleSettings}
-						/>
-					</DropdownMenu.Content>
-				</DropdownMenu.Root>
-			</div>
 		</div>
 		<div class="relative">
-			<div bind:this={conversationList} class="fill-device-height overflow-y-auto">
+			<div
+				bind:this={conversationList}
+				class="fill-device-height scroll-momentum overflow-y-auto overscroll-contain"
+			>
 				<div
-					class={cn('mx-auto flex max-w-3xl flex-col px-2 md:px-0', {
-						'pt-12 md:pt-10': page.url.pathname !== '/chat',
+					class={cn('mx-auto flex max-w-3xl flex-col px-3 sm:px-4 md:px-0', {
+						'pt-[calc(3rem+env(safe-area-inset-top))] md:pt-10':
+							page.url.pathname !== '/chat',
 					})}
 					style="padding-bottom: {page.url.pathname !== '/chat' ? wrapperSize.height : 0}px;"
 				>
@@ -1334,11 +1353,28 @@
 
 			<div
 				class={cn(
-					'group safe-area-pb absolute right-0 left-0 mx-auto flex w-full max-w-3xl flex-col gap-1 px-2 md:px-4',
+					'group absolute right-0 left-0 mx-auto flex w-full max-w-3xl flex-col gap-1 px-2 md:px-4',
+					'pl-[max(0.5rem,env(safe-area-inset-left))] pr-[max(0.5rem,env(safe-area-inset-right))] md:pl-4 md:pr-4',
 					promptDockClass
 				)}
 				bind:this={textareaWrapper}
 			>
+				{#if error}
+					<div
+						in:fade={{ duration: 150 }}
+						class="mb-1 rounded-lg bg-red-500/50 px-3 py-1.5 text-sm text-red-100"
+					>
+						{error}
+					</div>
+				{/if}
+				{#if youtubeUrlDetected && !transcriptsEnabled}
+					<div
+						in:fade={{ duration: 150 }}
+						class="mb-1 rounded-lg bg-yellow-500/50 px-3 py-1.5 text-sm text-yellow-100"
+					>
+						YouTube transcripts are disabled. Enable in Settings to include video content.
+					</div>
+				{/if}
 				{#if settings.temporaryMode}
 					<div
 						class="mb-2 flex items-center justify-center gap-2 rounded-lg bg-orange-500/20 px-3 py-1.5 text-sm text-orange-500"
@@ -1348,7 +1384,7 @@
 					</div>
 				{/if}
 				<div
-					class="bg-secondary/40 border-border rounded-2xl border p-3 shadow-2xl backdrop-blur-xl"
+					class="bg-secondary/40 border-border rounded-2xl border p-2 shadow-2xl backdrop-blur-xl md:p-3"
 				>
 					<form
 						class="relative flex w-full flex-col items-stretch gap-2 transition-all duration-300 ease-in-out"
@@ -1357,28 +1393,6 @@
 							handleSubmit();
 						}}
 					>
-						{#if error}
-							<div
-								in:fade={{ duration: 150 }}
-								class="bg-background absolute top-0 left-0 -translate-y-12 rounded-lg"
-							>
-								<div class="rounded-lg bg-red-500/50 px-3 py-1 text-sm text-red-100">
-									{error}
-								</div>
-							</div>
-						{/if}
-						{#if youtubeUrlDetected && !transcriptsEnabled}
-							<div
-								in:fade={{ duration: 150 }}
-								class="bg-background absolute top-0 left-0 {error
-									? '-translate-y-20'
-									: '-translate-y-12'} rounded-lg"
-							>
-								<div class="rounded-lg bg-yellow-500/50 px-3 py-1 text-sm text-yellow-100">
-									YouTube transcripts are disabled. Enable in Settings to include video content.
-								</div>
-							</div>
-						{/if}
 						{#if suggestedRules}
 							<div
 								{...popover.content}
@@ -1549,9 +1563,9 @@
 											class="bg-secondary/50 hover:bg-secondary text-muted-foreground flex h-9 items-center justify-center rounded-lg px-2.5 transition-colors"
 											onlyImageModels={selectedImages.length > 0}
 										/>
-										<!-- Desktop only: Provider picker -->
+										<!-- Provider picker: visible on mobile + desktop when the model supports it -->
 										<ProviderPicker
-											class="bg-secondary/50 hover:bg-secondary text-muted-foreground hidden h-9 items-center justify-center rounded-lg px-1.5 transition-colors md:flex"
+											class="bg-secondary/50 hover:bg-secondary text-muted-foreground flex h-9 items-center justify-center rounded-lg px-1.5 transition-colors"
 											modelId={settings.modelId}
 										/>
 										<!-- Desktop only: Assistant picker -->
@@ -2084,7 +2098,10 @@
 	<PromptPicker bind:open={promptPickerOpen} onApply={handlePromptApply} />
 
 	{#snippet failed(error)}
-		<div class="text-destructive fixed right-4 bottom-24 z-50 rounded-lg bg-black/80 px-3 py-2 text-xs">
+		<div
+			class="text-destructive fixed right-4 z-50 rounded-lg bg-black/80 px-3 py-2 text-xs"
+			style="bottom: calc(6rem + env(safe-area-inset-bottom));"
+		>
 			Prompt picker failed: {error instanceof Error ? error.message : String(error)}
 		</div>
 	{/snippet}
