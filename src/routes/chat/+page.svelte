@@ -90,6 +90,10 @@
 		const providerParam = page.url.searchParams.get('model_provider');
 		const searchParam = page.url.searchParams.get('search');
 		const searchProviderParam = page.url.searchParams.get('search_provider');
+		const searchExaDepthParam = page.url.searchParams.get('search_exa_depth');
+		const searchContextSizeParam = page.url.searchParams.get('search_context_size');
+		const searchKagiSourceParam = page.url.searchParams.get('search_kagi_source');
+		const searchValyuSearchTypeParam = page.url.searchParams.get('search_valyu_search_type');
 
 		untrack(() => {
 			if (urlQuery && prompt.current === '') {
@@ -100,7 +104,13 @@
 				settings.modelId = modelParam;
 			}
 
-			if (providerParam && settings.providerId !== providerParam) {
+			if (providerParam === 'auto' && settings.providerId !== undefined) {
+				settings.providerId = undefined;
+			} else if (
+				providerParam &&
+				providerParam !== 'auto' &&
+				settings.providerId !== providerParam
+			) {
 				settings.providerId = providerParam;
 			}
 
@@ -127,17 +137,48 @@
 				].includes(searchProviderParam) &&
 				settings.webSearchProvider !== searchProviderParam
 			) {
-				settings.webSearchProvider =
-					searchProviderParam as
-						| 'linkup'
-						| 'tavily'
-						| 'exa'
-						| 'kagi'
-						| 'perplexity'
-						| 'valyu'
-						| 'brave'
-						| 'brave-pro'
-						| 'brave-research';
+				settings.webSearchProvider = searchProviderParam as
+					| 'linkup'
+					| 'tavily'
+					| 'exa'
+					| 'kagi'
+					| 'perplexity'
+					| 'valyu'
+					| 'brave'
+					| 'brave-pro'
+					| 'brave-research';
+			}
+
+			if (
+				searchExaDepthParam &&
+				['fast', 'auto', 'neural', 'deep'].includes(searchExaDepthParam) &&
+				settings.webSearchExaDepth !== searchExaDepthParam
+			) {
+				settings.webSearchExaDepth = searchExaDepthParam as 'fast' | 'auto' | 'neural' | 'deep';
+			}
+
+			if (
+				searchContextSizeParam &&
+				['low', 'medium', 'high'].includes(searchContextSizeParam) &&
+				settings.webSearchContextSize !== searchContextSizeParam
+			) {
+				settings.webSearchContextSize = searchContextSizeParam as 'low' | 'medium' | 'high';
+			}
+
+			if (
+				searchKagiSourceParam &&
+				['web', 'news', 'search'].includes(searchKagiSourceParam) &&
+				settings.webSearchKagiSource !== searchKagiSourceParam
+			) {
+				settings.webSearchKagiSource = searchKagiSourceParam as 'web' | 'news' | 'search';
+			}
+
+			if (
+				searchValyuSearchTypeParam &&
+				['all', 'web'].includes(searchValyuSearchTypeParam) &&
+				settings.webSearchValyuSearchType !== searchValyuSearchTypeParam
+			) {
+				settings.webSearchValyuSearchType = searchValyuSearchTypeParam as 'all' | 'web';
 			}
 		});
 	});
@@ -199,10 +240,7 @@
 				</div>
 			</div>
 		{:else if showNoKeyState}
-			<div
-				class="w-full max-w-2xl px-4 py-12 text-center"
-				in:scale={{ duration: 500, start: 0.9 }}
-			>
+			<div class="w-full max-w-2xl px-4 py-12 text-center" in:scale={{ duration: 500, start: 0.9 }}>
 				<h1 class="mb-4 font-sans text-4xl font-bold tracking-tight">How can I help you?</h1>
 				<p class="text-muted-foreground mb-8 text-lg">
 					You can send some free messages, or provide a key for limitless access.

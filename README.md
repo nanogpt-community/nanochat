@@ -175,14 +175,18 @@ Generate videos using NanoGPT's video models:
 
 You can use URL parameters to pre-configure your chat session. This is useful for creating bookmarks or "bang" style shortcuts (e.g. in your browser).
 
-| Parameter         | Description                                              | Example                      |
-| ----------------- | -------------------------------------------------------- | ---------------------------- |
-| `q`               | Pre-fills the chat input                                 | `?q=Explain quantum physics` |
-| `model`           | Selects the AI model                                     | `?model=zai-org/glm-4.7`     |
-| `model_provider`  | Selects the provider for the model (NanoGPT)             | `?model_provider=cerebras`   |
-| `search`          | Sets web search mode (`off`, `standard`, `deep`)         | `?search=deep`               |
-| `search_provider` | Sets search provider (`linkup`, `tavily`, `exa`, `kagi`) | `?search_provider=linkup`    |
-| `projectId`       | Contextualizes chat with a specific Project              | `?projectId=123`             |
+| Parameter                  | Description                                                                                  | Example                           |
+| -------------------------- | -------------------------------------------------------------------------------------------- | --------------------------------- |
+| `q`                        | Pre-fills the chat input                                                                     | `?q=Explain quantum physics`      |
+| `model`                    | Selects the AI model                                                                         | `?model=zai-org/glm-4.7`          |
+| `model_provider`           | Selects the provider for the model, or clears to auto with `auto`                            | `?model_provider=cerebras`        |
+| `search`                   | Sets web search mode (`off`, `standard`, `deep`)                                             | `?search=deep`                    |
+| `search_provider`          | Sets search provider (`linkup`, `tavily`, `exa`, `kagi`, `perplexity`, `valyu`, Brave modes) | `?search_provider=brave-research` |
+| `search_context_size`      | Sets shared search context size (`low`, `medium`, `high`)                                    | `?search_context_size=high`       |
+| `search_exa_depth`         | Sets Exa depth (`fast`, `auto`, `neural`, `deep`)                                            | `?search_exa_depth=neural`        |
+| `search_kagi_source`       | Sets Kagi source (`web`, `news`, `search`)                                                   | `?search_kagi_source=news`        |
+| `search_valyu_search_type` | Sets Valyu search type (`all`, `web`)                                                        | `?search_valyu_search_type=web`   |
+| `projectId`                | Contextualizes chat with a specific Project                                                  | `?projectId=123`                  |
 
 **Example "Bang" URL:**
 `https://nanochat.app/chat?model=zai-org/glm-5.1&search=deep&q=%s`
@@ -195,15 +199,15 @@ You can use URL parameters to pre-configure your chat session. This is useful fo
 
 ## Environment Variables
 
-| Variable                      | Description                                                                                           |
-| ----------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `DATABASE_URL`                | SQLite database path (default: ./data/nanochat.db)                                                    |
-| `NANOGPT_API_KEY`             | Nano-GPT API key for generation                                                                       |
-| `BETTER_AUTH_SECRET`          | Authentication secret                                                                                 |
-| `BETTER_AUTH_URL`             | Base URL for authentication                                                                           |
-| `ARTIFICIAL_ANALYSIS_API_KEY` | (Optional) API key for model benchmarks from artificialanalysis.ai                                    |
+| Variable                      | Description                                                                                                           |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                | SQLite database path (default: ./data/nanochat.db)                                                                    |
+| `NANOGPT_API_KEY`             | Nano-GPT API key for generation                                                                                       |
+| `BETTER_AUTH_SECRET`          | Authentication secret                                                                                                 |
+| `BETTER_AUTH_URL`             | Base URL for authentication                                                                                           |
+| `ARTIFICIAL_ANALYSIS_API_KEY` | (Optional) API key for model benchmarks from artificialanalysis.ai                                                    |
 | `API_KEY_HASH_SECRET`         | (Optional) Dedicated secret for developer API key lookup hashes; defaults to `ENCRYPTION_KEY` or `BETTER_AUTH_SECRET` |
-| `ENCRYPTION_KEY`              | Encryption key for API keys and other stored secrets at rest. Generate with `openssl rand -base64 32` |
+| `ENCRYPTION_KEY`              | Encryption key for API keys and other stored secrets at rest. Generate with `openssl rand -base64 32`                 |
 
 ### API Key Encryption
 
