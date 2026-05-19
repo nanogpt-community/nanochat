@@ -1623,7 +1623,10 @@
 														</span>
 														<ChevronDownIcon class="size-3 opacity-50" />
 													</DropdownMenu.Trigger>
-													<DropdownMenu.Content align="start" class="w-56">
+													<DropdownMenu.Content
+														align="start"
+														class="max-h-[min(var(--bits-dropdown-menu-content-available-height),20rem)] w-56"
+													>
 														<DropdownMenu.Label>Search Mode</DropdownMenu.Label>
 														<DropdownMenu.RadioGroup bind:value={settings.webSearchMode}>
 															<DropdownMenu.RadioItem value="off">Off</DropdownMenu.RadioItem>
