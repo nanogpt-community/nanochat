@@ -156,7 +156,7 @@ export async function createBranchedConversation(
 		updatedAt: now,
 	});
 
-	// Copy messages one at a time to avoid batching issues
+	// Preserve original timestamps so the copied branch keeps the same message order.
 	for (const msg of messagesToCopy) {
 		const contentHtml = msg.contentHtml === null ? null : sanitizeHtml(msg.contentHtml);
 		await db.insert(messages).values({
@@ -174,7 +174,7 @@ export async function createBranchedConversation(
 			webSearchEnabled: msg.webSearchEnabled,
 			reasoningEffort: msg.reasoningEffort,
 			annotations: msg.annotations,
-			createdAt: now,
+			createdAt: msg.createdAt ?? now,
 		});
 	}
 

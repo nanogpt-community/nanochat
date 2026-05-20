@@ -63,7 +63,7 @@
 		onlyImageModels?: boolean;
 	};
 
-	let { class: className }: Props = $props();
+	let { class: className, onlyImageModels = false }: Props = $props();
 
 	const enabledModelsQuery = useCachedQuery(api.user_enabled_models.get_enabled, {});
 
@@ -91,29 +91,35 @@
 	});
 
 	const enrichedEnabledModels = $derived.by(() =>
-		enabledArr.map((model) => {
+		enabledArr.flatMap((model) => {
 			const nanoModel = nanoGPTModelById.get(model.modelId);
+			if (!nanoModel) return [];
+
 			const providerIconKey = getProviderIconKey(nanoModel?.icon_url, model.modelId);
-			const hasVision = !!(nanoModel && supportsVision(nanoModel));
-			const hasReasoning = !!(nanoModel && supportsReasoning(nanoModel));
-			const isImageOnly = !!(nanoModel && isImageOnlyModel(nanoModel));
-			const hasVideo = !!(nanoModel && supportsVideo(nanoModel));
+			const hasVision = supportsVision(nanoModel);
+			const hasReasoning = supportsReasoning(nanoModel);
+			const isImageOnly = isImageOnlyModel(nanoModel);
+			const hasVideo = supportsVideo(nanoModel);
 			const formattedModelName = formatModelName(model.modelId);
 
-			return {
-				...model,
-				nanoModel,
-				providerIconKey,
-				providerIconUrl: getIconUrl(providerIconKey, model.modelId),
-				capabilities: {
-					vision: hasVision,
-					reasoning: hasReasoning,
-					imageOnly: isImageOnly,
-					video: hasVideo,
+			return [
+				{
+					...model,
+					nanoModel,
+					providerIconKey,
+					providerIconUrl: getIconUrl(providerIconKey, model.modelId),
+					capabilities: {
+						vision: hasVision,
+						reasoning: hasReasoning,
+						imageOnly: isImageOnly,
+						video: hasVideo,
+					},
+					formattedModelName,
+					searchText: [model.modelId, nanoModel.name, formattedModelName.full]
+						.filter(Boolean)
+						.join(' '),
 				},
-				formattedModelName,
-				searchText: [model.modelId, nanoModel?.name, formattedModelName.full].filter(Boolean).join(' '),
-			};
+			];
 		})
 	);
 
@@ -147,13 +153,16 @@
 	});
 
 	const filteredModels = $derived.by(() => {
+		const candidateModels = onlyImageModels
+			? enrichedEnabledModels.filter((model) => model.capabilities.vision)
+			: enrichedEnabledModels;
 		const models = search
 			? fuzzysearch({
-					haystack: enrichedEnabledModels,
+					haystack: candidateModels,
 					needle: search,
 					property: 'searchText',
 				})
-			: enrichedEnabledModels;
+			: candidateModels;
 
 		return models
 			.filter((model) => {
@@ -716,7 +725,7 @@
 			<!-- Drag handle area (touch gestures only here) -->
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div
-				class="border-border flex touch-none cursor-grab items-center justify-center border-b p-3 active:cursor-grabbing"
+				class="border-border flex cursor-grab touch-none items-center justify-center border-b p-3 active:cursor-grabbing"
 				ontouchstart={(e) => {
 					touchStartY = e.touches[0]?.clientY ?? 0;
 					isDragging = true;

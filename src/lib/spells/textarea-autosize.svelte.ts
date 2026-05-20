@@ -122,7 +122,7 @@ export class TextareaAutosize {
 		});
 
 		// Ensure the width matches exactly
-		this.#hiddenTextarea.style.width = `${this.element.clientWidth} px`;
+		this.#hiddenTextarea.style.width = `${this.element.clientWidth}px`;
 	}
 
 	triggerResize = () => {
@@ -147,7 +147,7 @@ export class TextareaAutosize {
 		// Only update if height actually changed
 		if (this.textareaHeight !== newHeight) {
 			this.textareaHeight = newHeight;
-			this.element.style[this.styleProp] = `${newHeight} px`;
+			this.element.style[this.styleProp] = `${newHeight}px`;
 		}
 	};
 
@@ -178,7 +178,7 @@ export class TextareaAutosize {
 				removeListener();
 				this.#input = '';
 				this.element = undefined;
-			}
+			},
 		};
 	};
 }

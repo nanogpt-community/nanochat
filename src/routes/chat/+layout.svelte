@@ -222,14 +222,17 @@
 			} else {
 				console.log('Generation cancelled:', result.value.cancelled);
 				activeGeneration.clear(page.params.id);
-				setCachedQueryData<Conversation>(api.conversations.getById, { id: page.params.id }, (current) =>
-					current
-						? {
-								...current,
-								generating: false,
-								updatedAt: new Date(),
-							}
-						: current
+				setCachedQueryData<Conversation>(
+					api.conversations.getById,
+					{ id: page.params.id },
+					(current) =>
+						current
+							? {
+									...current,
+									generating: false,
+									updatedAt: new Date(),
+								}
+							: current
 				);
 				invalidateQueryPattern(api.messages.getAllFromConversation.url);
 				invalidateQueryPattern(api.conversations.get.url);
@@ -445,7 +448,9 @@
 					: undefined,
 			temporary: settings.temporaryMode || undefined,
 			image_params:
-				currentModelSupportsImageGen && Object.keys(imageParams).length > 0 ? imageParams : undefined,
+				currentModelSupportsImageGen && Object.keys(imageParams).length > 0
+					? imageParams
+					: undefined,
 		} as const;
 
 		message.current = '';
@@ -1320,8 +1325,7 @@
 			>
 				<div
 					class={cn('mx-auto flex max-w-3xl flex-col px-3 sm:px-4 md:px-0', {
-						'pt-[calc(3rem+env(safe-area-inset-top))] md:pt-10':
-							page.url.pathname !== '/chat',
+						'pt-[calc(3rem+env(safe-area-inset-top))] md:pt-10': page.url.pathname !== '/chat',
 					})}
 					style="padding-bottom: {page.url.pathname !== '/chat' ? wrapperSize.height : 0}px;"
 				>
@@ -1354,7 +1358,7 @@
 			<div
 				class={cn(
 					'group absolute right-0 left-0 mx-auto flex w-full max-w-3xl flex-col gap-1 px-2 md:px-4',
-					'pl-[max(0.5rem,env(safe-area-inset-left))] pr-[max(0.5rem,env(safe-area-inset-right))] md:pl-4 md:pr-4',
+					'pr-[max(0.5rem,env(safe-area-inset-right))] pl-[max(0.5rem,env(safe-area-inset-left))] md:pr-4 md:pl-4',
 					promptDockClass
 				)}
 				bind:this={textareaWrapper}
@@ -1513,13 +1517,18 @@
 									onfocus={popover.trigger.onfocus}
 									bind:this={textarea}
 									disabled={textareaDisabled}
-									class="text-foreground placeholder:text-muted-foreground/40 max-h-64 min-h-[48px] w-full resize-none !overflow-y-auto bg-transparent px-4 py-3 text-base leading-relaxed outline-none disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-[56px]"
+									class="text-foreground placeholder:text-muted-foreground/40 max-h-64 min-h-[48px] w-full resize-y !overflow-y-auto bg-transparent px-4 py-3 text-base leading-relaxed outline-none disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-[56px]"
 									placeholder={isGenerating
 										? 'Generating response...'
 										: 'Type your message here...'}
 									name="message"
 									onkeydown={(e) => {
-										if (e.key === 'Enter' && !e.shiftKey && !popover.open && !isMobileDevice.current) {
+										if (
+											e.key === 'Enter' &&
+											!e.shiftKey &&
+											!popover.open &&
+											!isMobileDevice.current
+										) {
 											e.preventDefault();
 											handleSubmit();
 										}
@@ -1636,8 +1645,7 @@
 																>
 															</DropdownMenu.RadioItem>
 															<DropdownMenu.RadioItem value="deep">
-																Deep <span class="text-muted-foreground ml-auto text-xs"
-																	>$0.06</span
+																Deep <span class="text-muted-foreground ml-auto text-xs">$0.06</span
 																>
 															</DropdownMenu.RadioItem>
 														</DropdownMenu.RadioGroup>
@@ -1657,12 +1665,8 @@
 																<DropdownMenu.RadioItem value="perplexity"
 																	>Perplexity</DropdownMenu.RadioItem
 																>
-																<DropdownMenu.RadioItem value="valyu"
-																	>Valyu</DropdownMenu.RadioItem
-																>
-																<DropdownMenu.RadioItem value="brave"
-																	>Brave</DropdownMenu.RadioItem
-																>
+																<DropdownMenu.RadioItem value="valyu">Valyu</DropdownMenu.RadioItem>
+																<DropdownMenu.RadioItem value="brave">Brave</DropdownMenu.RadioItem>
 																<DropdownMenu.RadioItem value="brave-pro"
 																	>Brave Pro</DropdownMenu.RadioItem
 																>
@@ -1675,18 +1679,12 @@
 																<DropdownMenu.Separator />
 																<DropdownMenu.Label>Exa Depth</DropdownMenu.Label>
 																<DropdownMenu.RadioGroup bind:value={settings.webSearchExaDepth}>
-																	<DropdownMenu.RadioItem value="fast"
-																		>Fast</DropdownMenu.RadioItem
-																	>
-																	<DropdownMenu.RadioItem value="auto"
-																		>Auto</DropdownMenu.RadioItem
-																	>
+																	<DropdownMenu.RadioItem value="fast">Fast</DropdownMenu.RadioItem>
+																	<DropdownMenu.RadioItem value="auto">Auto</DropdownMenu.RadioItem>
 																	<DropdownMenu.RadioItem value="neural"
 																		>Neural</DropdownMenu.RadioItem
 																	>
-																	<DropdownMenu.RadioItem value="deep"
-																		>Deep</DropdownMenu.RadioItem
-																	>
+																	<DropdownMenu.RadioItem value="deep">Deep</DropdownMenu.RadioItem>
 																</DropdownMenu.RadioGroup>
 															{/if}
 
@@ -1694,12 +1692,8 @@
 																<DropdownMenu.Separator />
 																<DropdownMenu.Label>Kagi Source</DropdownMenu.Label>
 																<DropdownMenu.RadioGroup bind:value={settings.webSearchKagiSource}>
-																	<DropdownMenu.RadioItem value="web"
-																		>Web</DropdownMenu.RadioItem
-																	>
-																	<DropdownMenu.RadioItem value="news"
-																		>News</DropdownMenu.RadioItem
-																	>
+																	<DropdownMenu.RadioItem value="web">Web</DropdownMenu.RadioItem>
+																	<DropdownMenu.RadioItem value="news">News</DropdownMenu.RadioItem>
 																	<DropdownMenu.RadioItem value="search"
 																		>Search</DropdownMenu.RadioItem
 																	>
@@ -1724,15 +1718,11 @@
 															<DropdownMenu.Separator />
 															<DropdownMenu.Label>Context Size</DropdownMenu.Label>
 															<DropdownMenu.RadioGroup bind:value={settings.webSearchContextSize}>
-																<DropdownMenu.RadioItem value="low"
-																	>Low</DropdownMenu.RadioItem
-																>
+																<DropdownMenu.RadioItem value="low">Low</DropdownMenu.RadioItem>
 																<DropdownMenu.RadioItem value="medium"
 																	>Medium</DropdownMenu.RadioItem
 																>
-																<DropdownMenu.RadioItem value="high"
-																	>High</DropdownMenu.RadioItem
-																>
+																<DropdownMenu.RadioItem value="high">High</DropdownMenu.RadioItem>
 															</DropdownMenu.RadioGroup>
 														{/if}
 													</DropdownMenu.Content>
@@ -1767,7 +1757,8 @@
 															type="button"
 															class={cn(
 																'bg-secondary/50 hover:bg-secondary text-muted-foreground relative flex size-8 items-center justify-center rounded-lg transition-colors',
-																settings.reasoningEffort === 'medium' && 'bg-primary/20 text-primary',
+																settings.reasoningEffort === 'medium' &&
+																	'bg-primary/20 text-primary',
 																settings.reasoningEffort === 'high' &&
 																	'bg-amber-500/20 text-amber-500'
 															)}
@@ -1876,167 +1867,168 @@
 										</div>
 										<!-- Mobile: Essential buttons only -->
 										<div class="flex items-center gap-1 md:hidden">
-										{#if currentModelSupportsImages || currentModelSupportsDocuments}
+											{#if currentModelSupportsImages || currentModelSupportsDocuments}
+												<button
+													type="button"
+													class="bg-secondary/50 hover:bg-secondary text-muted-foreground flex size-9 items-center justify-center rounded-lg transition-colors disabled:opacity-50"
+													onclick={() => fileInput?.click()}
+													disabled={isUploading}
+												>
+													{#if isUploading}
+														<div
+															class="size-4 animate-spin rounded-full border-2 border-current border-t-transparent"
+														></div>
+													{:else}
+														<PaperclipIcon class="size-4" />
+													{/if}
+												</button>
+											{/if}
 											<button
 												type="button"
-												class="bg-secondary/50 hover:bg-secondary text-muted-foreground flex size-9 items-center justify-center rounded-lg transition-colors disabled:opacity-50"
-												onclick={() => fileInput?.click()}
-												disabled={isUploading}
+												class={cn(
+													'bg-secondary/50 hover:bg-secondary text-muted-foreground flex size-9 items-center justify-center rounded-lg transition-colors',
+													(audioRecorder.isRecording || audioRecorder.isProcessing) &&
+														'animate-pulse bg-red-500/20 text-red-500'
+												)}
+												onclick={toggleRecording}
 											>
-												{#if isUploading}
+												{#if audioRecorder.isProcessing}
 													<div
 														class="size-4 animate-spin rounded-full border-2 border-current border-t-transparent"
 													></div>
+												{:else if audioRecorder.isRecording}
+													<StopIcon class="size-4" />
 												{:else}
-													<PaperclipIcon class="size-4" />
+													<MicIcon class="size-4" />
 												{/if}
 											</button>
-										{/if}
-										<button
-											type="button"
-											class={cn(
-												'bg-secondary/50 hover:bg-secondary text-muted-foreground flex size-9 items-center justify-center rounded-lg transition-colors',
-												(audioRecorder.isRecording || audioRecorder.isProcessing) &&
-													'animate-pulse bg-red-500/20 text-red-500'
-											)}
-											onclick={toggleRecording}
-										>
-											{#if audioRecorder.isProcessing}
-												<div
-													class="size-4 animate-spin rounded-full border-2 border-current border-t-transparent"
-												></div>
-											{:else if audioRecorder.isRecording}
-												<StopIcon class="size-4" />
-											{:else}
-												<MicIcon class="size-4" />
-											{/if}
-										</button>
-										<!-- Mobile More menu -->
-										<DropdownMenu.Root>
-											<DropdownMenu.Trigger
-												class={cn(
-													'bg-secondary/50 hover:bg-secondary text-muted-foreground relative flex size-9 items-center justify-center rounded-lg transition-colors',
-													(settings.webSearchMode !== 'off' ||
-														(currentModelSupportsReasoning &&
-															currentModelSupportsVerbosity &&
-															settings.reasoningEffort !== 'low') ||
-														settings.temporaryMode) &&
-														'bg-primary/20 text-primary'
-												)}
-											>
-												<EllipsisVerticalIcon class="size-4" />
-												{#if settings.webSearchMode !== 'off' || (currentModelSupportsReasoning && currentModelSupportsVerbosity && settings.reasoningEffort !== 'low') || settings.temporaryMode}
-													<span class="bg-primary absolute -top-0.5 -right-0.5 size-2 rounded-full"
-													></span>
-												{/if}
-											</DropdownMenu.Trigger>
-											<DropdownMenu.Content align="end">
-												{#if safeAssistants.length > 0}
-													<DropdownMenu.Sub>
-														<DropdownMenu.SubTrigger>
-															<BotIcon class="mr-2 size-4" />
-															{selectedAssistant?.name ?? 'Assistant'}
-														</DropdownMenu.SubTrigger>
-														<DropdownMenu.SubContent>
-															{#each safeAssistants as assistant (assistant.id)}
-																<DropdownMenu.CheckboxItem
-																	checked={selectedAssistantId.current === assistant.id}
-																	onclick={() => (selectedAssistantId.current = assistant.id)}
-																>
-																	{assistant.name}
-																</DropdownMenu.CheckboxItem>
-															{/each}
-														</DropdownMenu.SubContent>
-													</DropdownMenu.Sub>
-													<DropdownMenu.Separator />
-												{/if}
-												{#if !restrictions?.webDisabled}
-													<DropdownMenu.Item
-														onclick={() => {
-															if (settings.webSearchMode === 'off')
-																settings.webSearchMode = 'standard';
-															else if (settings.webSearchMode === 'standard')
-																settings.webSearchMode = 'deep';
-															else settings.webSearchMode = 'off';
-														}}
-													>
-														<SearchIcon
-															class={cn('mr-2 size-4', {
-																'text-primary': settings.webSearchMode === 'standard',
-																'text-amber-500': settings.webSearchMode === 'deep',
-															})}
-														/>
-														Web Search: {settings.webSearchMode === 'off'
-															? 'Off'
-															: settings.webSearchMode === 'standard'
-																? 'Standard'
-																: 'Deep'}
-													</DropdownMenu.Item>
-												{/if}
-												{#if currentModelSupportsReasoning && currentModelSupportsVerbosity}
-													<DropdownMenu.Item
-														onclick={() => {
-															if (settings.reasoningEffort === 'low')
-																settings.reasoningEffort = 'medium';
-															else if (settings.reasoningEffort === 'medium')
-																settings.reasoningEffort = 'high';
-															else settings.reasoningEffort = 'low';
-														}}
-													>
-														<BrainIcon
-															class={cn('mr-2 size-4', {
-																'text-primary': settings.reasoningEffort === 'medium',
-																'text-amber-500': settings.reasoningEffort === 'high',
-															})}
-														/>
-														Thinking: {settings.reasoningEffort === 'low'
-															? 'Off'
-															: settings.reasoningEffort === 'medium'
-																? 'Medium'
-																: 'High'}
-													</DropdownMenu.Item>
-												{/if}
-												<DropdownMenu.Item
-													onclick={() => (settings.temporaryMode = !settings.temporaryMode)}
+											<!-- Mobile More menu -->
+											<DropdownMenu.Root>
+												<DropdownMenu.Trigger
+													class={cn(
+														'bg-secondary/50 hover:bg-secondary text-muted-foreground relative flex size-9 items-center justify-center rounded-lg transition-colors',
+														(settings.webSearchMode !== 'off' ||
+															(currentModelSupportsReasoning &&
+																currentModelSupportsVerbosity &&
+																settings.reasoningEffort !== 'low') ||
+															settings.temporaryMode) &&
+															'bg-primary/20 text-primary'
+													)}
 												>
-													<GhostIcon
-														class={cn('mr-2 size-4', settings.temporaryMode && 'text-orange-500')}
-													/>
-													Temporary: {settings.temporaryMode ? 'On' : 'Off'}
-												</DropdownMenu.Item>
-												{#if currentModelSupportsVideo}
-													<DropdownMenu.Separator />
-													<DropdownMenu.Item onclick={() => (videoModalOpen = true)}>
-														<VideoIcon
-															class={cn(
-																'mr-2 size-4',
-																Object.keys(videoParams).length > 0 && 'text-blue-500'
-															)}
+													<EllipsisVerticalIcon class="size-4" />
+													{#if settings.webSearchMode !== 'off' || (currentModelSupportsReasoning && currentModelSupportsVerbosity && settings.reasoningEffort !== 'low') || settings.temporaryMode}
+														<span
+															class="bg-primary absolute -top-0.5 -right-0.5 size-2 rounded-full"
+														></span>
+													{/if}
+												</DropdownMenu.Trigger>
+												<DropdownMenu.Content align="end">
+													{#if safeAssistants.length > 0}
+														<DropdownMenu.Sub>
+															<DropdownMenu.SubTrigger>
+																<BotIcon class="mr-2 size-4" />
+																{selectedAssistant?.name ?? 'Assistant'}
+															</DropdownMenu.SubTrigger>
+															<DropdownMenu.SubContent>
+																{#each safeAssistants as assistant (assistant.id)}
+																	<DropdownMenu.CheckboxItem
+																		checked={selectedAssistantId.current === assistant.id}
+																		onclick={() => (selectedAssistantId.current = assistant.id)}
+																	>
+																		{assistant.name}
+																	</DropdownMenu.CheckboxItem>
+																{/each}
+															</DropdownMenu.SubContent>
+														</DropdownMenu.Sub>
+														<DropdownMenu.Separator />
+													{/if}
+													{#if !restrictions?.webDisabled}
+														<DropdownMenu.Item
+															onclick={() => {
+																if (settings.webSearchMode === 'off')
+																	settings.webSearchMode = 'standard';
+																else if (settings.webSearchMode === 'standard')
+																	settings.webSearchMode = 'deep';
+																else settings.webSearchMode = 'off';
+															}}
+														>
+															<SearchIcon
+																class={cn('mr-2 size-4', {
+																	'text-primary': settings.webSearchMode === 'standard',
+																	'text-amber-500': settings.webSearchMode === 'deep',
+																})}
+															/>
+															Web Search: {settings.webSearchMode === 'off'
+																? 'Off'
+																: settings.webSearchMode === 'standard'
+																	? 'Standard'
+																	: 'Deep'}
+														</DropdownMenu.Item>
+													{/if}
+													{#if currentModelSupportsReasoning && currentModelSupportsVerbosity}
+														<DropdownMenu.Item
+															onclick={() => {
+																if (settings.reasoningEffort === 'low')
+																	settings.reasoningEffort = 'medium';
+																else if (settings.reasoningEffort === 'medium')
+																	settings.reasoningEffort = 'high';
+																else settings.reasoningEffort = 'low';
+															}}
+														>
+															<BrainIcon
+																class={cn('mr-2 size-4', {
+																	'text-primary': settings.reasoningEffort === 'medium',
+																	'text-amber-500': settings.reasoningEffort === 'high',
+																})}
+															/>
+															Thinking: {settings.reasoningEffort === 'low'
+																? 'Off'
+																: settings.reasoningEffort === 'medium'
+																	? 'Medium'
+																	: 'High'}
+														</DropdownMenu.Item>
+													{/if}
+													<DropdownMenu.Item
+														onclick={() => (settings.temporaryMode = !settings.temporaryMode)}
+													>
+														<GhostIcon
+															class={cn('mr-2 size-4', settings.temporaryMode && 'text-orange-500')}
 														/>
-														Video Settings
-														{#if Object.keys(videoParams).length > 0}
-															<span class="ml-auto text-xs text-blue-500">•</span>
-														{/if}
+														Temporary: {settings.temporaryMode ? 'On' : 'Off'}
 													</DropdownMenu.Item>
-												{/if}
-												{#if currentModelSupportsImageGen}
-													<DropdownMenu.Separator />
-													<DropdownMenu.Item onclick={() => (imageModalOpen = true)}>
-														<ImageIcon
-															class={cn(
-																'mr-2 size-4',
-																Object.keys(imageParams).length > 0 && 'text-purple-500'
-															)}
-														/>
-														Image Settings
-														{#if Object.keys(imageParams).length > 0}
-															<span class="ml-auto text-xs text-purple-500">•</span>
-														{/if}
-													</DropdownMenu.Item>
-												{/if}
-											</DropdownMenu.Content>
-										</DropdownMenu.Root>
-									</div>
+													{#if currentModelSupportsVideo}
+														<DropdownMenu.Separator />
+														<DropdownMenu.Item onclick={() => (videoModalOpen = true)}>
+															<VideoIcon
+																class={cn(
+																	'mr-2 size-4',
+																	Object.keys(videoParams).length > 0 && 'text-blue-500'
+																)}
+															/>
+															Video Settings
+															{#if Object.keys(videoParams).length > 0}
+																<span class="ml-auto text-xs text-blue-500">•</span>
+															{/if}
+														</DropdownMenu.Item>
+													{/if}
+													{#if currentModelSupportsImageGen}
+														<DropdownMenu.Separator />
+														<DropdownMenu.Item onclick={() => (imageModalOpen = true)}>
+															<ImageIcon
+																class={cn(
+																	'mr-2 size-4',
+																	Object.keys(imageParams).length > 0 && 'text-purple-500'
+																)}
+															/>
+															Image Settings
+															{#if Object.keys(imageParams).length > 0}
+																<span class="ml-auto text-xs text-purple-500">•</span>
+															{/if}
+														</DropdownMenu.Item>
+													{/if}
+												</DropdownMenu.Content>
+											</DropdownMenu.Root>
+										</div>
 									</div>
 
 									{#snippet failed(error)}

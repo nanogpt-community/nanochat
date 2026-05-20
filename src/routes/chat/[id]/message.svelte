@@ -44,7 +44,7 @@
 		base: 'prose rounded-xl p-2 max-w-full',
 		variants: {
 			role: {
-				user: 'bg-secondary/50 border border-secondary/70 px-3 py-2 !text-black/80 dark:!text-secondary-foreground self-end',
+				user: 'bg-secondary/50 border border-secondary/70 px-3 py-2 !text-black/80 dark:!text-secondary-foreground self-end whitespace-pre-wrap break-words',
 				assistant: 'text-foreground',
 			},
 		},
@@ -147,17 +147,20 @@
 		const cid = res.value.conversationId;
 
 		if (message.role === 'user' && settings.modelId) {
-			await callGenerateMessageStream({
-				conversation_id: cid,
-				model_id: settings.modelId,
-				images: message.images ?? undefined,
-				web_search_enabled: message.webSearchEnabled ?? undefined,
-			}, {
-				userId: session.current?.user.id,
-				onError: (error) => {
-					console.error('Failed to generate branched response:', error);
+			await callGenerateMessageStream(
+				{
+					conversation_id: cid,
+					model_id: settings.modelId,
+					images: message.images ?? undefined,
+					web_search_enabled: message.webSearchEnabled ?? undefined,
 				},
-			});
+				{
+					userId: session.current?.user.id,
+					onError: (error) => {
+						console.error('Failed to generate branched response:', error);
+					},
+				}
+			);
 		}
 
 		await goto(`/chat/${cid}`);
@@ -360,17 +363,20 @@
 		}
 
 		if (settings.modelId) {
-			await callGenerateMessageStream({
-				conversation_id: message.conversationId,
-				model_id: settings.modelId,
-				images: message.images ?? undefined,
-				web_search_enabled: message.webSearchEnabled ?? undefined,
-			}, {
-				userId: session.current.user.id,
-				onError: (error) => {
-					console.error('Failed to regenerate:', error);
+			await callGenerateMessageStream(
+				{
+					conversation_id: message.conversationId,
+					model_id: settings.modelId,
+					images: message.images ?? undefined,
+					web_search_enabled: message.webSearchEnabled ?? undefined,
 				},
-			});
+				{
+					userId: session.current.user.id,
+					onError: (error) => {
+						console.error('Failed to regenerate:', error);
+					},
+				}
+			);
 		}
 	}
 </script>
@@ -673,7 +679,7 @@
 			<DropdownMenu.Root>
 				<DropdownMenu.Trigger
 					class={cn(
-						'hover:bg-accent order-3 flex size-9 md:size-7 items-center justify-center rounded-md transition-colors',
+						'hover:bg-accent order-3 flex size-9 items-center justify-center rounded-md transition-colors md:size-7',
 						{ 'order-3': message.role === 'user' }
 					)}
 				>
