@@ -83,6 +83,27 @@
 		}
 	}
 
+	async function handleSsoSignIn() {
+		if (!data.ssoEnabled) return;
+		isLoading = true;
+		error = '';
+		try {
+			const result = await authClient.signIn.sso({
+				...(data.ssoProviderId ? { providerId: data.ssoProviderId } : {}),
+				...(data.ssoDomain ? { domain: data.ssoDomain } : {}),
+				callbackURL: '/chat',
+				errorCallbackURL: '/login',
+			});
+			if (result?.error) {
+				error = getErrorMessage(result.error, 'SSO sign in failed');
+			}
+		} catch (e: any) {
+			error = e.message || 'SSO sign in failed';
+		} finally {
+			isLoading = false;
+		}
+	}
+
 	function handleKeyDown(e: KeyboardEvent) {
 		if (e.key === 'Enter' && username && password) {
 			handleSignIn();
@@ -147,6 +168,12 @@
 		<Button variant="outline" onclick={handlePasskeySignIn} disabled={isLoading} class="w-full">
 			Passkey
 		</Button>
+
+		{#if data.ssoEnabled}
+			<Button variant="outline" onclick={handleSsoSignIn} disabled={isLoading} class="w-full">
+				{data.ssoLabel}
+			</Button>
+		{/if}
 
 		<p class="text-muted-foreground pt-2 text-center text-xs">
 			You can add a passkey for passwordless login in your account settings after signing in.

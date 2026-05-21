@@ -3059,5 +3059,41 @@ The `/api/auth/[...auth]` endpoints are handled by Better Auth and provide stand
 - Session management
 - OAuth providers
 - Email/password authentication
+- Passkey authentication
+- OIDC single sign-on when `SSO_PROVIDER_ID`, `SSO_DOMAIN`, `SSO_OIDC_ISSUER`, `SSO_OIDC_CLIENT_ID`, and `SSO_OIDC_CLIENT_SECRET` are configured
 
 Refer to the [Better Auth documentation](https://www.better-auth.com/) for detailed endpoint information.
+
+#### POST `/api/auth/sign-in/sso`
+
+Starts an OIDC SSO login flow for the configured Better Auth SSO provider. The default username/password and passkey login methods remain available.
+
+**Authentication**: None
+
+**Request Body**:
+
+```json
+{
+	"providerId": "string (configured SSO_PROVIDER_ID)",
+	"domain": "string (configured SSO_DOMAIN, optional when providerId is supplied)",
+	"callbackURL": "string (where to redirect after successful login)",
+	"errorCallbackURL": "string (where to redirect after login failure)"
+}
+```
+
+**Response**:
+
+```json
+{
+	"url": "string (identity provider redirect URL)",
+	"redirect": "boolean"
+}
+```
+
+**CURL Example**:
+
+```bash
+curl -X POST "http://localhost:3432/api/auth/sign-in/sso" \
+  -H "Content-Type: application/json" \
+  -d '{"providerId":"authelia","callbackURL":"/chat","errorCallbackURL":"/login"}'
+```

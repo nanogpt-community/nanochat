@@ -72,6 +72,17 @@ export const passkey = sqliteTable('passkey', {
 	createdAt: integer('createdAt', { mode: 'timestamp' }),
 });
 
+export const ssoProvider = sqliteTable('ssoProvider', {
+	id: text('id').primaryKey(),
+	issuer: text('issuer').notNull(),
+	oidcConfig: text('oidcConfig'),
+	samlConfig: text('samlConfig'),
+	userId: text('userId').references(() => user.id),
+	providerId: text('providerId').notNull().unique(),
+	organizationId: text('organizationId'),
+	domain: text('domain').notNull(),
+});
+
 // ============================================================================
 // Application Tables (migrated from Convex)
 // ============================================================================

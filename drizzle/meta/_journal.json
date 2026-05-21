@@ -218,6 +218,13 @@
       "when": 1772895472071,
       "tag": "0030_add_api_key_hash",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "6",
+      "when": 1779322657202,
+      "tag": "0031_lowly_wiccan",
+      "breakpoints": true
     }
   ]
 }

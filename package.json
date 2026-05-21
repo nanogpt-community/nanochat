@@ -77,6 +77,7 @@
   },
   "dependencies": {
     "@better-auth/passkey": "1.6.11",
+    "@better-auth/sso": "1.6.11",
     "@floating-ui/dom": "^1.7.6",
     "@fontsource-variable/fraunces": "^5.2.9",
     "@fontsource-variable/geist-mono": "^5.2.8",
