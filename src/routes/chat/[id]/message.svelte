@@ -44,7 +44,7 @@
 		base: 'prose rounded-xl p-2 max-w-full',
 		variants: {
 			role: {
-				user: 'bg-secondary/50 border border-secondary/70 px-3 py-2 !text-black/80 dark:!text-secondary-foreground self-end whitespace-pre-wrap break-words',
+				user: 'bg-secondary/50 border border-secondary/70 px-3 py-2 !text-black/80 dark:!text-secondary-foreground self-end',
 				assistant: 'text-foreground',
 			},
 		},
@@ -76,6 +76,7 @@
 		const stripped = safeContent.replace(/!\[[^\]]*]\([^)]*\)/g, '').trim();
 		return stripped.length > 0 ? stripped : 'Generated Image';
 	});
+	const userDisplayContent = $derived(displayContent.replace(/\n+$/, ''));
 
 	let imageModal = $state<{ open: boolean; imageUrl: string; fileName: string }>({
 		open: false,
@@ -505,6 +506,8 @@
 				<div class="text-destructive">
 					<pre class="!bg-sidebar"><code>{message.error}</code></pre>
 				</div>
+			{:else if message.role === 'user'}
+				<div class="not-prose whitespace-pre-wrap break-words">{userDisplayContent}</div>
 			{:else if message.contentHtml}
 				<!-- eslint-disable-next-line svelte/no-at-html-tags -->
 				{@html sanitizeHtml(message.contentHtml)}
