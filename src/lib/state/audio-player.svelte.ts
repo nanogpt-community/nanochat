@@ -1,3 +1,4 @@
+import { browser } from '$app/environment';
 import { settings } from '$lib/state/settings.svelte';
 
 export class AudioPlayer {
@@ -6,10 +7,14 @@ export class AudioPlayer {
     currentMessageId = $state<string | null>(null);
     error = $state<string | null>(null);
 
-    private audio = new Audio();
+    private audio: HTMLAudioElement | null = null;
     private currentBlobUrl: string | null = null;
 
     constructor() {
+        if (!browser) return;
+
+        this.audio = new Audio();
+
         // Cleanup blob URL when audio ends
         this.audio.onended = () => {
             this.stop();
@@ -23,6 +28,11 @@ export class AudioPlayer {
     }
 
     async play(text: string, messageId: string, model: string = 'tts-1', voice: string = 'alloy') {
+        if (!this.audio) {
+            this.error = 'Audio playback is not available';
+            return;
+        }
+
         // If already playing this message, toggle pause/play is not implemented yet, just stop and restart for now or ignore?
         // Let's implement Stop if clicking same message, or simple restart. 
         // Better UX: If playing same message, stop. If different, stop current and play new.
@@ -98,6 +108,8 @@ export class AudioPlayer {
     }
 
     stop() {
+        if (!this.audio) return;
+
         this.audio.pause();
         this.audio.currentTime = 0;
         this.isPlaying = false;
