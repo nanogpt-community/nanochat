@@ -1,7 +1,7 @@
 /**
  * API wrapper to replace Convex API calls
  * This module provides a drop-in replacement for the Convex API patterns
- * using local SQLite + Drizzle backend via SvelteKit API routes
+ * using Postgres + Drizzle backend via SvelteKit API routes
  */
 
 import type { Provider } from '$lib/types';

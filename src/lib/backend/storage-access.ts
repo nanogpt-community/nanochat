@@ -21,8 +21,8 @@ function buildStorageReferencePredicate(storageId: string) {
 	const urlNeedle = `/api/storage/${storageId}`;
 	const storagePattern = `%\"storage_id\"%${storageId}%`;
 	return sql`(
-		${messages.images} LIKE ${storagePattern}
-		OR ${messages.documents} LIKE ${storagePattern}
+		${messages.images}::text LIKE ${storagePattern}
+		OR ${messages.documents}::text LIKE ${storagePattern}
 		OR ${messages.content} LIKE ${`%${urlNeedle}%`}
 		OR ${messages.contentHtml} LIKE ${`%${urlNeedle}%`}
 	)`;

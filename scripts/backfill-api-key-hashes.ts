@@ -1,10 +1,8 @@
 #!/usr/bin/env bun
 
 import 'dotenv/config';
-import { accessSync, constants } from 'fs';
-import { join } from 'path';
 import { eq, sql } from 'drizzle-orm';
-import { db, sqlite } from '../src/lib/db/index.js';
+import { db, client } from '../src/lib/db/index.js';
 import { apiKeys } from '../src/lib/db/schema.js';
 import {
 	CURRENT_DEVELOPER_API_KEY_HASH_PREFIX,
@@ -28,36 +26,6 @@ function isDryRun(): boolean {
 	return process.argv.includes('--dry-run');
 }
 
-function assertDatabaseWritable(): void {
-	const dbPath = join(process.cwd(), 'data', 'nanochat.db');
-	const walPath = `${dbPath}-wal`;
-	const shmPath = `${dbPath}-shm`;
-
-	try {
-		accessSync(dbPath, constants.R_OK | constants.W_OK);
-	} catch {
-		throw new Error(
-			`Database is not writable at ${dbPath}. Check file ownership/permissions before running this script.`
-		);
-	}
-
-	for (const path of [walPath, shmPath]) {
-		try {
-			accessSync(path, constants.F_OK);
-		} catch {
-			continue;
-		}
-
-		try {
-			accessSync(path, constants.R_OK | constants.W_OK);
-		} catch {
-			throw new Error(
-				`SQLite sidecar file is not writable at ${path}. Check file ownership/permissions before running this script.`
-			);
-		}
-	}
-}
-
 async function getLegacyApiKeys(): Promise<ApiKeyRecord[]> {
 	return db.query.apiKeys.findMany({
 		where: sql`${apiKeys.keyHash} is null or ${apiKeys.keyHash} not like ${`${CURRENT_DEVELOPER_API_KEY_HASH_PREFIX}%`}`,
@@ -77,10 +45,6 @@ async function main() {
 	console.log('  Developer API Key Hash Backfill');
 	console.log('==================================================');
 	console.log(dryRun ? '\nMode: dry run (no database writes)\n' : '');
-
-	if (!dryRun) {
-		assertDatabaseWritable();
-	}
 
 	const records = await getLegacyApiKeys();
 	console.log(`Found ${records.length} API key(s) with missing or legacy lookup hashes.`);
@@ -131,5 +95,5 @@ async function main() {
 try {
 	await main();
 } finally {
-	sqlite.close();
+	await client.end();
 }

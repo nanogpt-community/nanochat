@@ -31,7 +31,7 @@ const ssoProvider =
 export const auth = betterAuth({
 	secret: env.BETTER_AUTH_SECRET!,
 	database: drizzleAdapter(db, {
-		provider: 'sqlite',
+		provider: 'pg',
 		schema: {
 			user: schema.user,
 			session: schema.session,

@@ -18,7 +18,7 @@ Get the native NanoChat experience on your devices:
 
 ## Changes with this fork
 
-- Convex -> SQLite + Drizzle
+- Convex -> Postgres + Drizzle
 - Docker + Docker Compose
 - Yarn -> Bun
 - Openrouter -> Nano-GPT (nano-gpt.com)
@@ -49,8 +49,11 @@ Get the native NanoChat experience on your devices:
 - Clone the repository `git clone https://github.com/nanogpt-community/nanochat.git`
 - `cd nanochat`
 - `cp .env.example .env`
-- Edit the .env file with your configuration
+- Edit the .env file with your configuration (set `POSTGRES_PASSWORD`)
 - `docker compose up`
+
+Compose brings up its own Postgres and sets `DATABASE_URL` for the app, so there is
+nothing external to provision. Data lives in `./data/postgres`.
 
 ## Setup (Bun)
 
@@ -59,11 +62,27 @@ Get the native NanoChat experience on your devices:
 - Install Bun (https://bun.sh/)
 - Clone the repository `git clone https://github.com/nanogpt-community/nanochat.git`
 - `cd nanochat`
+- Have a Postgres 14+ database ready and put its URL in `DATABASE_URL`
+- Clone the repository `git clone https://github.com/nanogpt-community/nanochat.git`
+- `cd nanochat`
 - `cp .env.example .env`
 - Edit the .env file with your configuration
 - `bun install`
+- `bun run db:migrate`
 - `bun run dev`
-- run `npx drizzle-kit push` to upgrade your database schema when new features are added!
+- run `bun run db:migrate` to upgrade your database schema when new features are added!
+
+## Upgrading from the SQLite release
+
+Older versions stored everything in `data/nanochat.db`. To move that data into Postgres:
+
+- Point `DATABASE_URL` at your new, empty Postgres database
+- `bun run db:migrate` to create the schema
+- `bun run db:migrate-from-sqlite` (pass a path if your database is not at `data/nanochat.db`)
+- Start the app, confirm your chats are there, then archive the old `.db` file
+
+The copy is idempotent (`on conflict do nothing`), so it is safe to re-run.
+Uploaded files in `data/uploads` are untouched — keep that directory mounted.
 
 ## Nginx
 
@@ -201,7 +220,7 @@ You can use URL parameters to pre-configure your chat session. This is useful fo
 
 | Variable                      | Description                                                                                                           |
 | ----------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| `DATABASE_URL`                | SQLite database path (default: ./data/nanochat.db)                                                                    |
+| `DATABASE_URL`                | Postgres connection string, e.g. `postgres://user:pass@host:5432/nanochat`                                                                    |
 | `NANOGPT_API_KEY`             | Nano-GPT API key for generation                                                                                       |
 | `BETTER_AUTH_SECRET`          | Authentication secret                                                                                                 |
 | `BETTER_AUTH_URL`             | Base URL for authentication                                                                                           |
@@ -216,7 +235,7 @@ The application supports encrypting API keys stored in the database using AES-25
 - **Required for new secrets**: `ENCRYPTION_KEY` must be set before creating developer API keys, provider keys, or other stored secrets
 - **At rest**: Secrets are encrypted with AES-256-GCM
 - **Developer API auth**: API keys are also indexed with a non-reversible lookup hash so requests no longer require decrypting the entire key table
-- **Schema update**: Run `npx drizzle-kit push` after upgrading so the `api_keys.key_hash` column exists
+- **Schema update**: Run `bun run db:migrate` after upgrading
 - **Migration**: Run `bun run scripts/migrate-encrypt-api-keys.ts` to encrypt existing keys
 - **Details**: See [`scripts/README-API-KEY-ENCRYPTION.md`](scripts/README-API-KEY-ENCRYPTION.md)
 
@@ -224,7 +243,7 @@ The application supports encrypting API keys stored in the database using AES-25
 
 ## Database Schema
 
-The application uses SQLite with Drizzle ORM. Key tables:
+The application uses Postgres with Drizzle ORM. Key tables:
 
 - **messages**: Stores chat messages with content, role, annotations, and follow-up suggestions
 - **user_settings**: User preferences including follow-up questions toggle
@@ -238,7 +257,7 @@ The application uses SQLite with Drizzle ORM. Key tables:
 
 - **Frontend**: SvelteKit + Svelte 5
 - **Styling**: Tailwind CSS
-- **Database**: SQLite + Drizzle ORM
+- **Database**: Postgres + Drizzle ORM
 - **Auth**: Better Auth
 - **AI Provider**: Nano-GPT (nano-gpt.com)
 - **Runtime**: Bun

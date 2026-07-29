@@ -21,7 +21,6 @@ export async function migrateEmailDomains() {
 
         // Update strictly @thom.chat to @nano.chat
         // We use a raw SQL query for efficiency if possible, or iterate
-        // Drizzle update with sql replace might be cleaner if supported by sqlite, 
         // but simple iteration is safer for logic verification.
         // Actually, let's use a transaction to ensure valid updates.
 

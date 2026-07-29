@@ -1754,7 +1754,8 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 								eq(modelPerformanceStats.provider, Provider.NanoGPT)
 							)
 						)
-						.get();
+						.limit(1)
+						.then((rows) => rows[0]);
 
 					if (existing) {
 						const newTotalMessages = existing.totalMessages + 1;

@@ -25,7 +25,8 @@ async function requireOwnedMessage(messageId: string, userId: string) {
 		.from(messages)
 		.innerJoin(conversations, eq(messages.conversationId, conversations.id))
 		.where(and(eq(messages.id, messageId), eq(conversations.userId, userId)))
-		.get();
+		.limit(1)
+		.then((rows) => rows[0]);
 
 	if (!message) {
 		throw error(403, 'Unauthorized');

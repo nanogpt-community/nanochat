@@ -13,7 +13,6 @@ export default defineConfig({
 		allowedHosts: isDev ? true : undefined,
 	},
 	ssr: {
-		noExternal: ['bun:sqlite'],
 		external: [],
 	},
 	test: {

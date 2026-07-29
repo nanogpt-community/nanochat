@@ -1,26 +1,36 @@
-import { sqliteTable, text, integer, real, index, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import {
+	pgTable,
+	text,
+	integer,
+	boolean,
+	timestamp,
+	jsonb,
+	doublePrecision,
+	index,
+	uniqueIndex,
+} from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
 // ============================================================================
 // Better Auth Tables (required by better-auth)
 // ============================================================================
 
-export const user = sqliteTable('user', {
+export const user = pgTable('user', {
 	id: text('id').primaryKey(),
 	name: text('name').notNull(),
 	email: text('email').unique(),
-	emailVerified: integer('emailVerified', { mode: 'boolean' }).notNull(),
+	emailVerified: boolean('emailVerified').notNull(),
 	image: text('image'),
-	createdAt: integer('createdAt', { mode: 'timestamp' }).notNull(),
-	updatedAt: integer('updatedAt', { mode: 'timestamp' }).notNull(),
+	createdAt: timestamp('createdAt', { withTimezone: true }).notNull(),
+	updatedAt: timestamp('updatedAt', { withTimezone: true }).notNull(),
 });
 
-export const session = sqliteTable('session', {
+export const session = pgTable('session', {
 	id: text('id').primaryKey(),
-	expiresAt: integer('expiresAt', { mode: 'timestamp' }).notNull(),
+	expiresAt: timestamp('expiresAt', { withTimezone: true }).notNull(),
 	token: text('token').notNull().unique(),
-	createdAt: integer('createdAt', { mode: 'timestamp' }).notNull(),
-	updatedAt: integer('updatedAt', { mode: 'timestamp' }).notNull(),
+	createdAt: timestamp('createdAt', { withTimezone: true }).notNull(),
+	updatedAt: timestamp('updatedAt', { withTimezone: true }).notNull(),
 	ipAddress: text('ipAddress'),
 	userAgent: text('userAgent'),
 	userId: text('userId')
@@ -28,7 +38,7 @@ export const session = sqliteTable('session', {
 		.references(() => user.id, { onDelete: 'cascade' }),
 });
 
-export const account = sqliteTable('account', {
+export const account = pgTable('account', {
 	id: text('id').primaryKey(),
 	accountId: text('accountId').notNull(),
 	providerId: text('providerId').notNull(),
@@ -38,24 +48,24 @@ export const account = sqliteTable('account', {
 	accessToken: text('accessToken'),
 	refreshToken: text('refreshToken'),
 	idToken: text('idToken'),
-	accessTokenExpiresAt: integer('accessTokenExpiresAt', { mode: 'timestamp' }),
-	refreshTokenExpiresAt: integer('refreshTokenExpiresAt', { mode: 'timestamp' }),
+	accessTokenExpiresAt: timestamp('accessTokenExpiresAt', { withTimezone: true }),
+	refreshTokenExpiresAt: timestamp('refreshTokenExpiresAt', { withTimezone: true }),
 	scope: text('scope'),
 	password: text('password'),
-	createdAt: integer('createdAt', { mode: 'timestamp' }).notNull(),
-	updatedAt: integer('updatedAt', { mode: 'timestamp' }).notNull(),
+	createdAt: timestamp('createdAt', { withTimezone: true }).notNull(),
+	updatedAt: timestamp('updatedAt', { withTimezone: true }).notNull(),
 });
 
-export const verification = sqliteTable('verification', {
+export const verification = pgTable('verification', {
 	id: text('id').primaryKey(),
 	identifier: text('identifier').notNull(),
 	value: text('value').notNull(),
-	expiresAt: integer('expiresAt', { mode: 'timestamp' }).notNull(),
-	createdAt: integer('createdAt', { mode: 'timestamp' }),
-	updatedAt: integer('updatedAt', { mode: 'timestamp' }),
+	expiresAt: timestamp('expiresAt', { withTimezone: true }).notNull(),
+	createdAt: timestamp('createdAt', { withTimezone: true }),
+	updatedAt: timestamp('updatedAt', { withTimezone: true }),
 });
 
-export const passkey = sqliteTable('passkey', {
+export const passkey = pgTable('passkey', {
 	id: text('id').primaryKey(),
 	name: text('name'),
 	publicKey: text('publicKey').notNull(),
@@ -67,12 +77,12 @@ export const passkey = sqliteTable('passkey', {
 	webauthnUserID: text('webauthnUserID'),
 	counter: integer('counter').notNull(),
 	deviceType: text('deviceType').notNull(),
-	backedUp: integer('backedUp', { mode: 'boolean' }).notNull(),
+	backedUp: boolean('backedUp').notNull(),
 	transports: text('transports'),
-	createdAt: integer('createdAt', { mode: 'timestamp' }),
+	createdAt: timestamp('createdAt', { withTimezone: true }),
 });
 
-export const ssoProvider = sqliteTable('ssoProvider', {
+export const ssoProvider = pgTable('ssoProvider', {
 	id: text('id').primaryKey(),
 	issuer: text('issuer').notNull(),
 	oidcConfig: text('oidcConfig'),
@@ -87,7 +97,7 @@ export const ssoProvider = sqliteTable('ssoProvider', {
 // Application Tables (migrated from Convex)
 // ============================================================================
 
-export const userSettings = sqliteTable(
+export const userSettings = pgTable(
 	'user_settings',
 	{
 		id: text('id').primaryKey(),
@@ -95,26 +105,14 @@ export const userSettings = sqliteTable(
 			.notNull()
 			.references(() => user.id, { onDelete: 'cascade' }),
 		timezone: text('timezone').notNull().default('UTC'),
-		privacyMode: integer('privacy_mode', { mode: 'boolean' }).notNull().default(false),
-		contextMemoryEnabled: integer('context_memory_enabled', { mode: 'boolean' })
-			.notNull()
-			.default(false),
-		persistentMemoryEnabled: integer('persistent_memory_enabled', { mode: 'boolean' })
-			.notNull()
-			.default(false),
-		youtubeTranscriptsEnabled: integer('youtube_transcripts_enabled', { mode: 'boolean' })
-			.notNull()
-			.default(false),
-		webScrapingEnabled: integer('web_scraping_enabled', { mode: 'boolean' })
-			.notNull()
-			.default(false),
-		mcpEnabled: integer('mcp_enabled', { mode: 'boolean' }).notNull().default(false),
-		followUpQuestionsEnabled: integer('follow_up_questions_enabled', { mode: 'boolean' })
-			.notNull()
-			.default(true),
-		suggestedPromptsEnabled: integer('suggested_prompts_enabled', { mode: 'boolean' })
-			.notNull()
-			.default(true),
+		privacyMode: boolean('privacy_mode').notNull().default(false),
+		contextMemoryEnabled: boolean('context_memory_enabled').notNull().default(false),
+		persistentMemoryEnabled: boolean('persistent_memory_enabled').notNull().default(false),
+		youtubeTranscriptsEnabled: boolean('youtube_transcripts_enabled').notNull().default(false),
+		webScrapingEnabled: boolean('web_scraping_enabled').notNull().default(false),
+		mcpEnabled: boolean('mcp_enabled').notNull().default(false),
+		followUpQuestionsEnabled: boolean('follow_up_questions_enabled').notNull().default(true),
+		suggestedPromptsEnabled: boolean('suggested_prompts_enabled').notNull().default(true),
 		freeMessagesUsed: integer('free_messages_used').default(0),
 		dailyMessagesUsed: integer('daily_messages_used').default(0),
 		lastMessageDate: text('last_message_date'), // ISO date string (YYYY-MM-DD) for daily reset
@@ -127,13 +125,13 @@ export const userSettings = sqliteTable(
 		titleProviderId: text('title_provider_id'),
 		followUpModelId: text('follow_up_model_id'),
 		followUpProviderId: text('follow_up_provider_id'),
-		createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-		updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+		createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
+		updatedAt: timestamp('updated_at', { withTimezone: true }).notNull(),
 	},
 	(table) => [index('user_settings_user_id_idx').on(table.userId)]
 );
 
-export const userKeys = sqliteTable(
+export const userKeys = pgTable(
 	'user_keys',
 	{
 		id: text('id').primaryKey(),
@@ -142,8 +140,8 @@ export const userKeys = sqliteTable(
 			.references(() => user.id, { onDelete: 'cascade' }),
 		provider: text('provider').notNull(), // 'openrouter' | 'huggingface' | 'openai' | 'anthropic'
 		key: text('key').notNull(),
-		createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-		updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+		createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
+		updatedAt: timestamp('updated_at', { withTimezone: true }).notNull(),
 	},
 	(table) => [
 		index('user_keys_user_id_idx').on(table.userId),
@@ -151,7 +149,7 @@ export const userKeys = sqliteTable(
 	]
 );
 
-export const userEnabledModels = sqliteTable(
+export const userEnabledModels = pgTable(
 	'user_enabled_models',
 	{
 		id: text('id').primaryKey(),
@@ -160,9 +158,9 @@ export const userEnabledModels = sqliteTable(
 			.references(() => user.id, { onDelete: 'cascade' }),
 		provider: text('provider').notNull(),
 		modelId: text('model_id').notNull(),
-		pinned: integer('pinned', { mode: 'boolean' }),
-		createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-		updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+		pinned: boolean('pinned'),
+		createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
+		updatedAt: timestamp('updated_at', { withTimezone: true }).notNull(),
 	},
 	(table) => [
 		index('user_enabled_models_user_id_idx').on(table.userId),
@@ -176,7 +174,7 @@ export const userEnabledModels = sqliteTable(
 	]
 );
 
-export const apiKeys = sqliteTable(
+export const apiKeys = pgTable(
 	'api_keys',
 	{
 		id: text('id').primaryKey(),
@@ -186,8 +184,8 @@ export const apiKeys = sqliteTable(
 		key: text('key').notNull().unique(),
 		keyHash: text('key_hash'),
 		name: text('name').notNull(),
-		lastUsedAt: integer('last_used_at', { mode: 'timestamp' }),
-		createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+		lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
+		createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
 	},
 	(table) => [
 		index('api_keys_user_id_idx').on(table.userId),
@@ -195,7 +193,7 @@ export const apiKeys = sqliteTable(
 	]
 );
 
-export const userRules = sqliteTable(
+export const userRules = pgTable(
 	'user_rules',
 	{
 		id: text('id').primaryKey(),
@@ -205,8 +203,8 @@ export const userRules = sqliteTable(
 		name: text('name').notNull(),
 		attach: text('attach').notNull(), // 'always' | 'manual'
 		rule: text('rule').notNull(),
-		createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-		updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+		createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
+		updatedAt: timestamp('updated_at', { withTimezone: true }).notNull(),
 	},
 	(table) => [
 		index('user_rules_user_id_idx').on(table.userId),
@@ -216,7 +214,7 @@ export const userRules = sqliteTable(
 );
 
 // Projects - folders for organizing chats with custom instructions and shared files
-export const projects = sqliteTable(
+export const projects = pgTable(
 	'projects',
 	{
 		id: text('id').primaryKey(),
@@ -227,8 +225,8 @@ export const projects = sqliteTable(
 		description: text('description'),
 		systemPrompt: text('system_prompt'), // Custom instructions for this project
 		color: text('color'), // Optional color for sidebar display
-		createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-		updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+		createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
+		updatedAt: timestamp('updated_at', { withTimezone: true }).notNull(),
 	},
 	(table) => [
 		index('projects_user_id_idx').on(table.userId),
@@ -236,7 +234,7 @@ export const projects = sqliteTable(
 	]
 );
 
-export const conversations = sqliteTable(
+export const conversations = pgTable(
 	'conversations',
 	{
 		id: text('id').primaryKey(),
@@ -244,16 +242,16 @@ export const conversations = sqliteTable(
 			.notNull()
 			.references(() => user.id, { onDelete: 'cascade' }),
 		title: text('title').notNull(),
-		updatedAt: integer('updated_at', { mode: 'timestamp' }),
-		pinned: integer('pinned', { mode: 'boolean' }).default(false),
-		generating: integer('generating', { mode: 'boolean' }).default(false),
-		costUsd: real('cost_usd'),
-		public: integer('public', { mode: 'boolean' }).default(false),
+		updatedAt: timestamp('updated_at', { withTimezone: true }),
+		pinned: boolean('pinned').default(false),
+		generating: boolean('generating').default(false),
+		costUsd: doublePrecision('cost_usd'),
+		public: boolean('public').default(false),
 		branchedFrom: text('branched_from'),
 		assistantId: text('assistant_id').references(() => assistants.id),
 		projectId: text('project_id').references(() => projects.id, { onDelete: 'set null' }),
-		temporary: integer('temporary', { mode: 'boolean' }).default(false),
-		createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+		temporary: boolean('temporary').default(false),
+		createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
 	},
 	(table) => [
 		index('conversations_user_id_idx').on(table.userId),
@@ -261,7 +259,7 @@ export const conversations = sqliteTable(
 	]
 );
 
-export const messages = sqliteTable(
+export const messages = pgTable(
 	'messages',
 	{
 		id: text('id').primaryKey(),
@@ -279,10 +277,8 @@ export const messages = sqliteTable(
 		// Total generation time for this assistant response in milliseconds
 		responseTimeMs: integer('response_time_ms'),
 		timeToFirstTokenMs: integer('time_to_first_token_ms'),
-		images: text('images', { mode: 'json' }).$type<
-			Array<{ url: string; storage_id: string; fileName?: string }>
-		>(),
-		documents: text('documents', { mode: 'json' }).$type<
+		images: jsonb('images').$type<Array<{ url: string; storage_id: string; fileName?: string }>>(),
+		documents: jsonb('documents').$type<
 			Array<{
 				url: string;
 				storage_id: string;
@@ -290,20 +286,20 @@ export const messages = sqliteTable(
 				fileType: 'pdf' | 'markdown' | 'text' | 'epub';
 			}>
 		>(),
-		costUsd: real('cost_usd'),
+		costUsd: doublePrecision('cost_usd'),
 		generationId: text('generation_id'),
-		webSearchEnabled: integer('web_search_enabled', { mode: 'boolean' }).default(false),
+		webSearchEnabled: boolean('web_search_enabled').default(false),
 		reasoningEffort: text('reasoning_effort'), // 'low' | 'medium' | 'high'
-		annotations: text('annotations', { mode: 'json' }).$type<Array<Record<string, unknown>>>(),
-		followUpSuggestions: text('follow_up_suggestions', { mode: 'json' }).$type<string[] | null>(),
-		starred: integer('starred', { mode: 'boolean' }).default(false),
-		createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+		annotations: jsonb('annotations').$type<Array<Record<string, unknown>>>(),
+		followUpSuggestions: jsonb('follow_up_suggestions').$type<string[] | null>(),
+		starred: boolean('starred').default(false),
+		createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
 	},
 	(table) => [index('messages_conversation_id_idx').on(table.conversationId)]
 );
 
 // Storage table for uploaded files (replacing Convex storage)
-export const storage = sqliteTable('storage', {
+export const storage = pgTable('storage', {
 	id: text('id').primaryKey(),
 	userId: text('user_id')
 		.notNull()
@@ -312,11 +308,11 @@ export const storage = sqliteTable('storage', {
 	mimeType: text('mime_type').notNull(),
 	size: integer('size').notNull(),
 	path: text('path').notNull(), // Local path or S3 key
-	createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+	createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
 });
 
 // User memories for cross-conversation persistent memory
-export const userMemories = sqliteTable(
+export const userMemories = pgTable(
 	'user_memories',
 	{
 		id: text('id').primaryKey(),
@@ -325,14 +321,14 @@ export const userMemories = sqliteTable(
 			.references(() => user.id, { onDelete: 'cascade' }),
 		content: text('content').notNull(), // Compressed memory content from NanoGPT
 		tokenCount: integer('token_count'),
-		expiresAt: integer('expires_at', { mode: 'timestamp' }),
-		createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-		updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+		expiresAt: timestamp('expires_at', { withTimezone: true }),
+		createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
+		updatedAt: timestamp('updated_at', { withTimezone: true }).notNull(),
 	},
 	(table) => [index('user_memories_user_id_idx').on(table.userId)]
 );
 
-export const assistants = sqliteTable(
+export const assistants = pgTable(
 	'assistants',
 	{
 		id: text('id').primaryKey(),
@@ -341,7 +337,7 @@ export const assistants = sqliteTable(
 			.references(() => user.id, { onDelete: 'cascade' }),
 		name: text('name').notNull(),
 		systemPrompt: text('system_prompt').notNull(),
-		isDefault: integer('is_default', { mode: 'boolean' }).notNull().default(false),
+		isDefault: boolean('is_default').notNull().default(false),
 		defaultModelId: text('default_model_id'),
 		defaultWebSearchMode: text('default_web_search_mode'), // 'off' | 'standard' | 'deep'
 		defaultWebSearchProvider: text('default_web_search_provider'), // 'linkup' | 'tavily' | 'exa' | 'kagi' | 'perplexity' | 'valyu' | 'brave' | 'brave-pro' | 'brave-research'
@@ -349,14 +345,14 @@ export const assistants = sqliteTable(
 		defaultWebSearchContextSize: text('default_web_search_context_size'), // 'low' | 'medium' | 'high'
 		defaultWebSearchKagiSource: text('default_web_search_kagi_source'), // 'web' | 'news' | 'search'
 		defaultWebSearchValyuSearchType: text('default_web_search_valyu_search_type'), // 'all' | 'web'
-		createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-		updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+		createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
+		updatedAt: timestamp('updated_at', { withTimezone: true }).notNull(),
 	},
 	(table) => [index('assistants_user_id_idx').on(table.userId)]
 );
 
 // Prompts - reusable prompt templates with variables
-export const prompts = sqliteTable(
+export const prompts = pgTable(
 	'prompts',
 	{
 		id: text('id').primaryKey(),
@@ -367,21 +363,22 @@ export const prompts = sqliteTable(
 		content: text('content').notNull(), // The prompt template text with {{variables}}
 		description: text('description'),
 		// Variables stored as JSON array: [{name: string, defaultValue?: string, description?: string}]
-		variables: text('variables', { mode: 'json' }).$type<
-			Array<{ name: string; defaultValue?: string; description?: string }>
-		>(),
+		variables:
+			jsonb('variables').$type<
+				Array<{ name: string; defaultValue?: string; description?: string }>
+			>(),
 		defaultModelId: text('default_model_id'),
 		defaultWebSearchMode: text('default_web_search_mode'), // 'off' | 'standard' | 'deep'
 		defaultWebSearchProvider: text('default_web_search_provider'),
 		appendMode: text('append_mode').notNull().default('replace'), // 'replace' | 'append' | 'prepend'
-		createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-		updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+		createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
+		updatedAt: timestamp('updated_at', { withTimezone: true }).notNull(),
 	},
 	(table) => [index('prompts_user_id_idx').on(table.userId)]
 );
 
 // Scheduled tasks - cron/interval/one-off tasks that execute prompts
-export const scheduledTasks = sqliteTable(
+export const scheduledTasks = pgTable(
 	'scheduled_tasks',
 	{
 		id: text('id').primaryKey(),
@@ -390,20 +387,20 @@ export const scheduledTasks = sqliteTable(
 			.references(() => user.id, { onDelete: 'cascade' }),
 		name: text('name').notNull(),
 		description: text('description'),
-		enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
+		enabled: boolean('enabled').notNull().default(true),
 		scheduleType: text('schedule_type').notNull(), // 'cron' | 'interval' | 'once'
 		cronExpression: text('cron_expression'),
 		intervalSeconds: integer('interval_seconds'),
-		runAt: integer('run_at', { mode: 'timestamp' }),
-		payload: text('payload', { mode: 'json' }).$type<Record<string, unknown>>().notNull(),
-		nextRunAt: integer('next_run_at', { mode: 'timestamp' }),
-		lastRunAt: integer('last_run_at', { mode: 'timestamp' }),
+		runAt: timestamp('run_at', { withTimezone: true }),
+		payload: jsonb('payload').$type<Record<string, unknown>>().notNull(),
+		nextRunAt: timestamp('next_run_at', { withTimezone: true }),
+		lastRunAt: timestamp('last_run_at', { withTimezone: true }),
 		lastRunStatus: text('last_run_status'), // 'queued' | 'error'
 		lastRunError: text('last_run_error'),
-		lockedAt: integer('locked_at', { mode: 'timestamp' }),
+		lockedAt: timestamp('locked_at', { withTimezone: true }),
 		lockedBy: text('locked_by'),
-		createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-		updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+		createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
+		updatedAt: timestamp('updated_at', { withTimezone: true }).notNull(),
 	},
 	(table) => [
 		index('scheduled_tasks_user_id_idx').on(table.userId),
@@ -413,7 +410,7 @@ export const scheduledTasks = sqliteTable(
 );
 
 // Project files - documents attached to a project for context
-export const projectFiles = sqliteTable(
+export const projectFiles = pgTable(
 	'project_files',
 	{
 		id: text('id').primaryKey(),
@@ -426,13 +423,13 @@ export const projectFiles = sqliteTable(
 		fileName: text('file_name').notNull(),
 		fileType: text('file_type').notNull(), // 'pdf' | 'markdown' | 'text' | 'epub'
 		extractedContent: text('extracted_content'), // Pre-extracted text content for context
-		createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+		createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
 	},
 	(table) => [index('project_files_project_id_idx').on(table.projectId)]
 );
 
 // Project members - for collaboration/sharing
-export const projectMembers = sqliteTable(
+export const projectMembers = pgTable(
 	'project_members',
 	{
 		id: text('id').primaryKey(),
@@ -443,7 +440,7 @@ export const projectMembers = sqliteTable(
 			.notNull()
 			.references(() => user.id, { onDelete: 'cascade' }),
 		role: text('role').notNull().default('viewer'), // 'owner' | 'editor' | 'viewer'
-		createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+		createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
 	},
 	(table) => [
 		index('project_members_project_id_idx').on(table.projectId),
@@ -452,7 +449,7 @@ export const projectMembers = sqliteTable(
 );
 
 // Performance tracking tables
-export const messageRatings = sqliteTable(
+export const messageRatings = pgTable(
 	'message_ratings',
 	{
 		id: text('id').primaryKey(),
@@ -464,10 +461,10 @@ export const messageRatings = sqliteTable(
 			.references(() => user.id, { onDelete: 'cascade' }),
 		rating: integer('rating'), // 1-5 or null
 		thumbs: text('thumbs', { enum: ['up', 'down'] }),
-		categories: text('categories', { mode: 'json' }).$type<string[]>(), // ['accurate', 'helpful', etc.]
+		categories: jsonb('categories').$type<string[]>(), // ['accurate', 'helpful', etc.]
 		feedback: text('feedback'), // optional text
-		createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-		updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+		createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
+		updatedAt: timestamp('updated_at', { withTimezone: true }).notNull(),
 	},
 	(table) => [
 		index('message_ratings_message_id_idx').on(table.messageId),
@@ -475,7 +472,7 @@ export const messageRatings = sqliteTable(
 	]
 );
 
-export const messageInteractions = sqliteTable(
+export const messageInteractions = pgTable(
 	'message_interactions',
 	{
 		id: text('id').primaryKey(),
@@ -486,8 +483,8 @@ export const messageInteractions = sqliteTable(
 			.notNull()
 			.references(() => user.id, { onDelete: 'cascade' }),
 		action: text('action', { enum: ['regenerate', 'edit', 'copy', 'share'] }).notNull(),
-		metadata: text('metadata', { mode: 'json' }).$type<Record<string, unknown>>(), // store additional context
-		createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+		metadata: jsonb('metadata').$type<Record<string, unknown>>(), // store additional context
+		createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
 	},
 	(table) => [
 		index('message_interactions_message_id_idx').on(table.messageId),
@@ -496,7 +493,7 @@ export const messageInteractions = sqliteTable(
 	]
 );
 
-export const modelPerformanceStats = sqliteTable(
+export const modelPerformanceStats = pgTable(
 	'model_performance_stats',
 	{
 		id: text('id').primaryKey(),
@@ -508,13 +505,13 @@ export const modelPerformanceStats = sqliteTable(
 
 		// Aggregated stats (updated periodically)
 		totalMessages: integer('total_messages').notNull().default(0),
-		avgRating: real('avg_rating'),
+		avgRating: doublePrecision('avg_rating'),
 		thumbsUpCount: integer('thumbs_up_count').notNull().default(0),
 		thumbsDownCount: integer('thumbs_down_count').notNull().default(0),
 		regenerateCount: integer('regenerate_count').notNull().default(0),
-		avgResponseTime: real('avg_response_time'), // milliseconds
-		avgTokens: real('avg_tokens'),
-		totalCost: real('total_cost').notNull().default(0),
+		avgResponseTime: doublePrecision('avg_response_time'), // milliseconds
+		avgTokens: doublePrecision('avg_tokens'),
+		totalCost: doublePrecision('total_cost').notNull().default(0),
 		errorCount: integer('error_count').notNull().default(0),
 
 		// Category counts
@@ -524,7 +521,7 @@ export const modelPerformanceStats = sqliteTable(
 		fastCount: integer('fast_count').notNull().default(0),
 		costEffectiveCount: integer('cost_effective_count').notNull().default(0),
 
-		lastUpdated: integer('last_updated', { mode: 'timestamp' }).notNull(),
+		lastUpdated: timestamp('last_updated', { withTimezone: true }).notNull(),
 	},
 	(table) => [
 		index('model_performance_user_id_idx').on(table.userId),

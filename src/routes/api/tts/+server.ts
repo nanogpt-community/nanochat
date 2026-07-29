@@ -148,7 +148,8 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 								eq(modelPerformanceStats.provider, provider)
 							)
 						)
-						.get();
+						.limit(1)
+						.then((rows) => rows[0]);
 
 					if (existing) {
 						await db

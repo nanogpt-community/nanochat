@@ -18,11 +18,15 @@ COPY . .
 # Build arguments for environment variables needed during build
 ARG BETTER_AUTH_SECRET=build-time-secret-change-in-production
 ARG BETTER_AUTH_BASE_URL=http://localhost:3000
+# Never connected to; the build only needs the module to load. The real value is
+# supplied at runtime and this stage is discarded.
+ARG DATABASE_URL=postgres://build:build@localhost:5432/build
 
 # Set environment variables for build
 ENV NODE_ENV=production
 ENV BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
 ENV BETTER_AUTH_BASE_URL=${BETTER_AUTH_BASE_URL}
+ENV DATABASE_URL=${DATABASE_URL}
 
 # Build the application
 RUN bun run build
@@ -56,4 +60,4 @@ ENV PORT=3000
 ENV HOST=0.0.0.0
 ENV NODE_ENV=production
 
-CMD ["sh", "-c", "bun run db:push --force && bun build/index.js"]
+CMD ["sh", "-c", "bun run db:migrate && bun build/index.js"]

@@ -84,7 +84,7 @@ export const GET: RequestHandler = async ({ request, url, fetch }) => {
                             eq(modelPerformanceStats.modelId, modelId),
                             eq(modelPerformanceStats.provider, 'nanogpt')
                         )
-                    ).get();
+                    ).limit(1).then((rows) => rows[0]);
 
                     if (existing) {
                         await db.update(modelPerformanceStats).set({

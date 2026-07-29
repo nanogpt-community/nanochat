@@ -22,7 +22,7 @@ The application now encrypts all API keys (both user-added provider keys and app
 
 1. **Backup your database** - This is critical!
    ```bash
-   cp data/nanochat.db data/nanochat.db.backup
+   pg_dump "$DATABASE_URL" > nanochat-backup.sql
    ```
 
 2. **Generate an encryption key** (if you haven't already):
@@ -98,9 +98,8 @@ The application supports running without encryption for compatibility:
 After migration, you can verify encryption worked by checking the database:
 
 ```bash
-# For SQLite
-sqlite3 data/nanochat.db "SELECT key FROM user_keys LIMIT 5;"
-sqlite3 data/nanochat.db "SELECT key FROM api_keys LIMIT 5;"
+psql "$DATABASE_URL" -c "SELECT key FROM user_keys LIMIT 5;"
+psql "$DATABASE_URL" -c "SELECT key FROM api_keys LIMIT 5;"
 ```
 
 Encrypted keys will be long base64 strings (150+ characters), while unencrypted keys are shorter.
@@ -174,7 +173,7 @@ If you need to rollback:
 1. Stop the application
 2. Restore your database backup:
    ```bash
-   cp data/nanochat.db.backup data/nanochat.db
+   psql "$DATABASE_URL" < nanochat-backup.sql
    ```
 3. Remove or comment out the `ENCRYPTION_KEY` from your `.env` file
 4. Restart the application

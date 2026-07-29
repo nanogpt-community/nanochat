@@ -1,1 +1,0 @@
-ALTER TABLE `conversations` ADD `assistant_id` text REFERENCES assistants(id);

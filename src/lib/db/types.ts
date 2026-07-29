@@ -1,5 +1,5 @@
 /**
- * Type compatibility layer for Convex to SQLite migration
+ * Type compatibility layer for the original Convex migration
  * Provides Doc and Id types that match Convex patterns
  */
 
@@ -39,6 +39,6 @@ export type Doc<T extends keyof TableTypes> = TableTypes[T];
 
 /**
  * Id<TableName> - Gets the ID type for a table
- * In our SQLite implementation, all IDs are strings (UUIDs)
+ * In our Postgres implementation, all IDs are strings (UUIDs)
  */
 export type Id<T extends keyof TableTypes> = string;

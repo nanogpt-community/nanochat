@@ -1,1 +1,0 @@
-ALTER TABLE `passkey` ADD `credentialID` text NOT NULL;
