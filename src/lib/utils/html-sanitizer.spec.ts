@@ -65,12 +65,16 @@ describe('toSafeResourceUrl', () => {
 			'java\rscript:alert(1)',
 			'ja\tva\nscript:alert(1)',
 			'java\u0000script:alert(1)',
+			'vb\\tscript:alert(1)',
+			'da\\tta:text/html,<svg onload=alert(1)>',
 		]) {
 			for (const html of [`<a href="${smuggled}">x</a>`, `<img src="${smuggled}">`]) {
 				const attr = sanitizeHtml(html).match(/(?:href|src)="([^"]*)"/)?.[1] ?? '';
 				// What the browser is left with after it discards those characters.
 				const asBrowserParsesIt = attr.replace(/[\t\n\r]/g, '').toLowerCase();
-				expect(asBrowserParsesIt.startsWith('javascript:')).toBe(false);
+				for (const scheme of ['javascript:', 'data:', 'vbscript:']) {
+					expect(asBrowserParsesIt.startsWith(scheme)).toBe(false);
+				}
 			}
 		}
 	});
