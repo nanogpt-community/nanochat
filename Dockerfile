@@ -53,7 +53,10 @@ COPY --from=builder /app/drizzle ./drizzle
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/bun.lock ./bun.lock
 COPY --from=builder /app/drizzle.config.ts ./drizzle.config.ts
-COPY --from=builder /app/src/lib/db/schema.ts ./src/lib/db/schema.ts
+# Full src (2MB of TS) rather than just schema.ts: drizzle-kit needs the schema,
+# and the scripts/ one-offs (sqlite migration, key backfill) import from src too.
+COPY --from=builder /app/src ./src
+COPY --from=builder /app/scripts ./scripts
 
 # Install production dependencies only with frozen lockfile
 RUN --mount=type=cache,target=/root/.bun/install/cache \

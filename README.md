@@ -80,8 +80,18 @@ Older versions stored everything in `data/nanochat.db`. To move that data into P
 - `bun run db:migrate-from-sqlite` (pass a path if your database is not at `data/nanochat.db`)
 - Start the app, confirm your chats are there, then archive the old `.db` file
 
+On Docker, mount the old `data` directory into the container and run the same
+steps inside it:
+
+```bash
+docker compose exec nanochat bun run db:migrate
+docker compose exec nanochat bun run db:migrate-from-sqlite /app/data/nanochat.db
+```
+
 The copy is idempotent (`on conflict do nothing`), so it is safe to re-run.
-Uploaded files in `data/uploads` are untouched — keep that directory mounted.
+Tables that did not exist yet in your old release are skipped rather than
+failing the run. Uploaded files in `data/uploads` are untouched — keep that
+directory mounted.
 
 ## Nginx
 
@@ -219,7 +229,7 @@ You can use URL parameters to pre-configure your chat session. This is useful fo
 
 | Variable                      | Description                                                                                                           |
 | ----------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| `DATABASE_URL`                | Postgres connection string, e.g. `postgres://user:pass@host:5432/nanochat`                                                                    |
+| `DATABASE_URL`                | Postgres connection string, e.g. `postgres://user:pass@host:5432/nanochat`                                            |
 | `NANOGPT_API_KEY`             | Nano-GPT API key for generation                                                                                       |
 | `BETTER_AUTH_SECRET`          | Authentication secret                                                                                                 |
 | `BETTER_AUTH_URL`             | Base URL for authentication                                                                                           |
