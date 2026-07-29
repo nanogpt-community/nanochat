@@ -23,6 +23,7 @@
 	import FilterIcon from '~icons/lucide/filter';
 	import ImageIcon from '~icons/lucide/image';
 	import { Command } from 'bits-ui';
+	import ChevronDownIcon from '~icons/lucide/chevron-down';
 	import * as Popover from '$lib/components/ui/popover';
 	import { shortcut, getKeybindOptions } from '$lib/actions/shortcut.svelte';
 	import { Button } from '../ui/button';
@@ -682,7 +683,7 @@
 			className
 		)}
 	>
-		<div class="flex items-center gap-2 pr-2">
+		<div class="flex items-center gap-1.5">
 			<span class="truncate">
 				{#if enabledArr.length === 0}
 					Loading...
@@ -692,6 +693,7 @@
 					Select model
 				{/if}
 			</span>
+			<ChevronDownIcon class="size-3 shrink-0 opacity-50" />
 		</div>
 	</div>
 {/snippet}
@@ -699,7 +701,7 @@
 <!-- Mobile Drawer -->
 {#if isMobile.current}
 	{@const CLOSE_THRESHOLD = 100}
-	<button onclick={() => (open = true)} class={className}>
+	<button type="button" onclick={() => (open = true)}>
 		{@render trigger()}
 	</button>
 

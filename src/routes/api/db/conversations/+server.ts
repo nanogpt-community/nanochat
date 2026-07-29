@@ -73,88 +73,116 @@ export const GET: RequestHandler = async ({ request, url }) => {
 };
 
 // POST - create or update conversation
+/**
+ * Ownership failures from the query layer surface as `Error('Unauthorized')`. Left
+ * unhandled they became 500s — an authorization decision reported as a server fault,
+ * which is both misleading to clients and noise in error monitoring. 404 rather than
+ * 403 matches the GET handler above, which deliberately avoids revealing whether a
+ * conversation the caller cannot touch exists at all.
+ */
+function rethrowAsHttp(e: unknown): never {
+	if (e instanceof Error && e.message === 'Unauthorized') {
+		throw error(404, 'Conversation not found');
+	}
+	throw e;
+}
+
 export const POST: RequestHandler = async ({ request }) => {
 	const userId = await getAuthenticatedUserId(request);
 	const body = await request.json();
 	const { action } = body;
 
-	switch (action) {
-		case 'create': {
-			const conversation = await createConversation(userId, body.title, body.projectId);
-			return json(conversation);
-		}
-
-		case 'createWithMessage': {
-			const result = await createConversationWithMessage(userId, {
-				content: body.content,
-				contentHtml: body.contentHtml,
-				role: body.role,
-				images: body.images,
-				webSearchEnabled: body.webSearchEnabled,
-				projectId: body.projectId,
-			});
-			return json(result);
-		}
-
-		case 'branch': {
-			const newConversationId = await createBranchedConversation(
-				userId,
-				body.conversationId,
-				body.fromMessageId
-			);
-			return json({ conversationId: newConversationId });
-		}
-
-		case 'updateTitle': {
-			await updateConversationTitle(body.conversationId, userId, body.title);
-			return json({ ok: true });
-		}
-
-		case 'setProject': {
-			const projectId = body.projectId ?? null;
-
-			if (projectId) {
-				const ownedProject = await db.query.projects.findFirst({
-					where: and(eq(projects.id, projectId), eq(projects.userId, userId)),
-				});
-
-				if (!ownedProject) {
-					const membership = await db.query.projectMembers.findFirst({
-						where: and(eq(projectMembers.projectId, projectId), eq(projectMembers.userId, userId)),
-					});
-
-					if (!membership) {
-						return error(404, 'Project not found');
-					}
-				}
+	try {
+		switch (action) {
+			case 'create': {
+				const conversation = await createConversation(userId, body.title, body.projectId);
+				return json(conversation);
 			}
 
-			await updateConversationProject(body.conversationId, userId, projectId);
-			return json({ ok: true });
-		}
+			case 'createWithMessage': {
+				const result = await createConversationWithMessage(userId, {
+					content: body.content,
+					contentHtml: body.contentHtml,
+					role: body.role,
+					images: body.images,
+					webSearchEnabled: body.webSearchEnabled,
+					projectId: body.projectId,
+				});
+				return json(result);
+			}
 
-		case 'updateGenerating': {
-			await updateConversationGenerating(body.conversationId, userId, body.generating);
-			return json({ ok: true });
-		}
+			case 'branch': {
+				const newConversationId = await createBranchedConversation(
+					userId,
+					body.conversationId,
+					body.fromMessageId
+				);
+				return json({ conversationId: newConversationId });
+			}
 
-		case 'updateCost': {
-			await updateConversationCost(body.conversationId, userId, body.costUsd);
-			return json({ ok: true });
-		}
+			case 'updateTitle': {
+				await updateConversationTitle(body.conversationId, userId, body.title);
+				return json({ ok: true });
+			}
 
-		case 'setPublic': {
-			await setConversationPublic(body.conversationId, userId, body.public);
-			return json({ ok: true });
-		}
+			case 'setProject': {
+				const projectId = body.projectId ?? null;
 
-		case 'togglePin': {
-			const pinned = await toggleConversationPin(body.conversationId, userId);
-			return json({ pinned });
-		}
+				if (projectId) {
+					const ownedProject = await db.query.projects.findFirst({
+						where: and(eq(projects.id, projectId), eq(projects.userId, userId)),
+					});
 
-		default:
-			return error(400, 'Invalid action');
+					if (!ownedProject) {
+						const membership = await db.query.projectMembers.findFirst({
+							where: and(
+								eq(projectMembers.projectId, projectId),
+								eq(projectMembers.userId, userId)
+							),
+						});
+
+						if (!membership) {
+							return error(404, 'Project not found');
+						}
+
+						// Every other project write rejects viewers; this one accepted any
+						// membership, letting a viewer inject conversations into the project's
+						// shared list.
+						if (membership.role === 'viewer') {
+							return error(403, 'Permission denied');
+						}
+					}
+				}
+
+				await updateConversationProject(body.conversationId, userId, projectId);
+				return json({ ok: true });
+			}
+
+			case 'updateGenerating': {
+				await updateConversationGenerating(body.conversationId, userId, body.generating);
+				return json({ ok: true });
+			}
+
+			case 'updateCost': {
+				await updateConversationCost(body.conversationId, userId, body.costUsd);
+				return json({ ok: true });
+			}
+
+			case 'setPublic': {
+				await setConversationPublic(body.conversationId, userId, body.public);
+				return json({ ok: true });
+			}
+
+			case 'togglePin': {
+				const pinned = await toggleConversationPin(body.conversationId, userId);
+				return json({ pinned });
+			}
+
+			default:
+				return error(400, 'Invalid action');
+		}
+	} catch (e) {
+		rethrowAsHttp(e);
 	}
 };
 
@@ -173,6 +201,10 @@ export const DELETE: RequestHandler = async ({ request, url }) => {
 		return error(400, 'Missing conversation id');
 	}
 
-	await deleteConversation(conversationId, userId);
+	try {
+		await deleteConversation(conversationId, userId);
+	} catch (e) {
+		rethrowAsHttp(e);
+	}
 	return json({ ok: true });
 };

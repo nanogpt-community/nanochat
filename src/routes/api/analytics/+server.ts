@@ -6,11 +6,11 @@ import { getModelAnalytics } from '$lib/analytics/model-analytics';
 export const GET: RequestHandler = async ({ request, url }) => {
 	try {
 		const userId = await getAuthenticatedUserId(request);
-		const recalculate = url.searchParams.get('recalculate') !== 'false';
+		// Absent means "recompute only if stale"; the explicit values force either way.
+		const recalculateParam = url.searchParams.get('recalculate');
+		const recalculate = recalculateParam === null ? undefined : recalculateParam !== 'false';
 
-		console.log(
-			`[analytics] Fetching analytics for user ${userId} (recalculate: ${recalculate})`
-		);
+		console.log(`[analytics] Fetching analytics for user ${userId} (recalculate: ${recalculate})`);
 
 		const { stats, insights } = await getModelAnalytics(userId, { recalculate });
 

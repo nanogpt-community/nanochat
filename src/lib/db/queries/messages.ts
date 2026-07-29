@@ -1,6 +1,7 @@
+import type { ReasoningEffort } from '$lib/utils/model-capabilities';
 import { db, generateId } from '../index';
 import { messages, conversations, type Message } from '../schema';
-import { eq, asc, sql } from 'drizzle-orm';
+import { eq, asc, sql, and } from 'drizzle-orm';
 import { sanitizeHtml } from '$lib/utils/html-sanitizer';
 
 const messageRoleOrder = sql<number>`
@@ -23,7 +24,7 @@ export async function createMessage(
 		tokenCount?: number;
 		images?: Array<{ url: string; storage_id: string; fileName?: string }>;
 		webSearchEnabled?: boolean;
-		reasoningEffort?: 'low' | 'medium' | 'high';
+		reasoningEffort?: ReasoningEffort;
 	}
 ): Promise<Message> {
 	const now = new Date();
@@ -62,7 +63,7 @@ export async function updateMessageContent(
 		contentHtml?: string;
 		reasoning?: string;
 		generationId?: string;
-		reasoningEffort?: 'low' | 'medium' | 'high';
+		reasoningEffort?: ReasoningEffort;
 		annotations?: Array<Record<string, unknown>>;
 	}
 ): Promise<void> {
@@ -135,16 +136,38 @@ export async function setMessageStarred(messageId: string, starred: boolean): Pr
 }
 
 export async function getStarredMessages(userId: string): Promise<Message[]> {
-	// Get all starred messages for conversations owned by the user
+	// The starred check used to run in JS on the result set, so returning a handful
+	// of starred messages meant reading, sorting and transferring every message the
+	// user had ever sent — content_html and reasoning included.
 	const result = await db
 		.select({
 			message: messages,
 		})
 		.from(messages)
 		.innerJoin(conversations, eq(messages.conversationId, conversations.id))
-		.where(eq(conversations.userId, userId))
+		.where(and(eq(conversations.userId, userId), eq(messages.starred, true)))
 		.orderBy(asc(messages.createdAt), asc(messageRoleOrder), asc(messages.id));
 
-	// Filter to only starred messages and return the message objects
-	return result.filter((r) => r.message.starred === true).map((r) => r.message);
+	return result.map((r) => r.message);
+}
+
+/**
+ * A message, but only if it lives in a conversation the caller owns.
+ *
+ * Endpoints that merely checked existence let anyone act on a stranger's messages —
+ * and message ids are published by shared conversations, so targets were not even
+ * hard to come by.
+ */
+export async function getOwnedMessage(
+	messageId: string,
+	userId: string
+): Promise<{ id: string; conversationId: string } | null> {
+	const rows = await db
+		.select({ id: messages.id, conversationId: messages.conversationId })
+		.from(messages)
+		.innerJoin(conversations, eq(messages.conversationId, conversations.id))
+		.where(and(eq(messages.id, messageId), eq(conversations.userId, userId)))
+		.limit(1);
+
+	return rows[0] ?? null;
 }

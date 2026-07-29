@@ -29,6 +29,8 @@ export class TextareaAutosize {
 	maxHeight = $derived.by(() => extract(this.#options.maxHeight, undefined));
 	textareaHeight = $state(0);
 	textareaOldWidth = $state(0);
+	/** Cleared whenever something that affects text metrics may have changed. */
+	#stylesAreCurrent = false;
 
 	constructor(options: TextareaAutosizeOptions = {}) {
 		this.#options = options;
@@ -49,6 +51,7 @@ export class TextareaAutosize {
 				if (this.textareaOldWidth === contentRect.width) return;
 
 				this.textareaOldWidth = contentRect.width;
+				this.#stylesAreCurrent = false;
 				this.triggerResize();
 			}
 		);
@@ -86,8 +89,18 @@ export class TextareaAutosize {
 		document.body.appendChild(this.#hiddenTextarea);
 	}
 
+	/**
+	 * Mirror the real textarea's text-layout styles onto the hidden measuring one.
+	 *
+	 * This runs from triggerResize(), which fires on every keystroke — and
+	 * getComputedStyle plus 21 getPropertyValue reads followed by 21 style writes is
+	 * a forced synchronous layout each time, over the whole document. None of those
+	 * properties can change from typing, only from a resize or a font/padding change,
+	 * both of which already invalidate via the ResizeObserver below.
+	 */
 	#copyStyles() {
 		if (!this.element || !this.#hiddenTextarea) return;
+		if (this.#stylesAreCurrent) return;
 
 		const computed = window.getComputedStyle(this.element);
 
@@ -123,6 +136,7 @@ export class TextareaAutosize {
 
 		// Ensure the width matches exactly
 		this.#hiddenTextarea.style.width = `${this.element.clientWidth}px`;
+		this.#stylesAreCurrent = true;
 	}
 
 	triggerResize = () => {
@@ -154,6 +168,8 @@ export class TextareaAutosize {
 	attachment: Action<HTMLTextAreaElement> = (node) => {
 		this.element = node;
 		this.#input = node.value;
+		// A different element means different computed styles.
+		this.#stylesAreCurrent = false;
 
 		// Detect programmatic changes
 		const desc = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!;

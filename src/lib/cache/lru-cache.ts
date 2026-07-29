@@ -1,3 +1,43 @@
+/** Guards against cycles and pathologically deep structures. */
+const MAX_ESTIMATE_DEPTH = 8;
+
+function estimateBytes(value: unknown, depth: number): number {
+	if (value === null || value === undefined) return 4;
+
+	switch (typeof value) {
+		case 'string':
+			// Approximates the serialised UTF-8 byte count, which is 1 byte per char for
+			// the ASCII that dominates chat content. Using UTF-16 code units instead
+			// would roughly double every estimate and halve the effective capacity.
+			return value.length + 2;
+		case 'number':
+			return 8;
+		case 'boolean':
+			return 4;
+		case 'object':
+			break;
+		default:
+			return 8;
+	}
+
+	if (depth >= MAX_ESTIMATE_DEPTH) return 64;
+	if (value instanceof Date) return 26;
+
+	if (Array.isArray(value)) {
+		let total = 2;
+		for (const entry of value) total += estimateBytes(entry, depth + 1) + 1;
+		return total;
+	}
+
+	// for..in rather than Object.entries: the latter allocates a [key, value] pair
+	// array for every object visited, which is the bulk of the work on a message list.
+	let total = 2;
+	for (const key in value) {
+		total += key.length + 3 + estimateBytes((value as Record<string, unknown>)[key], depth + 1);
+	}
+	return total;
+}
+
 interface CacheNode<K, V> {
 	key: K;
 	value: V;
@@ -17,12 +57,19 @@ export class LRUCache<K = string, V = unknown> {
 		this.capacity = maxSizeBytes;
 	}
 
+	/**
+	 * Approximate byte size by walking the value instead of serialising it.
+	 *
+	 * This used to be `new Blob([JSON.stringify(value)]).size`, which built a full
+	 * string and a Blob of the entire conversation on every `set`. Streaming writes
+	 * 2-3 cache entries per token, so a 120-message conversation (~200KB) was being
+	 * serialised ~100 times a second purely to measure it, producing enough garbage
+	 * to keep the collector busy for the whole response.
+	 *
+	 * Only used to decide eviction, so an estimate within a small factor is fine.
+	 */
 	private calculateSize(value: V): number {
-		try {
-			return new Blob([JSON.stringify(value)]).size;
-		} catch {
-			return JSON.stringify(value).length * 2;
-		}
+		return estimateBytes(value, 0);
 	}
 
 	private removeNode(node: CacheNode<K, V>): void {

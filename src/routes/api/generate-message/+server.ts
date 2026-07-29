@@ -36,7 +36,11 @@ import {
 	scrapeUrls,
 	formatScrapedContent,
 } from '$lib/backend/url-scraper.server';
-import { supportsVideo } from '$lib/utils/model-capabilities';
+import {
+	supportsVideo,
+	REASONING_EFFORTS,
+	type ReasoningEffort,
+} from '$lib/utils/model-capabilities';
 import { decryptApiKey, isEncrypted } from '$lib/encryption';
 import {
 	checkAndUpdateDailyLimit,
@@ -44,9 +48,17 @@ import {
 	isSubscriptionOnlyMode,
 } from '$lib/backend/message-limits';
 import { substituteSystemPromptVariables } from '$lib/utils/system-prompt-variables';
-import { mcpToolDefinitions, executeMcpTool, isMcpAvailable } from '$lib/backend/mcp-tools';
+import {
+	mcpToolDefinitions,
+	executeMcpTool,
+	isMcpAvailable,
+	modelRejectsTools,
+	noteToolsRejection,
+} from '$lib/backend/mcp-tools';
+import { getRemoteMcpTools, executeRemoteMcpTool } from '$lib/backend/remote-mcp';
 import { nanoGptUrl } from '$lib/backend/nano-gpt-url.server';
 import { getUserIdFromApiKey } from '$lib/backend/auth-utils';
+import { resolveConversationRefs } from '$lib/backend/conversation-refs';
 
 // Set to true to enable debug logging
 const ENABLE_LOGGING = true;
@@ -96,7 +108,7 @@ const reqBodySchema = z
 				})
 			)
 			.optional(),
-		reasoning_effort: z.enum(['low', 'medium', 'high']).optional(),
+		reasoning_effort: z.enum(REASONING_EFFORTS).optional(),
 		temporary: z.boolean().optional(),
 		provider_id: z.string().optional(), // X-Provider header for provider selection
 		image_params: z.record(z.string(), z.any()).optional(), // Image generation settings (resolution, quality, etc.)
@@ -295,7 +307,7 @@ async function generateAIResponse({
 	rules: Doc<'user_rules'>[];
 	userSettingsData: Doc<'user_settings'> | null;
 	abortSignal?: AbortSignal;
-	reasoningEffort?: 'low' | 'medium' | 'high';
+	reasoningEffort?: ReasoningEffort;
 	webSearchDepth?: 'standard' | 'deep';
 	webSearchProvider?:
 		| 'linkup'
@@ -325,9 +337,19 @@ async function generateAIResponse({
 		return;
 	}
 
-	// Get all messages for this conversation
+	// Get all messages for this conversation.
+	// Only the columns prompt construction consumes; full rows meant transferring
+	// contentHtml, reasoning and annotations for the whole thread on every send.
 	const conversationMessages = await db.query.messages.findMany({
 		where: eq(messages.conversationId, conversationId),
+		columns: {
+			id: true,
+			role: true,
+			content: true,
+			images: true,
+			documents: true,
+			webSearchEnabled: true,
+		},
 		orderBy: [asc(messages.createdAt)],
 	});
 
@@ -463,7 +485,7 @@ async function generateAIResponse({
 
 						// Look up storage record
 						const storageRecord = await db.query.storage.findFirst({
-							where: eq(storage.id, img.storage_id),
+							where: and(eq(storage.id, img.storage_id), eq(storage.userId, userId)),
 						});
 
 						if (!storageRecord) {
@@ -474,10 +496,10 @@ async function generateAIResponse({
 							};
 						}
 
-							try {
-								const fileBuffer = await readStorageBuffer(storageRecord.path);
-								const base64 = fileBuffer.toString('base64');
-								const dataUrl = `data:${storageRecord.mimeType};base64,${base64}`;
+						try {
+							const fileBuffer = await readStorageBuffer(storageRecord.path);
+							const base64 = fileBuffer.toString('base64');
+							const dataUrl = `data:${storageRecord.mimeType};base64,${base64}`;
 
 							return {
 								type: 'image_url' as const,
@@ -515,7 +537,7 @@ async function generateAIResponse({
 
 						// Look up storage record
 						const storageRecord = await db.query.storage.findFirst({
-							where: eq(storage.id, doc.storage_id),
+							where: and(eq(storage.id, doc.storage_id), eq(storage.userId, userId)),
 						});
 
 						if (!storageRecord) {
@@ -528,9 +550,9 @@ async function generateAIResponse({
 
 						try {
 							// For text and markdown files, read content
-								if (doc.fileType === 'text' || doc.fileType === 'markdown') {
-									const fileBuffer = await readStorageBuffer(storageRecord.path);
-									const content = fileBuffer.toString('utf-8');
+							if (doc.fileType === 'text' || doc.fileType === 'markdown') {
+								const fileBuffer = await readStorageBuffer(storageRecord.path);
+								const content = fileBuffer.toString('utf-8');
 								return {
 									type: 'text' as const,
 									text: `[${doc.fileType.toUpperCase()} Document: ${doc.fileName || 'Untitled'}]\n\n${content}`,
@@ -606,63 +628,65 @@ async function generateAIResponse({
 		systemContent += `[MEMORY FROM PREVIOUS CONVERSATIONS]\n${storedMemory}\n\n[CURRENT CONVERSATION]\n`;
 	}
 
-	// Fetch assistant if assigned to conversation
 	const conversation = await db.query.conversations.findFirst({
 		where: eq(conversations.id, conversationId),
 	});
 
-	if (conversation?.assistantId) {
-		const assistant = await db.query.assistants.findFirst({
-			where: eq(assistants.id, conversation.assistantId),
-		});
+	// Assistant and project both hang off the conversation but not off each other, so
+	// they are fetched together rather than in series, with only the columns used
+	// below. Mirrors the streaming endpoint.
+	const [assistant, project] = await Promise.all([
+		conversation?.assistantId
+			? db.query.assistants.findFirst({
+					where: eq(assistants.id, conversation.assistantId),
+					columns: { systemPrompt: true },
+				})
+			: undefined,
+		conversation?.projectId
+			? db.query.projects.findFirst({
+					where: eq(projects.id, conversation.projectId),
+					columns: { systemPrompt: true },
+					with: { files: { columns: { fileName: true, extractedContent: true } } },
+				})
+			: undefined,
+	]);
 
-		if (assistant?.systemPrompt) {
-			// Substitute variables in system prompt
-			const substitutedPrompt = substituteSystemPromptVariables(assistant.systemPrompt, {
+	if (assistant?.systemPrompt) {
+		// Substitute variables in system prompt
+		const substitutedPrompt = substituteSystemPromptVariables(assistant.systemPrompt, {
+			modelId: model.modelId,
+			modelName: model.modelId, // NanoGPT doesn't have separate model names
+			provider: model.provider,
+			userName: userName,
+			timezone: userSettingsData?.timezone,
+		});
+		systemContent += `${substitutedPrompt}\n\n`;
+	}
+
+	if (project) {
+		// Add project custom instructions
+		if (project.systemPrompt) {
+			const substitutedPrompt = substituteSystemPromptVariables(project.systemPrompt, {
 				modelId: model.modelId,
-				modelName: model.modelId, // NanoGPT doesn't have separate model names
+				modelName: model.modelId,
 				provider: model.provider,
 				userName: userName,
 				timezone: userSettingsData?.timezone,
 			});
-			systemContent += `${substitutedPrompt}\n\n`;
+			systemContent += `\n[PROJECT INSTRUCTIONS]\n${substitutedPrompt}\n\n`;
 		}
-	}
 
-	// Fetch project if assigned to conversation
-	if (conversation?.projectId) {
-		const project = await db.query.projects.findFirst({
-			where: eq(projects.id, conversation.projectId),
-			with: {
-				files: true,
-			},
-		});
-
-		if (project) {
-			// Add project custom instructions
-			if (project.systemPrompt) {
-				const substitutedPrompt = substituteSystemPromptVariables(project.systemPrompt, {
-					modelId: model.modelId,
-					modelName: model.modelId,
-					provider: model.provider,
-					userName: userName,
-					timezone: userSettingsData?.timezone,
-				});
-				systemContent += `\n[PROJECT INSTRUCTIONS]\n${substitutedPrompt}\n\n`;
+		// Add project files context
+		if (project.files && project.files.length > 0) {
+			let projectKnowledge = '';
+			for (const file of project.files) {
+				if (file.extractedContent) {
+					projectKnowledge += `\n--- START OF FILE: ${file.fileName} ---\n${file.extractedContent}\n--- END OF FILE: ${file.fileName} ---\n`;
+				}
 			}
 
-			// Add project files context
-			if (project.files && project.files.length > 0) {
-				let projectKnowledge = '';
-				for (const file of project.files) {
-					if (file.extractedContent) {
-						projectKnowledge += `\n--- START OF FILE: ${file.fileName} ---\n${file.extractedContent}\n--- END OF FILE: ${file.fileName} ---\n`;
-					}
-				}
-
-				if (projectKnowledge) {
-					systemContent += `\n[PROJECT KNOWLEDGE BASE]\nThe following files are attached to this project. Use them as context to answer user queries.\n${projectKnowledge}\n\n`;
-				}
+			if (projectKnowledge) {
+				systemContent += `\n[PROJECT KNOWLEDGE BASE]\nThe following files are attached to this project. Use them as context to answer user queries.\n${projectKnowledge}\n\n`;
 			}
 		}
 	}
@@ -767,63 +791,95 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 	// This prevents the model from using the tool instead of the native integration
 	// which supports multiple providers (Tavily, Exa, etc.)
 	const webSearchActive = !webFeaturesDisabled && (lastUserMessage?.webSearchEnabled ?? false);
-	const tools = mcpAvailable
+	const builtinTools = mcpAvailable
 		? mcpToolDefinitions.filter((t) => {
 				if (webSearchActive && t.type === 'function' && t.function.name === 'nanogpt_web_search') {
 					return false;
 				}
 				return true;
 			})
-		: undefined;
+		: [];
 
-	const streamResult = await ResultAsync.fromPromise(
+	// User-configured remote MCP servers use the user's own credentials, so they
+	// aren't gated on the NanoGPT MCP toggle.
+	// ponytail: background generation stays single-round; only the streaming path
+	// chains tool calls. Lift the loop up here too if background tasks need it.
+	const remoteMcp = await getRemoteMcpTools(userId).catch((e) => {
+		log(`Background: Remote MCP discovery failed: ${e}`, startTime);
+		return { tools: [], routes: new Map() };
+	});
+
+	const allTools = [...builtinTools, ...remoteMcp.tools];
+	const tools = allTools.length > 0 ? allTools : undefined;
+	// Not every model accepts a tools payload, and the catalog can't be trusted to
+	// say which — see modelRejectsTools. Start optimistic, fall back below.
+	let sendTools = Boolean(tools) && !modelRejectsTools(modelId);
+
+	const requestParams = {
+		model: modelId,
+		messages: messagesToSend,
+		temperature: 0.7,
+		stream: true,
+		reasoning_effort: reasoningEffort,
+		stream_options: { include_usage: true },
+		// @ts-ignore - Custom NanoGPT parameters
+		linkup:
+			!webFeaturesDisabled && (lastUserMessage?.webSearchEnabled ?? false)
+				? {
+						enabled: true,
+						provider: webSearchProvider || 'linkup',
+						depth:
+							webSearchProvider === 'exa'
+								? webSearchExaDepth || 'auto'
+								: webSearchDepth === 'deep'
+									? 'deep'
+									: 'standard',
+						...(webSearchContextSize ? { search_context_size: webSearchContextSize } : {}),
+						...(webSearchProvider === 'kagi' && webSearchKagiSource
+							? { kagiSource: webSearchKagiSource }
+							: {}),
+						...(webSearchProvider === 'valyu' && webSearchValyuSearchType
+							? { searchType: webSearchValyuSearchType }
+							: {}),
+					}
+				: undefined,
+		// @ts-ignore - Custom NanoGPT parameters
+		youtube_transcripts: userSettingsData?.youtubeTranscriptsEnabled ?? false,
+		// @ts-ignore - Custom NanoGPT parameters
+		prompt_caching: model.modelId.startsWith('claude-')
+			? {
+					enabled: true,
+					ttl: '5m',
+				}
+			: undefined,
+	};
+
+	const createStream = (withTools: boolean) =>
 		openai.chat.completions.create(
-			{
-				model: modelId,
-				messages: messagesToSend,
-				temperature: 0.7,
-				stream: true,
-				reasoning_effort: reasoningEffort,
-				stream_options: { include_usage: true },
-				// Add MCP tools when enabled
-				tools,
-				// @ts-ignore - Custom NanoGPT parameters
-				linkup:
-					!webFeaturesDisabled && (lastUserMessage?.webSearchEnabled ?? false)
-						? {
-								enabled: true,
-								provider: webSearchProvider || 'linkup',
-								depth:
-									webSearchProvider === 'exa'
-										? webSearchExaDepth || 'auto'
-										: webSearchDepth === 'deep'
-											? 'deep'
-											: 'standard',
-								...(webSearchContextSize ? { search_context_size: webSearchContextSize } : {}),
-								...(webSearchProvider === 'kagi' && webSearchKagiSource
-									? { kagiSource: webSearchKagiSource }
-									: {}),
-								...(webSearchProvider === 'valyu' && webSearchValyuSearchType
-									? { searchType: webSearchValyuSearchType }
-									: {}),
-							}
-						: undefined,
-				// @ts-ignore - Custom NanoGPT parameters
-				youtube_transcripts: userSettingsData?.youtubeTranscriptsEnabled ?? false,
-				// @ts-ignore - Custom NanoGPT parameters
-				prompt_caching: model.modelId.startsWith('claude-')
-					? {
-							enabled: true,
-							ttl: '5m',
-						}
-					: undefined,
-			} as any, // Cast to any to allow custom parameters
-			{
-				signal: abortSignal,
-			}
-		),
+			{ ...requestParams, tools: withTools ? tools : undefined } as any,
+			{ signal: abortSignal }
+		);
+
+	let streamResult = await ResultAsync.fromPromise(
+		createStream(sendTools),
 		(e) => `OpenAI API call failed: ${e}`
 	);
+
+	// A model that won't take tools shouldn't cost the user their whole message —
+	// drop the tools and answer without them rather than failing the request.
+	if (streamResult.isErr() && sendTools && !abortSignal?.aborted) {
+		noteToolsRejection(modelId, streamResult.error);
+		log(
+			`Background: ${modelId} rejected a tools request (${streamResult.error}); retrying without tools`,
+			startTime
+		);
+
+		sendTools = false;
+		streamResult = await ResultAsync.fromPromise(
+			createStream(false),
+			(e) => `OpenAI API call failed: ${e}`
+		);
+	}
 
 	if (streamResult.isErr()) {
 		await handleGenerationError({
@@ -935,7 +991,7 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 		}
 
 		// Handle tool calls if the model requested them
-		if (finishReason === 'tool_calls' && toolCalls.length > 0 && mcpAvailable) {
+		if (finishReason === 'tool_calls' && toolCalls.length > 0 && sendTools) {
 			log(`Background: Model requested ${toolCalls.length} tool call(s)`, startTime);
 
 			// Update message to show tool execution is happening
@@ -959,9 +1015,10 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 
 				try {
 					let args = JSON.parse(tc.function.arguments || '{}');
+					const route = remoteMcp.routes.get(tc.function.name);
 
 					// Special handling for vision tool: inject image from context if missing
-					if (tc.function.name === 'nanogpt_vision') {
+					if (!route && tc.function.name === 'nanogpt_vision') {
 						const imgUrl = args.image_url as string | undefined;
 						// If no URL provided, or it's not a valid URL/data-uri, try to find one in context
 						if (!imgUrl || (!imgUrl.startsWith('http') && !imgUrl.startsWith('data:'))) {
@@ -1005,7 +1062,9 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 
 					log(`Background: Executing tool ${tc.function.name}`, startTime);
 
-					const result = await executeMcpTool(tc.function.name, args, apiKey);
+					const result = route
+						? await executeRemoteMcpTool(route, args)
+						: await executeMcpTool(tc.function.name, args, apiKey);
 
 					toolResults.push({
 						role: 'tool',
@@ -1399,6 +1458,7 @@ async function generateVideoResponse({
 	// Get all messages for this conversation
 	const conversationMessages = await db.query.messages.findMany({
 		where: eq(messages.conversationId, conversationId),
+		columns: { id: true, role: true, content: true, images: true },
 		orderBy: [asc(messages.createdAt)],
 	});
 
@@ -1431,14 +1491,14 @@ async function generateVideoResponse({
 		} else {
 			// Resolve storage ID
 			const storageRecord = await db.query.storage.findFirst({
-				where: eq(storage.id, img.storage_id),
+				where: and(eq(storage.id, img.storage_id), eq(storage.userId, userId)),
 			});
 
 			if (storageRecord) {
-					try {
-						const fileBuffer = await readStorageBuffer(storageRecord.path);
-						const base64 = fileBuffer.toString('base64');
-						imageDataUrl = `data:${storageRecord.mimeType};base64,${base64}`;
+				try {
+					const fileBuffer = await readStorageBuffer(storageRecord.path);
+					const base64 = fileBuffer.toString('base64');
+					imageDataUrl = `data:${storageRecord.mimeType};base64,${base64}`;
 				} catch (e) {
 					console.error(`Failed to read file for image ${img.storage_id}:`, e);
 				}
@@ -1732,6 +1792,13 @@ export async function _generateMessageForUser({
 		conversationId = generateId();
 		const now = new Date();
 
+		// Drops any project/assistant the caller may not use, rather than trusting the
+		// request body with columns that prompt assembly later reads privileged data from.
+		const refs = await resolveConversationRefs(userId, {
+			projectId: args.project_id,
+			assistantId: args.assistant_id,
+		});
+
 		await db.insert(conversations).values({
 			id: conversationId,
 			userId,
@@ -1740,8 +1807,8 @@ export async function _generateMessageForUser({
 			public: false,
 			pinned: false,
 			costUsd: 0,
-			assistantId: args.assistant_id,
-			projectId: args.project_id,
+			assistantId: refs.assistantId,
+			projectId: refs.projectId,
 			temporary: isTemporaryChat,
 			createdAt: now,
 			updatedAt: now,
@@ -1812,8 +1879,7 @@ export async function _generateMessageForUser({
 	const modelsResult = await getNanoGPTModels();
 	let isImageModel = false;
 	let modelInfo:
-		| { maxImages?: number; architecture?: { output_modalities?: string[] } }
-		| undefined;
+		{ maxImages?: number; architecture?: { output_modalities?: string[] } } | undefined;
 
 	if (modelsResult.isOk()) {
 		modelInfo = modelsResult.value.find((m) => m.id === args.model_id);
@@ -1846,7 +1912,7 @@ export async function _generateMessageForUser({
 				if (args.images && args.images.length > 0) {
 					const inputImage = args.images[0]!;
 					const storageRecord = await db.query.storage.findFirst({
-						where: eq(storage.id, inputImage.storage_id),
+						where: and(eq(storage.id, inputImage.storage_id), eq(storage.userId, userId)),
 					});
 
 					if (storageRecord) {

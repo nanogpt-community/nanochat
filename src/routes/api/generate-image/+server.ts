@@ -170,7 +170,7 @@ export async function POST({ request }: RequestEvent) {
 	// Handle reference image for img2img
 	if (args.reference_image_id) {
 		const storageRecord = await db.query.storage.findFirst({
-			where: eq(storage.id, args.reference_image_id),
+			where: and(eq(storage.id, args.reference_image_id), eq(storage.userId, userId)),
 		});
 
 		if (storageRecord && existsSync(storageRecord.path)) {
@@ -247,8 +247,7 @@ export async function POST({ request }: RequestEvent) {
 				}
 
 				const storageId = generateId();
-				const extension =
-					(mimeType.split('/')[1] || 'png').replace(/[^a-zA-Z0-9]/g, '') || 'png';
+				const extension = (mimeType.split('/')[1] || 'png').replace(/[^a-zA-Z0-9]/g, '') || 'png';
 				const filename = `${storageId}.${extension}`;
 				const filepath = join(UPLOAD_DIR, filename);
 

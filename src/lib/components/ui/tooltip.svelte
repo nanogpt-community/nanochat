@@ -24,7 +24,12 @@
 		disabled,
 		closeDelay,
 		closeOnPointerDown,
-		forceVisible = true,
+		// melt treats forceVisible as `isVisible = open || forceVisible`, so defaulting
+		// it to true kept every tooltip's content permanently showPopover()'d into the
+		// top layer, each with its own capture-phase document scroll listener. A message
+		// mounts ~8 tooltips, so a 120-message conversation carried ~900 live popovers.
+		// The fade still works: it transitions on [data-open], not on this.
+		forceVisible = false,
 		disableHoverableContent = true,
 	}: Props = $props();
 

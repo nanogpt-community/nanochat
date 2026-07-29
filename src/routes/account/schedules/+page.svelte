@@ -1,4 +1,9 @@
 <script lang="ts">
+	import {
+		REASONING_EFFORTS,
+		REASONING_EFFORT_LABELS,
+		type ReasoningEffort,
+	} from '$lib/utils/model-capabilities';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { api, useCachedQuery, invalidateQueryPattern } from '$lib/cache/cached-query.svelte';
@@ -67,7 +72,7 @@
 		| 'brave-pro'
 		| 'brave-research'
 	>('linkup');
-	let formReasoningEffort = $state<'low' | 'medium' | 'high' | ''>('');
+	let formReasoningEffort = $state<ReasoningEffort | ''>('');
 	let formEnabled = $state(true);
 
 	type ScheduleType = 'cron' | 'interval' | 'once';
@@ -154,8 +159,7 @@
 	}
 
 	function toUtcIsoFromTimezone(value: string, tz: string): string {
-		const match =
-			/^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2})$/.exec(value.trim()) ?? null;
+		const match = /^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2})$/.exec(value.trim()) ?? null;
 		if (!match) return '';
 		const [, year, month, day, hour, minute] = match;
 		const base = Date.UTC(
@@ -204,7 +208,8 @@
 		formModelId = (task.payload as any)?.model_id ?? '';
 		formAssistantId = (task.payload as any)?.assistant_id ?? '';
 		formProjectId = (task.payload as any)?.project_id ?? '';
-		formWebSearchMode = ((task.payload as any)?.web_search_mode as typeof formWebSearchMode) ?? 'off';
+		formWebSearchMode =
+			((task.payload as any)?.web_search_mode as typeof formWebSearchMode) ?? 'off';
 		formWebSearchProvider =
 			((task.payload as any)?.web_search_provider as typeof formWebSearchProvider) ?? 'linkup';
 		formReasoningEffort =
@@ -273,7 +278,12 @@
 		}
 	}
 
-	function buildSchedule(): { type: ScheduleType; cron?: string; intervalSeconds?: number; runAt?: string } {
+	function buildSchedule(): {
+		type: ScheduleType;
+		cron?: string;
+		intervalSeconds?: number;
+		runAt?: string;
+	} {
 		if (formScheduleType === 'cron') {
 			return { type: 'cron', cron: formCron.trim() };
 		}
@@ -412,176 +422,176 @@
 				<p class="text-muted-foreground text-xs">Run prompts on a recurring schedule.</p>
 			</div>
 			<div class="bg-card border-border flex flex-col gap-4 rounded-lg border p-5">
-			<div class="flex flex-col gap-2">
-				<Label for="schedule-name">Name</Label>
-				<Input id="schedule-name" bind:value={formName} placeholder="Daily summary" />
-			</div>
-			<div class="flex flex-col gap-2">
-				<Label for="schedule-description">Description (optional)</Label>
-				<Textarea
-					id="schedule-description"
-					bind:value={formDescription}
-					rows={2}
-					placeholder="Optional notes about this task"
-				/>
-			</div>
-			<div class="flex flex-col gap-2">
-				<Label for="schedule-message">Prompt</Label>
-				<Textarea
-					id="schedule-message"
-					bind:value={formMessage}
-					rows={4}
-					placeholder="Write the prompt to run on schedule"
-				/>
-			</div>
-			<div class="grid gap-4 md:grid-cols-2">
 				<div class="flex flex-col gap-2">
-					<Label for="schedule-model">Model</Label>
-					<select
-						id="schedule-model"
-						class="border-input bg-background h-10 rounded-md border px-3 py-2 text-sm"
-						bind:value={formModelId}
-					>
-						<option value="" disabled>Select a model</option>
-						{#each enabledModels as model}
-							<option value={model.value}>{model.label}</option>
-						{/each}
-					</select>
+					<Label for="schedule-name">Name</Label>
+					<Input id="schedule-name" bind:value={formName} placeholder="Daily summary" />
 				</div>
 				<div class="flex flex-col gap-2">
-					<Label for="schedule-assistant">Assistant (optional)</Label>
-					<select
-						id="schedule-assistant"
-						class="border-input bg-background h-10 rounded-md border px-3 py-2 text-sm"
-						bind:value={formAssistantId}
-					>
-						<option value="">None</option>
-						{#each assistantsQuery.data ?? [] as assistant}
-							<option value={assistant.id}>{assistant.name}</option>
-						{/each}
-					</select>
+					<Label for="schedule-description">Description (optional)</Label>
+					<Textarea
+						id="schedule-description"
+						bind:value={formDescription}
+						rows={2}
+						placeholder="Optional notes about this task"
+					/>
 				</div>
 				<div class="flex flex-col gap-2">
-					<Label for="schedule-project">Project (optional)</Label>
-					<select
-						id="schedule-project"
-						class="border-input bg-background h-10 rounded-md border px-3 py-2 text-sm"
-						bind:value={formProjectId}
-					>
-						<option value="">None</option>
-						{#each projectsQuery.data ?? [] as project}
-							<option value={project.id}>{project.name}</option>
-						{/each}
-					</select>
+					<Label for="schedule-message">Prompt</Label>
+					<Textarea
+						id="schedule-message"
+						bind:value={formMessage}
+						rows={4}
+						placeholder="Write the prompt to run on schedule"
+					/>
 				</div>
-				<div class="flex flex-col gap-2">
-					<Label for="schedule-reasoning">Reasoning Effort</Label>
-					<select
-						id="schedule-reasoning"
-						class="border-input bg-background h-10 rounded-md border px-3 py-2 text-sm"
-						bind:value={formReasoningEffort}
-					>
-						<option value="">Default</option>
-						<option value="low">Low</option>
-						<option value="medium">Medium</option>
-						<option value="high">High</option>
-					</select>
-				</div>
-				<div class="flex flex-col gap-2">
-					<Label for="schedule-search-mode">Web Search</Label>
-					<select
-						id="schedule-search-mode"
-						class="border-input bg-background h-10 rounded-md border px-3 py-2 text-sm"
-						bind:value={formWebSearchMode}
-					>
-						<option value="off">Off</option>
-						<option value="standard">Standard</option>
-						<option value="deep">Deep</option>
-					</select>
-				</div>
-				{#if formWebSearchMode !== 'off'}
+				<div class="grid gap-4 md:grid-cols-2">
 					<div class="flex flex-col gap-2">
-						<Label for="schedule-search-provider">Web Search Provider</Label>
+						<Label for="schedule-model">Model</Label>
 						<select
-							id="schedule-search-provider"
+							id="schedule-model"
 							class="border-input bg-background h-10 rounded-md border px-3 py-2 text-sm"
-							bind:value={formWebSearchProvider}
+							bind:value={formModelId}
 						>
-							<option value="linkup">Linkup</option>
-							<option value="tavily">Tavily</option>
-							<option value="exa">Exa</option>
-							<option value="kagi">Kagi</option>
-							<option value="perplexity">Perplexity</option>
-							<option value="valyu">Valyu</option>
-							<option value="brave">Brave</option>
-							<option value="brave-pro">Brave Pro</option>
-							<option value="brave-research">Brave Research</option>
+							<option value="" disabled>Select a model</option>
+							{#each enabledModels as model}
+								<option value={model.value}>{model.label}</option>
+							{/each}
 						</select>
 					</div>
-				{/if}
-				<div class="flex flex-col gap-2">
-					<Label for="schedule-type">Schedule Type</Label>
-					<select
-						id="schedule-type"
-						class="border-input bg-background h-10 rounded-md border px-3 py-2 text-sm"
-						bind:value={formScheduleType}
-					>
-						<option value="cron">Cron Expression</option>
-						<option value="interval">Interval</option>
-						<option value="once">One-time</option>
-					</select>
-				</div>
-				{#if formScheduleType === 'cron'}
 					<div class="flex flex-col gap-2">
-						<Label for="schedule-cron">Cron Expression</Label>
-						<Input id="schedule-cron" bind:value={formCron} placeholder="0 9 * * *" />
+						<Label for="schedule-assistant">Assistant (optional)</Label>
+						<select
+							id="schedule-assistant"
+							class="border-input bg-background h-10 rounded-md border px-3 py-2 text-sm"
+							bind:value={formAssistantId}
+						>
+							<option value="">None</option>
+							{#each assistantsQuery.data ?? [] as assistant}
+								<option value={assistant.id}>{assistant.name}</option>
+							{/each}
+						</select>
 					</div>
-				{:else if formScheduleType === 'interval'}
 					<div class="flex flex-col gap-2">
-						<Label for="schedule-interval">Interval</Label>
-						<div class="flex items-center gap-2">
-							<Input
-								id="schedule-interval"
-								type="number"
-								min="1"
-								bind:value={formIntervalValue}
-								class="w-[120px]"
-							/>
+						<Label for="schedule-project">Project (optional)</Label>
+						<select
+							id="schedule-project"
+							class="border-input bg-background h-10 rounded-md border px-3 py-2 text-sm"
+							bind:value={formProjectId}
+						>
+							<option value="">None</option>
+							{#each projectsQuery.data ?? [] as project}
+								<option value={project.id}>{project.name}</option>
+							{/each}
+						</select>
+					</div>
+					<div class="flex flex-col gap-2">
+						<Label for="schedule-reasoning">Reasoning Effort</Label>
+						<select
+							id="schedule-reasoning"
+							class="border-input bg-background h-10 rounded-md border px-3 py-2 text-sm"
+							bind:value={formReasoningEffort}
+						>
+							<option value="">Default</option>
+							{#each REASONING_EFFORTS as effort (effort)}
+								<option value={effort}>{REASONING_EFFORT_LABELS[effort]}</option>
+							{/each}
+						</select>
+					</div>
+					<div class="flex flex-col gap-2">
+						<Label for="schedule-search-mode">Web Search</Label>
+						<select
+							id="schedule-search-mode"
+							class="border-input bg-background h-10 rounded-md border px-3 py-2 text-sm"
+							bind:value={formWebSearchMode}
+						>
+							<option value="off">Off</option>
+							<option value="standard">Standard</option>
+							<option value="deep">Deep</option>
+						</select>
+					</div>
+					{#if formWebSearchMode !== 'off'}
+						<div class="flex flex-col gap-2">
+							<Label for="schedule-search-provider">Web Search Provider</Label>
 							<select
+								id="schedule-search-provider"
 								class="border-input bg-background h-10 rounded-md border px-3 py-2 text-sm"
-								bind:value={formIntervalUnit}
+								bind:value={formWebSearchProvider}
 							>
-								<option value="minutes">Minutes</option>
-								<option value="hours">Hours</option>
-								<option value="days">Days</option>
+								<option value="linkup">Linkup</option>
+								<option value="tavily">Tavily</option>
+								<option value="exa">Exa</option>
+								<option value="kagi">Kagi</option>
+								<option value="perplexity">Perplexity</option>
+								<option value="valyu">Valyu</option>
+								<option value="brave">Brave</option>
+								<option value="brave-pro">Brave Pro</option>
+								<option value="brave-research">Brave Research</option>
 							</select>
 						</div>
-					</div>
-				{:else}
-					<div class="flex flex-col gap-2">
-						<Label for="schedule-run-at">Run At</Label>
-						<Input id="schedule-run-at" type="datetime-local" bind:value={formRunAt} />
-					</div>
-				{/if}
-			</div>
-			<div class="flex items-center gap-2">
-				<input id="schedule-enabled" type="checkbox" bind:checked={formEnabled} />
-				<Label for="schedule-enabled">Enabled</Label>
-			</div>
-			<div class="border-border flex items-center justify-between border-t pt-4">
-				<Button variant="ghost" onclick={cancelForm}>Cancel</Button>
-				<Button onclick={handleSubmit} disabled={isSubmitting}>
-					{#if isSubmitting}
-						<LoaderCircle class="mr-2 size-4 animate-spin" />
-						Saving...
-					{:else}
-						<Save class="mr-2 size-4" />
-						Save
 					{/if}
-				</Button>
+					<div class="flex flex-col gap-2">
+						<Label for="schedule-type">Schedule Type</Label>
+						<select
+							id="schedule-type"
+							class="border-input bg-background h-10 rounded-md border px-3 py-2 text-sm"
+							bind:value={formScheduleType}
+						>
+							<option value="cron">Cron Expression</option>
+							<option value="interval">Interval</option>
+							<option value="once">One-time</option>
+						</select>
+					</div>
+					{#if formScheduleType === 'cron'}
+						<div class="flex flex-col gap-2">
+							<Label for="schedule-cron">Cron Expression</Label>
+							<Input id="schedule-cron" bind:value={formCron} placeholder="0 9 * * *" />
+						</div>
+					{:else if formScheduleType === 'interval'}
+						<div class="flex flex-col gap-2">
+							<Label for="schedule-interval">Interval</Label>
+							<div class="flex items-center gap-2">
+								<Input
+									id="schedule-interval"
+									type="number"
+									min="1"
+									bind:value={formIntervalValue}
+									class="w-[120px]"
+								/>
+								<select
+									class="border-input bg-background h-10 rounded-md border px-3 py-2 text-sm"
+									bind:value={formIntervalUnit}
+								>
+									<option value="minutes">Minutes</option>
+									<option value="hours">Hours</option>
+									<option value="days">Days</option>
+								</select>
+							</div>
+						</div>
+					{:else}
+						<div class="flex flex-col gap-2">
+							<Label for="schedule-run-at">Run At</Label>
+							<Input id="schedule-run-at" type="datetime-local" bind:value={formRunAt} />
+						</div>
+					{/if}
+				</div>
+				<div class="flex items-center gap-2">
+					<input id="schedule-enabled" type="checkbox" bind:checked={formEnabled} />
+					<Label for="schedule-enabled">Enabled</Label>
+				</div>
+				<div class="border-border flex items-center justify-between border-t pt-4">
+					<Button variant="ghost" onclick={cancelForm}>Cancel</Button>
+					<Button onclick={handleSubmit} disabled={isSubmitting}>
+						{#if isSubmitting}
+							<LoaderCircle class="mr-2 size-4 animate-spin" />
+							Saving...
+						{:else}
+							<Save class="mr-2 size-4" />
+							Save
+						{/if}
+					</Button>
+				</div>
 			</div>
-		</div>
-	</section>
+		</section>
 	{/if}
 
 	<!-- Schedules list -->
@@ -594,7 +604,9 @@
 		</div>
 
 		{#if isLoading}
-			<div class="bg-card border-border text-muted-foreground flex items-center gap-2 rounded-lg border p-5 text-sm">
+			<div
+				class="bg-card border-border text-muted-foreground flex items-center gap-2 rounded-lg border p-5 text-sm"
+			>
 				<LoaderCircle class="size-4 animate-spin" />
 				Loading schedules...
 			</div>

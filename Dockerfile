@@ -1,4 +1,4 @@
-FROM oven/bun:1 AS builder
+FROM oven/bun:canary AS builder
 
 WORKDIR /app
 
@@ -15,24 +15,32 @@ COPY icons ./icons
 # Copy source code
 COPY . .
 
-# Build arguments for environment variables needed during build
-ARG BETTER_AUTH_SECRET=build-time-secret-change-in-production
-ARG BETTER_AUTH_BASE_URL=http://localhost:3000
-# Never connected to; the build only needs the module to load. The real value is
-# supplied at runtime and this stage is discarded.
-ARG DATABASE_URL=postgres://build:build@localhost:5432/build
-
-# Set environment variables for build
 ENV NODE_ENV=production
-ENV BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
-ENV BETTER_AUTH_BASE_URL=${BETTER_AUTH_BASE_URL}
-ENV DATABASE_URL=${DATABASE_URL}
 
-# Build the application
-RUN bun run build
+# Build-only placeholders, set inline on the RUN rather than via ARG/ENV.
+#
+# They are needed because `bun run build` imports server modules, and two of them
+# validate configuration at module load:
+#   BETTER_AUTH_SECRET - better-auth refuses to initialise with its default secret
+#                        while NODE_ENV=production, and $lib/auth is reachable.
+#   DATABASE_URL       - src/lib/db/index.ts throws if it is unset. Never connected to.
+#
+# Neither value is used at runtime: BETTER_AUTH_SECRET is read through
+# $env/dynamic/private and DATABASE_URL through process.env, both resolved when the
+# container starts from the operator's real environment.
+#
+# Inline keeps them out of the image entirely — no ENV layer, nothing in
+# `docker history` or `docker inspect`, and no --build-arg through which a real
+# secret could be passed in by mistake. That is also what silences BuildKit's
+# SecretsUsedInArgOrEnv warning, by removing the cause rather than the symptom.
+# BETTER_AUTH_BASE_URL, previously declared here, was referenced nowhere in the
+# codebase at all; the app reads BETTER_AUTH_URL, at runtime.
+RUN BETTER_AUTH_SECRET=build-time-placeholder-never-used-at-runtime \
+    DATABASE_URL=postgres://build:build@localhost:5432/build \
+    bun run build
 
 # Production image
-FROM oven/bun:1
+FROM oven/bun:canary
 
 # Install poppler-utils for PDF text extraction
 RUN apt-get update && apt-get install -y poppler-utils && rm -rf /var/lib/apt/lists/*

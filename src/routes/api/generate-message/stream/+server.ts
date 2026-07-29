@@ -34,7 +34,11 @@ import {
 	scrapeUrls,
 	formatScrapedContent,
 } from '$lib/backend/url-scraper.server';
-import { supportsVideo } from '$lib/utils/model-capabilities';
+import {
+	supportsVideo,
+	REASONING_EFFORTS,
+	type ReasoningEffort,
+} from '$lib/utils/model-capabilities';
 import { decryptApiKey, isEncrypted } from '$lib/encryption';
 import {
 	checkAndUpdateDailyLimit,
@@ -42,15 +46,36 @@ import {
 	isSubscriptionOnlyMode,
 } from '$lib/backend/message-limits';
 import { substituteSystemPromptVariables } from '$lib/utils/system-prompt-variables';
-import { mcpToolDefinitions, executeMcpTool, isMcpAvailable } from '$lib/backend/mcp-tools';
+import {
+	mcpToolDefinitions,
+	executeMcpTool,
+	isMcpAvailable,
+	modelRejectsTools,
+	noteToolsRejection,
+} from '$lib/backend/mcp-tools';
+import { getRemoteMcpTools, executeRemoteMcpTool } from '$lib/backend/remote-mcp';
 import { nanoGptUrl } from '$lib/backend/nano-gpt-url.server';
 import { SSEEncoder, sseHeaders } from '$lib/sse';
 import { getUserIdFromApiKey } from '$lib/backend/auth-utils';
+import { resolveConversationRefs } from '$lib/backend/conversation-refs';
 import { FOLLOW_UP_QUESTIONS_PROMPT } from '$lib/prompts/follow-up-questions';
 import type { SSEEvent } from '$lib/sse';
 
 // Set to true to enable debug logging
 const ENABLE_LOGGING = true;
+
+type Usage = { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number } | null;
+
+/** Tool rounds are separate billable calls; sum them so cost isn't undercounted. */
+function addUsage(a: Usage, b: Usage): Usage {
+	if (!a) return b;
+	if (!b) return a;
+	return {
+		prompt_tokens: (a.prompt_tokens ?? 0) + (b.prompt_tokens ?? 0),
+		completion_tokens: (a.completion_tokens ?? 0) + (b.completion_tokens ?? 0),
+		total_tokens: (a.total_tokens ?? 0) + (b.total_tokens ?? 0),
+	};
+}
 
 const reqBodySchema = z
 	.object({
@@ -97,7 +122,7 @@ const reqBodySchema = z
 				})
 			)
 			.optional(),
-		reasoning_effort: z.enum(['low', 'medium', 'high']).optional(),
+		reasoning_effort: z.enum(REASONING_EFFORTS).optional(),
 		temporary: z.boolean().optional(),
 		provider_id: z.string().optional(),
 	})
@@ -342,9 +367,7 @@ async function generateFollowUpSuggestions({
 		await db
 			.update(messages)
 			.set({ followUpSuggestions: suggestions })
-			.where(
-				and(eq(messages.id, assistantMessageId), eq(messages.conversationId, conversationId))
-			);
+			.where(and(eq(messages.id, assistantMessageId), eq(messages.conversationId, conversationId)));
 
 		log(`Follow-up generation: Generated ${suggestions.length} suggestions`, startTime);
 		return suggestions;
@@ -549,6 +572,13 @@ export const POST: RequestHandler = async ({ request }) => {
 		conversationId = generateId();
 		const now = new Date();
 
+		// Drops any project/assistant the caller may not use, rather than trusting the
+		// request body with columns that prompt assembly later reads privileged data from.
+		const refs = await resolveConversationRefs(userId, {
+			projectId: args.project_id,
+			assistantId: args.assistant_id,
+		});
+
 		await db.insert(conversations).values({
 			id: conversationId,
 			userId,
@@ -557,8 +587,8 @@ export const POST: RequestHandler = async ({ request }) => {
 			public: false,
 			pinned: false,
 			costUsd: 0,
-			assistantId: args.assistant_id,
-			projectId: args.project_id,
+			assistantId: refs.assistantId,
+			projectId: refs.projectId,
 			temporary: isTemporaryChat,
 			createdAt: now,
 			updatedAt: now,
@@ -810,7 +840,7 @@ async function streamAIResponse({
 	rules: Doc<'user_rules'>[];
 	userSettingsData: Doc<'user_settings'> | null;
 	abortSignal?: AbortSignal;
-	reasoningEffort?: 'low' | 'medium' | 'high';
+	reasoningEffort?: ReasoningEffort;
 	webSearchDepth?: 'standard' | 'deep';
 	webSearchProvider?:
 		| 'linkup'
@@ -845,9 +875,21 @@ async function streamAIResponse({
 		return;
 	}
 
-	// Get all messages for this conversation
+	// Get all messages for this conversation.
+	// Only the columns prompt construction actually consumes: previously this pulled
+	// full rows, so every generation also transferred contentHtml, reasoning and
+	// annotations for the entire thread — on a long conversation with reasoning
+	// traces, tens of MB read per send, none of it used.
 	const conversationMessages = await db.query.messages.findMany({
 		where: eq(messages.conversationId, conversationId),
+		columns: {
+			id: true,
+			role: true,
+			content: true,
+			images: true,
+			documents: true,
+			webSearchEnabled: true,
+		},
 		orderBy: [asc(messages.createdAt)],
 	});
 
@@ -983,7 +1025,7 @@ async function streamAIResponse({
 						}
 
 						const storageRecord = await db.query.storage.findFirst({
-							where: eq(storage.id, img.storage_id),
+							where: and(eq(storage.id, img.storage_id), eq(storage.userId, userId)),
 						});
 
 						if (!storageRecord) {
@@ -994,10 +1036,10 @@ async function streamAIResponse({
 							};
 						}
 
-							try {
-								const fileBuffer = await readStorageBuffer(storageRecord.path);
-								const base64 = fileBuffer.toString('base64');
-								const dataUrl = `data:${storageRecord.mimeType};base64,${base64}`;
+						try {
+							const fileBuffer = await readStorageBuffer(storageRecord.path);
+							const base64 = fileBuffer.toString('base64');
+							const dataUrl = `data:${storageRecord.mimeType};base64,${base64}`;
 
 							return {
 								type: 'image_url' as const,
@@ -1033,7 +1075,7 @@ async function streamAIResponse({
 						}
 
 						const storageRecord = await db.query.storage.findFirst({
-							where: eq(storage.id, doc.storage_id),
+							where: and(eq(storage.id, doc.storage_id), eq(storage.userId, userId)),
 						});
 
 						if (!storageRecord) {
@@ -1045,9 +1087,9 @@ async function streamAIResponse({
 						}
 
 						try {
-								if (doc.fileType === 'text' || doc.fileType === 'markdown') {
-									const fileBuffer = await readStorageBuffer(storageRecord.path);
-									const content = fileBuffer.toString('utf-8');
+							if (doc.fileType === 'text' || doc.fileType === 'markdown') {
+								const fileBuffer = await readStorageBuffer(storageRecord.path);
+								const content = fileBuffer.toString('utf-8');
 								return {
 									type: 'text' as const,
 									text: `[${doc.fileType.toUpperCase()} Document: ${doc.fileName || 'Untitled'}]\n\n${content}`,
@@ -1120,60 +1162,64 @@ async function streamAIResponse({
 		systemContent += `[MEMORY FROM PREVIOUS CONVERSATIONS]\n${storedMemory}\n\n[CURRENT CONVERSATION]\n`;
 	}
 
-	// Fetch assistant if assigned to conversation
 	const conversation = await db.query.conversations.findFirst({
 		where: eq(conversations.id, conversationId),
 	});
 
-	if (conversation?.assistantId) {
-		const assistant = await db.query.assistants.findFirst({
-			where: eq(assistants.id, conversation.assistantId),
-		});
+	// The assistant and the project both hang off the conversation, but not off each
+	// other, so they are fetched together. This runs before the first token, so every
+	// serialised round trip here is latency the user watches. Columns are narrowed
+	// too: the project previously came back with every file's full extractedContent
+	// plus columns nothing below reads.
+	const [assistant, project] = await Promise.all([
+		conversation?.assistantId
+			? db.query.assistants.findFirst({
+					where: eq(assistants.id, conversation.assistantId),
+					columns: { systemPrompt: true },
+				})
+			: undefined,
+		conversation?.projectId
+			? db.query.projects.findFirst({
+					where: eq(projects.id, conversation.projectId),
+					columns: { systemPrompt: true },
+					with: { files: { columns: { fileName: true, extractedContent: true } } },
+				})
+			: undefined,
+	]);
 
-		if (assistant?.systemPrompt) {
-			const substitutedPrompt = substituteSystemPromptVariables(assistant.systemPrompt, {
+	if (assistant?.systemPrompt) {
+		const substitutedPrompt = substituteSystemPromptVariables(assistant.systemPrompt, {
+			modelId: model.modelId,
+			modelName: model.modelId,
+			provider: model.provider,
+			userName: userName,
+			timezone: userSettingsData?.timezone,
+		});
+		systemContent += `${substitutedPrompt}\n\n`;
+	}
+
+	if (project) {
+		if (project.systemPrompt) {
+			const substitutedPrompt = substituteSystemPromptVariables(project.systemPrompt, {
 				modelId: model.modelId,
 				modelName: model.modelId,
 				provider: model.provider,
 				userName: userName,
 				timezone: userSettingsData?.timezone,
 			});
-			systemContent += `${substitutedPrompt}\n\n`;
+			systemContent += `\n[PROJECT INSTRUCTIONS]\n${substitutedPrompt}\n\n`;
 		}
-	}
 
-	// Fetch project if assigned to conversation
-	if (conversation?.projectId) {
-		const project = await db.query.projects.findFirst({
-			where: eq(projects.id, conversation.projectId),
-			with: {
-				files: true,
-			},
-		});
-
-		if (project) {
-			if (project.systemPrompt) {
-				const substitutedPrompt = substituteSystemPromptVariables(project.systemPrompt, {
-					modelId: model.modelId,
-					modelName: model.modelId,
-					provider: model.provider,
-					userName: userName,
-					timezone: userSettingsData?.timezone,
-				});
-				systemContent += `\n[PROJECT INSTRUCTIONS]\n${substitutedPrompt}\n\n`;
+		if (project.files && project.files.length > 0) {
+			let projectKnowledge = '';
+			for (const file of project.files) {
+				if (file.extractedContent) {
+					projectKnowledge += `\n--- START OF FILE: ${file.fileName} ---\n${file.extractedContent}\n--- END OF FILE: ${file.fileName} ---\n`;
+				}
 			}
 
-			if (project.files && project.files.length > 0) {
-				let projectKnowledge = '';
-				for (const file of project.files) {
-					if (file.extractedContent) {
-						projectKnowledge += `\n--- START OF FILE: ${file.fileName} ---\n${file.extractedContent}\n--- END OF FILE: ${file.fileName} ---\n`;
-					}
-				}
-
-				if (projectKnowledge) {
-					systemContent += `\n[PROJECT KNOWLEDGE BASE]\nThe following files are attached to this project. Use them as context to answer user queries.\n${projectKnowledge}\n\n`;
-				}
+			if (projectKnowledge) {
+				systemContent += `\n[PROJECT KNOWLEDGE BASE]\nThe following files are attached to this project. Use them as context to answer user queries.\n${projectKnowledge}\n\n`;
 			}
 		}
 	}
@@ -1260,62 +1306,101 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 	}
 
 	const webSearchActive = !webFeaturesDisabled && (lastUserMessage?.webSearchEnabled ?? false);
-	const tools = mcpAvailable
+	const builtinTools = mcpAvailable
 		? mcpToolDefinitions.filter((t) => {
 				if (webSearchActive && t.type === 'function' && t.function.name === 'nanogpt_web_search') {
 					return false;
 				}
 				return true;
 			})
-		: undefined;
+		: [];
 
-	const streamResult = await ResultAsync.fromPromise(
+	// User-configured remote MCP servers run on the user's own credentials, so
+	// they're independent of the NanoGPT MCP toggle and its key restrictions.
+	const remoteMcp = await getRemoteMcpTools(userId).catch((e) => {
+		log(`Remote MCP discovery failed: ${e}`, startTime);
+		return { tools: [], routes: new Map() };
+	});
+	if (remoteMcp.tools.length > 0) {
+		log(`${remoteMcp.tools.length} remote MCP tool(s) available`, startTime);
+	}
+
+	const allTools = [...builtinTools, ...remoteMcp.tools];
+	const tools = allTools.length > 0 ? allTools : undefined;
+	// Not every model accepts a tools payload, and the catalog can't be trusted to
+	// say which — see modelRejectsTools. Start optimistic, fall back below.
+	let sendTools = Boolean(tools) && !modelRejectsTools(modelId);
+
+	const requestParams = {
+		model: modelId,
+		messages: messagesToSend,
+		temperature: 0.7,
+		stream: true,
+		reasoning_effort: reasoningEffort,
+		stream_options: { include_usage: true },
+		// @ts-ignore - Custom NanoGPT parameters
+		linkup:
+			!webFeaturesDisabled && (lastUserMessage?.webSearchEnabled ?? false)
+				? {
+						enabled: true,
+						provider: webSearchProvider || 'linkup',
+						depth:
+							webSearchProvider === 'exa'
+								? webSearchExaDepth || 'auto'
+								: webSearchDepth === 'deep'
+									? 'deep'
+									: 'standard',
+						...(webSearchContextSize ? { search_context_size: webSearchContextSize } : {}),
+						...(webSearchProvider === 'kagi' && webSearchKagiSource
+							? { kagiSource: webSearchKagiSource }
+							: {}),
+						...(webSearchProvider === 'valyu' && webSearchValyuSearchType
+							? { searchType: webSearchValyuSearchType }
+							: {}),
+					}
+				: undefined,
+		// @ts-ignore
+		youtube_transcripts: userSettingsData?.youtubeTranscriptsEnabled ?? false,
+		// @ts-ignore
+		prompt_caching: model.modelId.startsWith('claude-')
+			? {
+					enabled: true,
+					ttl: '5m',
+				}
+			: undefined,
+	};
+
+	const createStream = (withTools: boolean) =>
 		openai.chat.completions.create(
-			{
-				model: modelId,
-				messages: messagesToSend,
-				temperature: 0.7,
-				stream: true,
-				reasoning_effort: reasoningEffort,
-				stream_options: { include_usage: true },
-				tools,
-				// @ts-ignore - Custom NanoGPT parameters
-				linkup:
-					!webFeaturesDisabled && (lastUserMessage?.webSearchEnabled ?? false)
-						? {
-								enabled: true,
-								provider: webSearchProvider || 'linkup',
-								depth:
-									webSearchProvider === 'exa'
-										? webSearchExaDepth || 'auto'
-										: webSearchDepth === 'deep'
-											? 'deep'
-											: 'standard',
-								...(webSearchContextSize ? { search_context_size: webSearchContextSize } : {}),
-								...(webSearchProvider === 'kagi' && webSearchKagiSource
-									? { kagiSource: webSearchKagiSource }
-									: {}),
-								...(webSearchProvider === 'valyu' && webSearchValyuSearchType
-									? { searchType: webSearchValyuSearchType }
-									: {}),
-							}
-						: undefined,
-				// @ts-ignore
-				youtube_transcripts: userSettingsData?.youtubeTranscriptsEnabled ?? false,
-				// @ts-ignore
-				prompt_caching: model.modelId.startsWith('claude-')
-					? {
-							enabled: true,
-							ttl: '5m',
-						}
-					: undefined,
-			} as any,
-			{
-				signal: abortSignal,
-			}
-		),
+			{ ...requestParams, tools: withTools ? tools : undefined } as any,
+			{ signal: abortSignal }
+		);
+
+	let streamResult = await ResultAsync.fromPromise(
+		createStream(sendTools),
 		(e) => `OpenAI API call failed: ${e}`
 	);
+
+	// A model that won't take tools shouldn't cost the user their whole message —
+	// drop the tools and answer without them rather than failing the request.
+	if (
+		streamResult.isErr() &&
+		sendTools &&
+		!abortSignal?.aborted &&
+		!isAbortError(streamResult.error)
+	) {
+		noteToolsRejection(modelId, streamResult.error);
+		log(
+			`${modelId} rejected a tools request (${streamResult.error}); retrying without tools`,
+			startTime
+		);
+
+		sendTools = false;
+		streamResult = await ResultAsync.fromPromise(
+			createStream(false),
+			(e) => `OpenAI API call failed: ${e}`
+		);
+	}
 
 	if (streamResult.isErr()) {
 		if (abortSignal?.aborted || isAbortError(streamResult.error)) {
@@ -1345,8 +1430,8 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 	let chunkCount = 0;
 	let generationId: string | null = null;
 	const annotations: Annotation[] = [];
-	let usage: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number } | null =
-		null;
+	let usage: Usage = null;
+	let carriedUsage: Usage = null;
 	let firstTokenTime: number | null = null;
 	const toolCalls: Array<{
 		id: string;
@@ -1358,6 +1443,10 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 	// Track previous content for delta calculation
 	let previousContent = '';
 	let previousReasoning = '';
+
+	// Throttle for the in-flight progress writes (see the persist block in the loop).
+	const PROGRESS_PERSIST_INTERVAL_MS = 750;
+	let lastProgressPersistAt = 0;
 
 	try {
 		for await (const chunk of openaiStream) {
@@ -1432,24 +1521,49 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 				previousReasoning = reasoning;
 			}
 
-			// Update message content in database periodically
+			// Persist progress periodically. This used to run on every chunk, which was
+			// an awaited round trip per token — cheap in-process on SQLite, but on
+			// Postgres it added network latency to every single token and wrote the
+			// whole message body hundreds of times. The write exists only so a
+			// disconnected client can recover partial output, so a coarse interval is
+			// enough; the authoritative write happens once the stream ends.
 			if (content || reasoning) {
-				await db
-					.update(messages)
-					.set({
-						content,
-						reasoning: reasoning.length > 0 ? reasoning : null,
-						generationId,
-						annotations: annotations.length > 0 ? annotations : null,
-						reasoningEffort,
-					})
-					.where(eq(messages.id, assistantMessageId));
+				const now = Date.now();
+				if (now - lastProgressPersistAt >= PROGRESS_PERSIST_INTERVAL_MS) {
+					lastProgressPersistAt = now;
+					await db
+						.update(messages)
+						.set({
+							content,
+							reasoning: reasoning.length > 0 ? reasoning : null,
+							generationId,
+							annotations: annotations.length > 0 ? annotations : null,
+							reasoningEffort,
+						})
+						.where(eq(messages.id, assistantMessageId));
+				}
 			}
 		}
 
-		// Handle tool calls if the model requested them
-		if (finishReason === 'tool_calls' && toolCalls.length > 0 && mcpAvailable) {
-			log(`Model requested ${toolCalls.length} tool call(s)`, startTime);
+		// Handle tool calls if the model requested them. Each round executes the
+		// requested tools and feeds the results back so the model can chain calls,
+		// capped so a confused model can't loop forever.
+		const MAX_TOOL_ROUNDS = 5;
+		const toolConversation: any[] = [...messagesToSend];
+		let pendingToolCalls = finishReason === 'tool_calls' ? toolCalls.filter(Boolean) : [];
+		let roundStartLength = 0;
+
+		for (let round = 0; sendTools && pendingToolCalls.length > 0; round++) {
+			if (abortSignal?.aborted) break;
+			if (round >= MAX_TOOL_ROUNDS) {
+				log(`Tool round limit (${MAX_TOOL_ROUNDS}) reached, stopping`, startTime);
+				break;
+			}
+
+			log(
+				`Model requested ${pendingToolCalls.length} tool call(s) [round ${round + 1}]`,
+				startTime
+			);
 
 			// Update message to show tool execution is happening
 			await db
@@ -1467,14 +1581,15 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 				content: string;
 			}> = [];
 
-			for (const tc of toolCalls) {
+			for (const tc of pendingToolCalls) {
 				if (!tc.id || !tc.function.name) continue;
 
 				try {
 					let args = JSON.parse(tc.function.arguments || '{}');
+					const route = remoteMcp.routes.get(tc.function.name);
 
 					// Special handling for vision tool
-					if (tc.function.name === 'nanogpt_vision') {
+					if (!route && tc.function.name === 'nanogpt_vision') {
 						const imgUrl = args.image_url as string | undefined;
 						if (!imgUrl || (!imgUrl.startsWith('http') && !imgUrl.startsWith('data:'))) {
 							log('Vision tool called without valid URL, searching context for images', startTime);
@@ -1510,7 +1625,9 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 
 					log(`Executing tool ${tc.function.name}`, startTime);
 
-					const result = await executeMcpTool(tc.function.name, args, apiKey);
+					const result = route
+						? await executeRemoteMcpTool(route, args)
+						: await executeMcpTool(tc.function.name, args, apiKey);
 
 					toolResults.push({
 						role: 'tool',
@@ -1529,73 +1646,116 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 				}
 			}
 
-			// Make a follow-up API call with tool results
-			log('Making follow-up call with tool results', startTime);
-
-			const followUpMessages = [
-				...messagesToSend,
+			// Feed the results back and let the model keep going — with tools still
+			// attached, so it can chain another round if it needs to.
+			toolConversation.push(
 				{
 					role: 'assistant' as const,
-					content: content || null,
-					tool_calls: toolCalls.map((tc) => ({
+					content: content.slice(roundStartLength) || null,
+					tool_calls: pendingToolCalls.map((tc) => ({
 						id: tc.id,
 						type: 'function' as const,
 						function: tc.function,
 					})),
 				},
-				...toolResults,
-			];
+				...toolResults
+			);
+
+			log('Making follow-up call with tool results', startTime);
 
 			const followUpResult = await ResultAsync.fromPromise(
 				openai.chat.completions.create(
 					{
 						model: modelId,
-						messages: followUpMessages as any,
+						messages: toolConversation as any,
 						temperature: 0.7,
 						stream: true,
 						stream_options: { include_usage: true },
+						tools,
 					},
 					{ signal: abortSignal }
 				),
 				(e) => `Follow-up API call failed: ${e}`
 			);
 
-			if (followUpResult.isOk()) {
-				const followUpStream = followUpResult.value as unknown as AsyncIterable<any>;
+			if (followUpResult.isErr()) {
+				log(`Follow-up call failed: ${followUpResult.error}`, startTime);
+				break;
+			}
 
-				content = '';
-				reasoning = '';
-				previousContent = '';
-				previousReasoning = '';
-				firstTokenTime = null;
+			// Every round is billed separately, so bank the finished round's usage
+			// instead of letting the next one overwrite it.
+			carriedUsage = addUsage(carriedUsage, usage);
+			usage = null;
 
-				for await (const chunk of followUpStream) {
-					if (abortSignal?.aborted) break;
+			roundStartLength = content.length;
+			const nextToolCalls: typeof toolCalls = [];
+			finishReason = null;
 
-					reasoning += chunk.choices[0]?.delta?.reasoning || '';
-					content += chunk.choices[0]?.delta?.content || '';
+			for await (const chunk of followUpResult.value as unknown as AsyncIterable<any>) {
+				if (abortSignal?.aborted) break;
 
-					if (firstTokenTime === null && (content || reasoning)) {
-						firstTokenTime = Date.now();
+				reasoning += chunk.choices[0]?.delta?.reasoning || '';
+				content += chunk.choices[0]?.delta?.content || '';
+
+				const deltaToolCalls = chunk.choices[0]?.delta?.tool_calls as
+					| Array<{
+							index: number;
+							id?: string;
+							type?: 'function';
+							function?: { name?: string; arguments?: string };
+					  }>
+					| undefined;
+
+				if (deltaToolCalls) {
+					for (const dtc of deltaToolCalls) {
+						const idx = dtc.index;
+						// Validate index is a non-negative integer to prevent prototype pollution
+						if (typeof idx !== 'number' || !Number.isInteger(idx) || idx < 0) {
+							continue;
+						}
+						if (!nextToolCalls[idx]) {
+							nextToolCalls[idx] = {
+								id: dtc.id || '',
+								type: 'function',
+								function: { name: '', arguments: '' },
+							};
+						}
+						if (dtc.id) nextToolCalls[idx].id = dtc.id;
+						if (dtc.function?.name) nextToolCalls[idx].function.name += dtc.function.name;
+						if (dtc.function?.arguments)
+							nextToolCalls[idx].function.arguments += dtc.function.arguments;
 					}
+				}
 
-					if (chunk.usage) usage = chunk.usage;
-					if (chunk.id) generationId = chunk.id;
+				if (chunk.choices[0]?.finish_reason) {
+					finishReason = chunk.choices[0].finish_reason;
+				}
 
-					const contentDelta = content.slice(previousContent.length);
-					const reasoningDelta = reasoning.slice(previousReasoning.length);
+				if (firstTokenTime === null && (content || reasoning)) {
+					firstTokenTime = Date.now();
+				}
 
-					if (contentDelta || reasoningDelta) {
-						sendEvent({
-							event: 'delta',
-							data: { content: contentDelta, reasoning: reasoningDelta },
-						});
+				if (chunk.usage) usage = chunk.usage;
+				if (chunk.id) generationId = chunk.id;
 
-						previousContent = content;
-						previousReasoning = reasoning;
-					}
+				const contentDelta = content.slice(previousContent.length);
+				const reasoningDelta = reasoning.slice(previousReasoning.length);
 
-					if (content || reasoning) {
+				if (contentDelta || reasoningDelta) {
+					sendEvent({
+						event: 'delta',
+						data: { content: contentDelta, reasoning: reasoningDelta },
+					});
+
+					previousContent = content;
+					previousReasoning = reasoning;
+				}
+
+				if (content || reasoning) {
+					const now = Date.now();
+					if (now - lastProgressPersistAt >= PROGRESS_PERSIST_INTERVAL_MS) {
+						lastProgressPersistAt = now;
 						await db
 							.update(messages)
 							.set({
@@ -1606,12 +1766,13 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 							.where(eq(messages.id, assistantMessageId));
 					}
 				}
-
-				log('Follow-up response completed', startTime);
-			} else {
-				log(`Follow-up call failed: ${followUpResult.error}`, startTime);
 			}
+
+			log('Follow-up response completed', startTime);
+			pendingToolCalls = finishReason === 'tool_calls' ? nextToolCalls.filter(Boolean) : [];
 		}
+
+		usage = addUsage(carriedUsage, usage);
 
 		if (!generationId) {
 			log('No generation id found', startTime);
@@ -1716,10 +1877,16 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 			startTime
 		);
 
-		// Update message with final data
+		// Update message with final data. content/reasoning/annotations are written
+		// here too: the in-loop persist is throttled, so whatever arrived since its
+		// last tick exists only in memory until this point.
 		await db
 			.update(messages)
 			.set({
+				content,
+				reasoning: reasoning.length > 0 ? reasoning : null,
+				annotations: annotations.length > 0 ? annotations : null,
+				reasoningEffort,
 				tokenCount,
 				costUsd,
 				generationId,
@@ -1909,6 +2076,21 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 		log('SSE stream completed successfully', startTime);
 	} catch (streamError) {
 		if (abortSignal?.aborted || isAbortError(streamError)) {
+			// Flush whatever arrived since the last throttled persist, otherwise
+			// stopping a generation discards up to PROGRESS_PERSIST_INTERVAL_MS of
+			// text the user already watched stream in.
+			if (assistantMessageId && (content || reasoning)) {
+				await db
+					.update(messages)
+					.set({
+						content,
+						reasoning: reasoning.length > 0 ? reasoning : null,
+						annotations: annotations.length > 0 ? annotations : null,
+						reasoningEffort,
+					})
+					.where(eq(messages.id, assistantMessageId));
+			}
+
 			await handleGenerationAbort({
 				conversationId,
 				startTime,

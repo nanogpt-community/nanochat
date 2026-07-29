@@ -4,7 +4,7 @@ import { ResultAsync } from 'neverthrow';
 import { z } from 'zod/v4';
 import { OpenAI } from 'openai';
 import { db } from '$lib/db';
-import { messages, userKeys, userSettings } from '$lib/db/schema';
+import { messages, conversations, userKeys, userSettings } from '$lib/db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { Provider } from '$lib/types';
 import { FOLLOW_UP_QUESTIONS_PROMPT } from '$lib/prompts/follow-up-questions';
@@ -70,9 +70,23 @@ export const POST: RequestHandler = async ({ request }) => {
 
 	const modelId = userSettingsData?.followUpModelId || MODEL;
 
-	const targetMessage = await db.query.messages.findFirst({
-		where: eq(messages.id, args.messageId),
-	});
+	// Resolved through the owning conversation. Looking the message up by id alone
+	// let any authenticated caller generate suggestions from — and then overwrite
+	// followUpSuggestions on — someone else's message, and public shares hand out
+	// valid message ids to anyone who opens them.
+	const targetMessage = await db
+		.select({ id: messages.id, role: messages.role, content: messages.content })
+		.from(messages)
+		.innerJoin(conversations, eq(messages.conversationId, conversations.id))
+		.where(
+			and(
+				eq(messages.id, args.messageId),
+				eq(messages.conversationId, args.conversationId),
+				eq(conversations.userId, userId)
+			)
+		)
+		.limit(1)
+		.then((rows) => rows[0]);
 
 	if (!targetMessage) {
 		return error(404, 'Message not found');
@@ -140,7 +154,7 @@ export const POST: RequestHandler = async ({ request }) => {
 	await db
 		.update(messages)
 		.set({ followUpSuggestions: suggestions })
-		.where(eq(messages.id, args.messageId));
+		.where(and(eq(messages.id, args.messageId), eq(messages.conversationId, args.conversationId)));
 
 	console.log(
 		`[follow-up] Generated ${suggestions.length} suggestions for message ${args.messageId}`

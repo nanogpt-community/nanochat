@@ -8,6 +8,27 @@
       "when": 1785291698726,
       "tag": "0000_init_postgres",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1785295352812,
+      "tag": "0001_perf_indexes",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1785302213256,
+      "tag": "0002_red_masked_marvel",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1785303907584,
+      "tag": "0003_handy_grim_reaper",
+      "breakpoints": true
     }
   ]
 }

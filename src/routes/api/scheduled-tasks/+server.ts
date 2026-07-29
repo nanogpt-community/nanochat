@@ -1,3 +1,4 @@
+import { REASONING_EFFORTS } from '$lib/utils/model-capabilities';
 import { json, type RequestEvent } from '@sveltejs/kit';
 import { z } from 'zod';
 import { desc, eq } from 'drizzle-orm';
@@ -52,7 +53,7 @@ const payloadSchema = z
 				})
 			)
 			.optional(),
-		reasoning_effort: z.enum(['low', 'medium', 'high']).optional(),
+		reasoning_effort: z.enum(REASONING_EFFORTS).optional(),
 		provider_id: z.string().optional(),
 		image_params: z.record(z.string(), z.any()).optional(),
 		temporary: z.boolean().optional(),

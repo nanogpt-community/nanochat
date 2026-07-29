@@ -43,9 +43,7 @@ async function dedupedFetch<TResult>(
 	}
 }
 
-type CacheEvent =
-	| { type: 'invalidate'; key: string }
-	| { type: 'update'; key: string };
+type CacheEvent = { type: 'invalidate'; key: string } | { type: 'update'; key: string };
 
 type Listener = (event: CacheEvent) => void;
 const listeners = new Set<Listener>();
@@ -93,7 +91,10 @@ function buildQueryKey(queryConfig: QueryConfig, queryArgs: QueryArgs): string {
 }
 
 function matchesCacheKey(eventKey: string, currentKey: string): boolean {
-	return eventKey === currentKey || (eventKey.endsWith('*') && currentKey.startsWith(eventKey.slice(0, -1)));
+	return (
+		eventKey === currentKey ||
+		(eventKey.endsWith('*') && currentKey.startsWith(eventKey.slice(0, -1)))
+	);
 }
 
 function parseCacheKey(key: string): { url: string; args: QueryArgs } | null {
@@ -135,6 +136,8 @@ export function useCachedQuery<TResult>(
 	let error = $state<Error | undefined>(undefined);
 	let isLoading = $state(true);
 	let isStale = $state(false);
+	/** Key of the most recent fetch, so we can tell a refetch from a switch of subject. */
+	let lastKey: string | undefined;
 
 	const getArgs = () => (typeof queryArgs === 'function' ? queryArgs() : queryArgs);
 	const getCacheKey = () => cacheKey || buildQueryKey(queryConfig, getArgs());
@@ -148,6 +151,10 @@ export function useCachedQuery<TResult>(
 
 		isLoading = true;
 		const key = getCacheKey();
+		// A different key means we are now asking about a different thing (another
+		// conversation, say), not revalidating the current one.
+		const keyChanged = lastKey !== undefined && lastKey !== key;
+		lastKey = key;
 
 		// Check cache first
 		const cached = globalCache.get(key);
@@ -158,6 +165,13 @@ export function useCachedQuery<TResult>(
 			if (!staleWhileRevalidate) {
 				return;
 			}
+		} else if (keyChanged) {
+			// Nothing cached for the new key. `data` still holds the previous key's
+			// result, and leaving it there rendered the conversation you just navigated
+			// away from until the new fetch landed.
+			data = undefined;
+			error = undefined;
+			isStale = false;
 		}
 
 		try {
@@ -296,6 +310,9 @@ export const api = {
 		delete: { url: '/api/db/messages', method: 'POST' } as QueryConfig,
 		setStarred: { url: '/api/db/messages', method: 'POST' } as QueryConfig,
 	},
+	message_ratings: {
+		getForConversation: { url: '/api/db/message-ratings', method: 'GET' } as QueryConfig,
+	},
 	user_settings: {
 		get: { url: '/api/db/user-settings', method: 'GET' } as QueryConfig,
 		set: { url: '/api/db/user-settings', method: 'POST' } as QueryConfig,
@@ -306,6 +323,11 @@ export const api = {
 		all: { url: '/api/db/user-keys', method: 'GET' } as QueryConfig,
 		get: { url: '/api/db/user-keys', method: 'GET' } as QueryConfig,
 		set: { url: '/api/db/user-keys', method: 'POST' } as QueryConfig,
+	},
+	mcp_servers: {
+		list: { url: '/api/db/mcp-servers', method: 'GET' } as QueryConfig,
+		save: { url: '/api/db/mcp-servers', method: 'POST' } as QueryConfig,
+		remove: { url: '/api/db/mcp-servers', method: 'DELETE' } as QueryConfig,
 	},
 	user_enabled_models: {
 		get_enabled: { url: '/api/db/user-models', method: 'GET' } as QueryConfig,
@@ -406,7 +428,10 @@ export function setCachedQueryData<TResult>(
 
 export function setCachedQueryDataMatching<TResult>(
 	matcher: (entry: { key: string; url: string; args: QueryArgs }) => boolean,
-	updater: (current: TResult | undefined, entry: { key: string; url: string; args: QueryArgs }) => TResult | undefined,
+	updater: (
+		current: TResult | undefined,
+		entry: { key: string; url: string; args: QueryArgs }
+	) => TResult | undefined,
 	options: { ttl?: number } = {}
 ): void {
 	for (const key of globalCache.keys()) {

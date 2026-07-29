@@ -1,6 +1,6 @@
 import { db, generateId } from '../index';
 import { conversations, messages, type Conversation, type Message } from '../schema';
-import { eq, desc, and, or, isNull, asc, sql } from 'drizzle-orm';
+import { eq, desc, and, or, isNull, asc, sql, inArray } from 'drizzle-orm';
 import enhancedSearch from '$lib/utils/fuzzy-search';
 import { getFirstSentence } from '$lib/utils/strings';
 import { sanitizeHtml } from '$lib/utils/html-sanitizer';
@@ -181,18 +181,34 @@ export async function createBranchedConversation(
 	return newConversationId;
 }
 
+/**
+ * Apply an update to a conversation the user owns, in one statement.
+ *
+ * These mutations each used to call getConversationById() first purely to check
+ * ownership, then issue the UPDATE — two round trips where the WHERE clause can do
+ * the job. getConversationById also permits access to any *public* conversation, so
+ * gating on it meant a non-owner could mutate someone else's shared chat.
+ */
+async function updateOwnedConversation(
+	conversationId: string,
+	userId: string,
+	values: Partial<typeof conversations.$inferInsert>
+): Promise<void> {
+	const updated = await db
+		.update(conversations)
+		.set(values)
+		.where(and(eq(conversations.id, conversationId), eq(conversations.userId, userId)))
+		.returning({ id: conversations.id });
+
+	if (updated.length === 0) throw new Error('Unauthorized');
+}
+
 export async function updateConversationTitle(
 	conversationId: string,
 	userId: string,
 	title: string
 ): Promise<void> {
-	const conv = await getConversationById(conversationId, userId);
-	if (!conv || conv.userId !== userId) throw new Error('Unauthorized');
-
-	await db
-		.update(conversations)
-		.set({ title, updatedAt: new Date() })
-		.where(eq(conversations.id, conversationId));
+	await updateOwnedConversation(conversationId, userId, { title, updatedAt: new Date() });
 }
 
 export async function updateConversationProject(
@@ -200,13 +216,7 @@ export async function updateConversationProject(
 	userId: string,
 	projectId: string | null
 ): Promise<void> {
-	const conv = await getConversationById(conversationId, userId);
-	if (!conv || conv.userId !== userId) throw new Error('Unauthorized');
-
-	await db
-		.update(conversations)
-		.set({ projectId, updatedAt: new Date() })
-		.where(eq(conversations.id, conversationId));
+	await updateOwnedConversation(conversationId, userId, { projectId, updatedAt: new Date() });
 }
 
 export async function updateConversationGenerating(
@@ -214,13 +224,7 @@ export async function updateConversationGenerating(
 	userId: string,
 	generating: boolean
 ): Promise<void> {
-	const conv = await getConversationById(conversationId, userId);
-	if (!conv || conv.userId !== userId) throw new Error('Unauthorized');
-
-	await db
-		.update(conversations)
-		.set({ generating, updatedAt: new Date() })
-		.where(eq(conversations.id, conversationId));
+	await updateOwnedConversation(conversationId, userId, { generating, updatedAt: new Date() });
 }
 
 export async function updateConversationCost(
@@ -228,14 +232,18 @@ export async function updateConversationCost(
 	userId: string,
 	costUsd: number
 ): Promise<void> {
-	const conv = await getConversationById(conversationId, userId);
-	if (!conv) return;
-
-	const currentCost = conv.costUsd ?? 0;
+	// Incremented in SQL rather than read-modify-written in JS: two generations
+	// finishing at once would both read the same starting cost and the second write
+	// would discard the first one's charge. Folding ownership into the WHERE also
+	// drops a round trip, and closes a hole where getConversationById() granted
+	// access to any *public* conversation, letting a non-owner bump its cost.
 	await db
 		.update(conversations)
-		.set({ costUsd: currentCost + costUsd, updatedAt: new Date() })
-		.where(eq(conversations.id, conversationId));
+		.set({
+			costUsd: sql`coalesce(${conversations.costUsd}, 0) + ${costUsd}`,
+			updatedAt: new Date(),
+		})
+		.where(and(eq(conversations.id, conversationId), eq(conversations.userId, userId)));
 }
 
 export async function setConversationPublic(
@@ -243,37 +251,37 @@ export async function setConversationPublic(
 	userId: string,
 	isPublic: boolean
 ): Promise<void> {
-	const conv = await getConversationById(conversationId, userId);
-	if (!conv || conv.userId !== userId) throw new Error('Unauthorized');
-
-	await db
-		.update(conversations)
-		.set({ public: isPublic })
-		.where(eq(conversations.id, conversationId));
+	await updateOwnedConversation(conversationId, userId, { public: isPublic });
 }
 
 export async function toggleConversationPin(
 	conversationId: string,
 	userId: string
 ): Promise<boolean> {
-	const conv = await getConversationById(conversationId, userId);
-	if (!conv || conv.userId !== userId) throw new Error('Unauthorized');
-
-	const newPinned = !conv.pinned;
-	await db
+	// Flipped in SQL and read back via RETURNING, so the pin state cannot be computed
+	// from a value that another request has already changed.
+	const [updated] = await db
 		.update(conversations)
-		.set({ pinned: newPinned, updatedAt: new Date() })
-		.where(eq(conversations.id, conversationId));
+		.set({
+			pinned: sql`NOT coalesce(${conversations.pinned}, false)`,
+			updatedAt: new Date(),
+		})
+		.where(and(eq(conversations.id, conversationId), eq(conversations.userId, userId)))
+		.returning({ pinned: conversations.pinned });
 
-	return newPinned;
+	if (!updated) throw new Error('Unauthorized');
+
+	return updated.pinned ?? false;
 }
 
 export async function deleteConversation(conversationId: string, userId: string): Promise<void> {
-	const conv = await getConversationById(conversationId, userId);
-	if (!conv || conv.userId !== userId) throw new Error('Unauthorized');
-
 	// Messages will be cascade deleted due to foreign key
-	await db.delete(conversations).where(eq(conversations.id, conversationId));
+	const deleted = await db
+		.delete(conversations)
+		.where(and(eq(conversations.id, conversationId), eq(conversations.userId, userId)))
+		.returning({ id: conversations.id });
+
+	if (deleted.length === 0) throw new Error('Unauthorized');
 }
 
 export async function deleteAllConversations(userId: string): Promise<void> {
@@ -294,17 +302,26 @@ export async function getConversationMessages(
 	userId: string,
 	options?: { limit?: number }
 ): Promise<Message[]> {
-	const conv = await getConversationById(conversationId, userId);
-	if (!conv) throw new Error('Conversation not found');
-
 	const limit = options?.limit;
-	const results = await db.query.messages.findMany({
-		where: eq(messages.conversationId, conversationId),
-		orderBy: limit
-			? [desc(messages.createdAt), desc(messageRoleOrder), desc(messages.id)]
-			: [asc(messages.createdAt), asc(messageRoleOrder), asc(messages.id)],
-		...(limit ? { limit } : {}),
-	});
+
+	// Issued together rather than one after the other. This is the app's hottest read
+	// path and the access check does not constrain the message query, so serialising
+	// them just added a round trip to every conversation load. They cannot be merged
+	// into a single statement: an empty result would then be ambiguous between "no
+	// access" and "conversation with no messages", which callers map to different
+	// HTTP statuses.
+	const [conv, results] = await Promise.all([
+		getConversationById(conversationId, userId),
+		db.query.messages.findMany({
+			where: eq(messages.conversationId, conversationId),
+			orderBy: limit
+				? [desc(messages.createdAt), desc(messageRoleOrder), desc(messages.id)]
+				: [asc(messages.createdAt), asc(messageRoleOrder), asc(messages.id)],
+			...(limit ? { limit } : {}),
+		}),
+	]);
+
+	if (!conv) throw new Error('Conversation not found');
 
 	return limit ? results.reverse() : results;
 }
@@ -328,9 +345,16 @@ export async function getPublicConversationMessages(
 	return limit ? results.reverse() : results;
 }
 
+/** The subset of a message the search UI needs; keeps whole conversations out of memory. */
+export type ConversationSearchMessage = Pick<
+	Message,
+	'id' | 'conversationId' | 'role' | 'content' | 'createdAt'
+>;
+
 interface ConversationSearchResult {
 	conversation: Conversation;
-	messages: Message[];
+	/** Only the messages that matched, not the whole conversation. */
+	messages: ConversationSearchMessage[];
 	score: number;
 	titleMatch: boolean;
 }
@@ -341,12 +365,39 @@ export async function searchConversations(
 	searchMode: 'exact' | 'words' | 'fuzzy' = 'fuzzy'
 ): Promise<ConversationSearchResult[]> {
 	const allConversations = await getUserConversations(userId);
+	if (allConversations.length === 0) return [];
+
+	// Previously one query per conversation, each selecting every column: a user with
+	// 300 conversations paid 301 sequential round trips and pulled their entire chat
+	// history — content_html, reasoning and annotations included — into memory on
+	// every keystroke. Scoring is fuzzy and happens in JS, so the message bodies do
+	// have to come back, but one query and five columns is a different animal.
+	const conversationIds = allConversations.map((conversation) => conversation.id);
+	const allMessages = await db
+		.select({
+			id: messages.id,
+			conversationId: messages.conversationId,
+			role: messages.role,
+			content: messages.content,
+			createdAt: messages.createdAt,
+		})
+		.from(messages)
+		.innerJoin(conversations, eq(messages.conversationId, conversations.id))
+		.where(
+			and(eq(conversations.userId, userId), inArray(messages.conversationId, conversationIds))
+		);
+
+	const messagesByConversation = new Map<string, ConversationSearchMessage[]>();
+	for (const message of allMessages) {
+		const bucket = messagesByConversation.get(message.conversationId);
+		if (bucket) bucket.push(message);
+		else messagesByConversation.set(message.conversationId, [message]);
+	}
+
 	const results: ConversationSearchResult[] = [];
 
 	for (const conv of allConversations) {
-		const convMessages = await db.query.messages.findMany({
-			where: eq(messages.conversationId, conv.id),
-		});
+		const convMessages = messagesByConversation.get(conv.id) ?? [];
 
 		// Search in title
 		const titleSearch = enhancedSearch({
@@ -374,7 +425,9 @@ export async function searchConversations(
 
 			results.push({
 				conversation: conv,
-				messages: convMessages,
+				// The UI renders this as "N matching messages", but it used to receive
+				// every message in the conversation, so the count was always the total.
+				messages: messageSearch.map((result) => result.item),
 				score: bestScore,
 				titleMatch,
 			});

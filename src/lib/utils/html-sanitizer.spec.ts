@@ -53,4 +53,39 @@ describe('toSafeResourceUrl', () => {
 		expect(toSafeResourceUrl('data:image/svg+xml,<svg></svg>')).toBeNull();
 		expect(toSafeResourceUrl('//example.com/image.png')).toBeNull();
 	});
+
+	// Browsers strip ASCII tab/LF/CR from a URL before parsing its scheme, so a scheme
+	// check against the raw string can be walked straight past: `java<TAB>script:` was
+	// emitted verbatim and then executed as `javascript:`. Verified exploitable against
+	// the previous implementation.
+	it('strips control characters smuggled into a URL scheme', () => {
+		for (const smuggled of [
+			'java\tscript:alert(1)',
+			'java\nscript:alert(1)',
+			'java\rscript:alert(1)',
+			'ja\tva\nscript:alert(1)',
+			'java\u0000script:alert(1)',
+		]) {
+			for (const html of [`<a href="${smuggled}">x</a>`, `<img src="${smuggled}">`]) {
+				const attr = sanitizeHtml(html).match(/(?:href|src)="([^"]*)"/)?.[1] ?? '';
+				// What the browser is left with after it discards those characters.
+				const asBrowserParsesIt = attr.replace(/[\t\n\r]/g, '').toLowerCase();
+				expect(asBrowserParsesIt.startsWith('javascript:')).toBe(false);
+			}
+		}
+	});
+
+	it('leaves ordinary URLs untouched', () => {
+		const cases: [string, string][] = [
+			['<a href="https://example.com/a?b=1#c">x</a>', 'https://example.com/a?b=1#c'],
+			['<a href="/chat/123">x</a>', '/chat/123'],
+			['<a href="mailto:a@b.com">x</a>', 'mailto:a@b.com'],
+			['<a href="#section">x</a>', '#section'],
+			['<img src="/api/storage/abc">', '/api/storage/abc'],
+		];
+
+		for (const [html, expected] of cases) {
+			expect(sanitizeHtml(html).match(/(?:href|src)="([^"]*)"/)?.[1]).toBe(expected);
+		}
+	});
 });

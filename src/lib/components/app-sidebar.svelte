@@ -29,6 +29,7 @@
 	import FolderOpenIcon from '~icons/lucide/folder-open';
 	import PlusIcon from '~icons/lucide/plus';
 	import ImageIcon from '~icons/lucide/image';
+	import LibraryIcon from '~icons/lucide/library';
 	import ChevronRightIcon from '~icons/lucide/chevron-right';
 	import { Input } from '$lib/components/ui/input';
 	import CreateProjectModal from '$lib/components/projects/create-project-modal.svelte';
@@ -151,7 +152,7 @@
 		expandedProjects[projectId] = !expandedProjects[projectId];
 	}
 
-		function groupConversationsByTime(conversations: Doc<'conversations'>[]) {
+	function groupConversationsByTime(conversations: Doc<'conversations'>[]) {
 		const now = Date.now();
 		const oneDay = 24 * 60 * 60 * 1000;
 		const sevenDays = 7 * oneDay;
@@ -255,54 +256,54 @@
 			<div class="size-9"></div>
 		{/if}
 	</div>
-	<div class="mt-2 flex w-full flex-col gap-2 px-2">
+	<div class="mt-2 flex w-full flex-col gap-1.5 px-2">
 		<Tooltip>
 			{#snippet trigger(tooltip)}
 				<a
 					href="/chat"
-					class="bg-primary text-primary-foreground font-fake-proxima w-full rounded-lg px-4 py-3.5 text-center text-sm font-semibold tracking-[-0.01em] transition-all duration-200 hover:opacity-90 active:scale-[0.98] md:py-3"
+					class="bg-primary text-primary-foreground font-fake-proxima flex w-full items-center justify-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-semibold tracking-[-0.01em] transition-all duration-200 hover:opacity-90 active:scale-[0.98]"
 					{...tooltip.trigger}
 					onclick={controls.closeMobile}
 				>
+					<PlusIcon class="size-4" />
 					New Chat
 				</a>
 			{/snippet}
 			New Chat ({cmdOrCtrl} + Shift + O)
 		</Tooltip>
-	</div>
-	<div class="mt-2 grid grid-cols-2 gap-2 px-2 md:flex md:flex-col">
-		<Tooltip>
-			{#snippet trigger(tooltip)}
-				<a
-					href="/studio"
-					class="bg-secondary text-secondary-foreground font-fake-proxima hover:bg-secondary/80 flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold tracking-[-0.01em] transition-all duration-200 active:scale-[0.98] md:py-3"
-					{...tooltip.trigger}
-					onclick={controls.closeMobile}
-				>
-					<ImageIcon class="size-4" />
-					<span class="truncate">Studio</span>
-				</a>
-			{/snippet}
-			Image Studio
-		</Tooltip>
-		<Tooltip>
-			{#snippet trigger(tooltip)}
-				<a
-					href="/gallery"
-					class="bg-secondary/40 text-secondary-foreground/80 hover:text-secondary-foreground font-fake-proxima hover:bg-secondary/60 flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium tracking-[-0.01em] transition-all duration-200 active:scale-[0.98] md:py-2"
-					{...tooltip.trigger}
-					onclick={controls.closeMobile}
-				>
-					<span class="truncate">My Stuff</span>
-				</a>
-			{/snippet}
-			My Stuff
-		</Tooltip>
-	</div>
-	<div class="mt-2 flex w-full flex-col gap-2 px-2">
+		<div class="grid grid-cols-2 gap-1.5">
+			<Tooltip>
+				{#snippet trigger(tooltip)}
+					<a
+						href="/studio"
+						class="text-muted-foreground hover:text-foreground hover:bg-secondary/60 font-fake-proxima flex w-full items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium tracking-[-0.01em] transition-all duration-200 active:scale-[0.98]"
+						{...tooltip.trigger}
+						onclick={controls.closeMobile}
+					>
+						<ImageIcon class="size-4 shrink-0" />
+						<span class="truncate">Studio</span>
+					</a>
+				{/snippet}
+				Image Studio
+			</Tooltip>
+			<Tooltip>
+				{#snippet trigger(tooltip)}
+					<a
+						href="/gallery"
+						class="text-muted-foreground hover:text-foreground hover:bg-secondary/60 font-fake-proxima flex w-full items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium tracking-[-0.01em] transition-all duration-200 active:scale-[0.98]"
+						{...tooltip.trigger}
+						onclick={controls.closeMobile}
+					>
+						<LibraryIcon class="size-4 shrink-0" />
+						<span class="truncate">My Stuff</span>
+					</a>
+				{/snippet}
+				My Stuff
+			</Tooltip>
+		</div>
 		<button
 			type="button"
-			class="text-muted-foreground/70 hover:text-foreground bg-secondary/20 hover:border-border flex items-center gap-2 rounded-lg border border-transparent px-3 py-2.5 text-sm transition-all md:py-2"
+			class="text-muted-foreground/70 hover:text-foreground bg-secondary/20 hover:border-border mt-0.5 flex items-center gap-2 rounded-lg border border-transparent px-3 py-2 text-sm transition-all"
 			onclick={() => (searchModalOpen = true)}
 		>
 			<SearchIcon class="size-4" />
@@ -331,7 +332,9 @@
 			{:else}
 				{#each safeProjects as project (project.id)}
 					{@const isExpanded = expandedProjects[project.id]}
-					{@const projectConversations = safeConversations.filter((c) => c.projectId === project.id)}
+					{@const projectConversations = safeConversations.filter(
+						(c) => c.projectId === project.id
+					)}
 
 					<div class="flex flex-col">
 						<div class="group/project flex w-full items-center gap-1">
@@ -388,7 +391,7 @@
 														{#snippet trigger(tooltip)}
 															<DropdownMenu.Trigger
 																{...tooltip.trigger}
-																class="hover:bg-muted/60 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 rounded-md p-1 transition-opacity"
+																class="hover:bg-muted/60 text-muted-foreground hover:text-foreground rounded-md p-1 opacity-0 transition-opacity group-hover:opacity-100"
 																onclick={(e) => {
 																	e.preventDefault();
 																	e.stopPropagation();
@@ -412,7 +415,8 @@
 															{#each safeProjects as project (project.id)}
 																<DropdownMenu.Item
 																	disabled={conversation.projectId === project.id}
-																	onclick={() => setConversationProject(conversation.id, project.id)}
+																	onclick={() =>
+																		setConversationProject(conversation.id, project.id)}
 																>
 																	<FolderIcon class="size-3.5" />
 																	<span class="truncate">{project.name}</span>
@@ -560,7 +564,7 @@
 										'to-sidebar-accent via-sidebar-accent bg-gradient-to-r from-transparent from-10% via-21% ',
 										// On touch devices there's no hover, so expose actions on the
 										// currently-active conversation row at minimum.
-										isActive && 'pointer-events-auto translate-x-0',
+										isActive && 'pointer-events-auto translate-x-0'
 									)}
 									class:hidden={editingConversationId === conversation.id}
 								>

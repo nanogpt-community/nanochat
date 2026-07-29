@@ -30,6 +30,11 @@ export type UserSettings = Omit<DbUserSettings, 'karakeepApiKey'> & {
 	hasKarakeepApiKey: boolean;
 };
 
+export type McpServerConfig = Omit<import('$lib/db/schema').McpServer, 'authToken' | 'headers'> & {
+	hasAuthToken: boolean;
+	headerNames: string[];
+};
+
 export type UserKeyStatus = {
 	hasKey: boolean;
 	source: 'user' | 'server' | null;

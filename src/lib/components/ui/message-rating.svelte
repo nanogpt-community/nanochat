@@ -33,6 +33,22 @@
 	let selectedCategories = $state<string[]>(initialRating?.categories || []);
 	// svelte-ignore state_referenced_locally
 	let feedback = $state<string>(initialRating?.feedback || '');
+
+	// Saved ratings are fetched, so `initialRating` usually arrives after this
+	// component has mounted — the $state above would otherwise keep its empty
+	// starting value forever. Once the user touches the widget their input wins, so
+	// a late-arriving fetch cannot overwrite what they are in the middle of doing.
+	let hasLocalEdit = $state(false);
+
+	$effect(() => {
+		const incoming = initialRating;
+		if (hasLocalEdit) return;
+
+		thumbs = incoming?.thumbs;
+		starRating = incoming?.rating;
+		selectedCategories = incoming?.categories ?? [];
+		feedback = incoming?.feedback ?? '';
+	});
 	let showDetailedFeedback = $state(false);
 	let isSubmitting = $state(false);
 
@@ -40,6 +56,7 @@
 
 	async function handleThumbsClick(value: 'up' | 'down') {
 		const newValue = thumbs === value ? undefined : value;
+		hasLocalEdit = true;
 		thumbs = newValue;
 
 		if (onRate) {
@@ -58,6 +75,7 @@
 	}
 
 	async function submitDetailedRating() {
+		hasLocalEdit = true;
 		if (onRate) {
 			isSubmitting = true;
 			try {
@@ -75,6 +93,7 @@
 	}
 
 	function toggleCategory(category: string) {
+		hasLocalEdit = true;
 		if (selectedCategories.includes(category)) {
 			selectedCategories = selectedCategories.filter((c) => c !== category);
 		} else {
@@ -144,7 +163,10 @@
 				{#each [1, 2, 3, 4, 5] as star}
 					<button
 						type="button"
-						onclick={() => (starRating = starRating === star ? undefined : star)}
+						onclick={() => {
+							hasLocalEdit = true;
+							starRating = starRating === star ? undefined : star;
+						}}
 						class={cn(
 							'transition-colors',
 							starRating && star <= starRating ? 'text-yellow-500' : 'text-muted-foreground/30'
@@ -187,8 +209,7 @@
 				bind:value={feedback}
 				placeholder="Share your thoughts..."
 				class="bg-background border-border w-full rounded-md border px-3 py-2 text-sm"
-				rows="3"
-			></textarea>
+				rows="3"></textarea>
 		</div>
 
 		<!-- Submit button -->

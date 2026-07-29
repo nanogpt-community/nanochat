@@ -1,4 +1,5 @@
 import { createPersistedObj } from '$lib/spells/persisted-obj.svelte';
+import type { ReasoningEffort } from '$lib/utils/model-capabilities';
 
 export const settings = createPersistedObj('settings', {
 	modelId: undefined as string | undefined,
@@ -18,7 +19,7 @@ export const settings = createPersistedObj('settings', {
 	webSearchContextSize: 'medium' as 'low' | 'medium' | 'high',
 	webSearchKagiSource: 'web' as 'web' | 'news' | 'search',
 	webSearchValyuSearchType: 'all' as 'all' | 'web',
-	reasoningEffort: 'low' as 'low' | 'medium' | 'high',
+	reasoningEffort: 'auto' as ReasoningEffort | 'auto',
 	theme: undefined as string | undefined,
 	temporaryMode: false as boolean,
 	ttsVoice: 'alloy' as string,

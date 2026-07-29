@@ -21,6 +21,34 @@ function getStoredApiKeyValue(storedKey: string): string {
 	return isEncrypted(storedKey) ? decryptApiKey(storedKey) : storedKey;
 }
 
+/** Coarsest useful resolution for a "last used" timestamp. */
+const LAST_USED_THROTTLE_MS = 60_000;
+const lastUsedWrites = new Map<string, number>();
+
+/**
+ * Record that a key was used, without making the caller wait for it.
+ *
+ * This previously awaited an UPDATE on every authenticated request, so each API
+ * call carried an extra write round trip, and a key used concurrently produced
+ * row-level lock contention against itself. The value is informational, so a
+ * per-minute granularity is plenty.
+ */
+function touchApiKeyLastUsed(apiKeyId: string): void {
+	const now = Date.now();
+	const previous = lastUsedWrites.get(apiKeyId) ?? 0;
+	if (now - previous < LAST_USED_THROTTLE_MS) return;
+
+	lastUsedWrites.set(apiKeyId, now);
+	void db
+		.update(apiKeys)
+		.set({ lastUsedAt: new Date(now) })
+		.where(eq(apiKeys.id, apiKeyId))
+		.catch(() => {
+			// Never fail a request over a usage timestamp; allow a retry next time.
+			lastUsedWrites.delete(apiKeyId);
+		});
+}
+
 type ApiKeyAuthRecord = {
 	id: string;
 	userId: string;
@@ -109,8 +137,7 @@ export async function getUserIdFromApiKey(
 			await db.update(apiKeys).set({ keyHash }).where(eq(apiKeys.id, apiKeyRecord.id));
 		}
 
-		// Update lastUsedAt timestamp
-		await db.update(apiKeys).set({ lastUsedAt: new Date() }).where(eq(apiKeys.id, apiKeyRecord.id));
+		touchApiKeyLastUsed(apiKeyRecord.id);
 
 		return ok(apiKeyRecord.userId);
 	} catch (e) {

@@ -98,7 +98,7 @@ Notes:
 		"aspect_ratio": "string (optional)",
 		"seed": "number (optional, set -1 for random)"
 	},
-	"reasoning_effort": "enum: 'low' | 'medium' | 'high' (optional)",
+	"reasoning_effort": "enum: 'none' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh' (optional)",
 	"temporary": "boolean (optional)",
 	"provider_id": "string (optional) - Select specific provider for this generation"
 }
@@ -258,34 +258,38 @@ client.newCall(request).enqueue(object : Callback {
 ### Image Studio Generation
 
 #### POST `/api/generate-image`
+
 Starts an image generation job in the background and returns a generation ID immediately. Used by the Image Studio for standalone image generation without creating a conversation.
 
 **Authentication**: Session or API Key
 
 **Request Body**:
+
 ```json
 {
-  "model_id": "string (required - image model ID)",
-  "prompt": "string (required - image generation prompt)",
-  "image_params": {
-    "resolution": "string (e.g. '1024x1024')",
-    "nImages": "number (how many images to generate)",
-    "quality": "string (model-dependent, e.g. 'hd')",
-    "aspect_ratio": "string (model-dependent, e.g. '16:9')",
-    "seed": "number (optional, for reproducibility)"
-  },
-  "reference_image_id": "string (optional - storage ID of a reference image for img2img)"
+	"model_id": "string (required - image model ID)",
+	"prompt": "string (required - image generation prompt)",
+	"image_params": {
+		"resolution": "string (e.g. '1024x1024')",
+		"nImages": "number (how many images to generate)",
+		"quality": "string (model-dependent, e.g. 'hd')",
+		"aspect_ratio": "string (model-dependent, e.g. '16:9')",
+		"seed": "number (optional, for reproducibility)"
+	},
+	"reference_image_id": "string (optional - storage ID of a reference image for img2img)"
 }
 ```
 
 **Response**:
+
 ```json
 {
-  "generation_id": "string (use this to poll for results)"
+	"generation_id": "string (use this to poll for results)"
 }
 ```
 
 **CURL Example**:
+
 ```bash
 curl -X POST "http://localhost:3432/api/generate-image" \
   -H "Content-Type: application/json" \
@@ -300,44 +304,50 @@ curl -X POST "http://localhost:3432/api/generate-image" \
 ```
 
 #### GET `/api/generate-image`
+
 Polls for the status and result of an image generation job started via POST.
 
 **Authentication**: Session or API Key
 
 **Query Parameters**:
+
 - `id` (required): The `generation_id` returned from the POST request.
 
 **Response** (pending):
+
 ```json
 {
-  "status": "pending"
+	"status": "pending"
 }
 ```
 
 **Response** (complete):
+
 ```json
 {
-  "status": "complete",
-  "images": [
-    {
-      "url": "/api/storage/{storageId}",
-      "storage_id": "string",
-      "fileName": "generated-image-1.png"
-    }
-  ],
-  "cost": 0.05
+	"status": "complete",
+	"images": [
+		{
+			"url": "/api/storage/{storageId}",
+			"storage_id": "string",
+			"fileName": "generated-image-1.png"
+		}
+	],
+	"cost": 0.05
 }
 ```
 
 **Response** (error):
+
 ```json
 {
-  "status": "error",
-  "message": "string (error description)"
+	"status": "error",
+	"message": "string (error description)"
 }
 ```
 
 **CURL Example**:
+
 ```bash
 curl "http://localhost:3432/api/generate-image?id=your_generation_id" \
   -H "Authorization: Bearer your_api_key"
@@ -603,6 +613,150 @@ curl -X POST "http://localhost:3432/api/mcp" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer your_api_key" \
   -d '{"tool": "web_search", "args": {"query": "latest news"}}'
+```
+
+---
+
+### Remote MCP Servers
+
+User-configured remote MCP servers. Their tools are discovered via `tools/list` and offered to the
+model on every chat message as functions named `mcp_<server>_<tool>`; calls are routed back over
+`tools/call`. Streamable HTTP is tried first, with a fallback to the deprecated SSE transport.
+
+Auth tokens and custom headers are encrypted at rest and are never returned by the API — responses
+expose `hasAuthToken` and `headerNames` (names only) instead.
+
+Servers that don't use `Authorization: Bearer` can supply arbitrary request headers via `headers`.
+These are merged into every request to that server, and an explicit `Authorization` header overrides
+`authToken`. Header names must be valid RFC 7230 tokens; `Host`, `Content-Length`, `Connection` and
+`Transfer-Encoding` are rejected, as are values containing CR/LF.
+
+#### GET `/api/db/mcp-servers`
+
+List the current user's configured MCP servers.
+
+**Authentication**: Session or API Key
+
+**Response**:
+
+```json
+[
+	{
+		"id": "string",
+		"userId": "string",
+		"name": "string",
+		"url": "string",
+		"enabled": "boolean",
+		"hasAuthToken": "boolean",
+		"headerNames": "string[] (names of configured custom headers)",
+		"createdAt": "string (ISO date)",
+		"updatedAt": "string (ISO date)"
+	}
+]
+```
+
+**CURL Example**:
+
+```bash
+curl -X GET "http://localhost:3432/api/db/mcp-servers" \
+  -H "Authorization: Bearer your_api_key"
+```
+
+#### POST `/api/db/mcp-servers`
+
+Create a server, update an existing one, or test a connection. The action is selected by the
+`action` field (defaults to `create`).
+
+**Authentication**: Session or API Key (owner only)
+
+**Request Body** (`create`):
+
+```json
+{
+	"action": "create (optional, default)",
+	"name": "string (required, namespaces the exposed tool names)",
+	"url": "string (required, http(s) URL of the MCP endpoint)",
+	"authToken": "string (optional, sent as Authorization: Bearer)",
+	"headers": "object (optional, extra request headers as name -> string value)",
+	"enabled": "boolean (optional, default true)"
+}
+```
+
+**Request Body** (`update`) — omit `authToken` to leave the stored token unchanged, or send `null`
+to clear it:
+
+```json
+{
+	"action": "update",
+	"id": "string (required)",
+	"name": "string (optional)",
+	"url": "string (optional)",
+	"authToken": "string | null (optional)",
+	"headers": "object | null (optional, omit to keep, null to clear)",
+	"enabled": "boolean (optional)"
+}
+```
+
+**Request Body** (`test`) — pass `id` to test a saved server, or `url`/`authToken` to test before
+saving:
+
+```json
+{
+	"action": "test",
+	"id": "string (optional)",
+	"url": "string (optional)",
+	"authToken": "string (optional)",
+	"headers": "object (optional)"
+}
+```
+
+**Response** (`create` / `update`): the server object, as in the GET response.
+
+**Response** (`test`):
+
+```json
+{
+	"ok": "boolean",
+	"tools": "string[] (tool names, only when ok)",
+	"error": "string (only when not ok)"
+}
+```
+
+**Note**: Storing an `authToken` requires `ENCRYPTION_KEY` to be configured; the endpoint returns
+503 otherwise.
+
+**CURL Example**:
+
+```bash
+curl -X POST "http://localhost:3432/api/db/mcp-servers" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your_api_key" \
+  -d '{"name": "linear", "url": "https://mcp.linear.app/mcp", "headers": {"X-Api-Key": "abc123"}}'
+```
+
+#### DELETE `/api/db/mcp-servers`
+
+Remove a configured MCP server.
+
+**Authentication**: Session or API Key (owner only)
+
+**Query Parameters**:
+
+- `id` (required) - the server id
+
+**Response**:
+
+```json
+{
+	"ok": true
+}
+```
+
+**CURL Example**:
+
+```bash
+curl -X DELETE "http://localhost:3432/api/db/mcp-servers?id=abc123" \
+  -H "Authorization: Bearer your_api_key"
 ```
 
 ---
@@ -1103,7 +1257,7 @@ Create a scheduled task.
 		"conversation_id": "string (optional)",
 		"web_search_mode": "off | standard | deep (optional)",
 		"web_search_provider": "linkup | tavily | exa | kagi | perplexity | valyu | brave | brave-pro | brave-research (optional)",
-		"reasoning_effort": "low | medium | high (optional)"
+		"reasoning_effort": "none | minimal | low | medium | high | xhigh (optional)"
 	}
 }
 ```
@@ -1809,6 +1963,40 @@ List all conversations for the user, or get a specific conversation by ID.
 ]
 ```
 
+**Response** (when `search` is provided):
+
+Returns scored search results instead of a plain conversation list. `messages` contains
+only the messages that matched the search term, not the whole conversation.
+
+```json
+[
+	{
+		"conversation": {
+			"id": "string",
+			"title": "string",
+			"userId": "string",
+			"projectId": "string | null",
+			"pinned": "boolean",
+			"generating": "boolean",
+			"costUsd": "number | null",
+			"createdAt": "date",
+			"updatedAt": "date"
+		},
+		"messages": [
+			{
+				"id": "string",
+				"conversationId": "string",
+				"role": "string",
+				"content": "string",
+				"createdAt": "date"
+			}
+		],
+		"score": "number (best match score, 0-1)",
+		"titleMatch": "boolean (whether the conversation title matched)"
+	}
+]
+```
+
 **CURL Example**:
 
 ```bash
@@ -2050,6 +2238,42 @@ curl -X POST "http://localhost:3432/api/db/message-interactions" \
 
 ### Message Ratings
 
+#### GET `/api/db/message-ratings`
+
+Get the authenticated user's ratings for every message in a conversation. Used to
+restore the rating widget's state when a conversation loads.
+
+**Authentication**: Session or API Key (owner only)
+
+**Query Parameters**:
+
+- `conversationId`: (Required) Conversation whose ratings to fetch.
+
+**Response**:
+
+```json
+[
+	{
+		"id": "string",
+		"messageId": "string",
+		"userId": "string",
+		"rating": "number | null",
+		"thumbs": "'up' | 'down' | null",
+		"categories": "string[] | null",
+		"feedback": "string | null",
+		"createdAt": "date",
+		"updatedAt": "date"
+	}
+]
+```
+
+**CURL Example**:
+
+```bash
+curl -X GET "http://localhost:3432/api/db/message-ratings?conversationId=abc123" \
+  -H "Authorization: Bearer your_api_key"
+```
+
 #### POST `/api/db/message-ratings`
 
 Rate a message (thumbs up/down, star rating, feedback).
@@ -2149,7 +2373,9 @@ Get model analytics for the user (stats + insights).
 
 **Query Parameters**:
 
-- `recalculate`: Set to `"false"` to use cached stats. Defaults to `"true"`.
+- `recalculate`: Set to `"true"` to force recomputation, or `"false"` to always use
+  cached stats. When omitted, stats are recomputed only if the stored values are more
+  than 60 seconds old.
 
 **Response**:
 

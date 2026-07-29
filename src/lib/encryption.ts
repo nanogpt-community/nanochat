@@ -52,7 +52,21 @@ export function assertEncryptionEnabled(): void {
 }
 
 /**
- * Derives a cryptographic key from the environment variable using scrypt
+ * Cached derivation. Keyed on the secret itself so changing ENCRYPTION_KEY still
+ * re-derives rather than silently serving a stale key.
+ */
+let derivedKeyCache: { secret: string; key: Buffer } | null = null;
+
+/**
+ * Derives a cryptographic key from the environment variable using scrypt.
+ *
+ * The result is memoised. Both inputs — the env var and the hardcoded salt below —
+ * are constant for the lifetime of the process, so the derivation is pure and its
+ * output invariant. It was previously recomputed on every encrypt and decrypt:
+ * measured at ~20ms and ~64MB of allocation per call, paid once per stored key. The
+ * API-key auth path decrypts candidates in a loop, so a deployment with 20 legacy
+ * keys spent ~400ms of CPU and ~1.2GB of transient allocation authenticating a
+ * single request — cheap to trigger, and entirely wasted work.
  */
 function deriveKey(): Buffer {
 	const encryptionKey = process.env.ENCRYPTION_KEY;
@@ -67,11 +81,21 @@ function deriveKey(): Buffer {
 		throw new Error('ENCRYPTION_KEY must be at least 32 characters long for security.');
 	}
 
-	// Use a static salt for key derivation from the environment variable
-	// This is acceptable because we're deriving from a high-entropy environment variable
+	if (derivedKeyCache?.secret === encryptionKey) {
+		return derivedKeyCache.key;
+	}
+
+	// Static salt: acceptable here because the input is a single high-entropy secret
+	// rather than a user password, and the derived key is per-deployment, not
+	// per-record. Note this means the SALT field in the ciphertext format is inert —
+	// records are not individually salted. Per-record IVs still make every ciphertext
+	// distinct, which is what GCM requires.
 	const salt = Buffer.from('nanochat-api-key-encryption-salt', 'utf-8');
 
-	return scryptSync(encryptionKey, salt, KEY_LENGTH, SCRYPT_PARAMS);
+	const key = scryptSync(encryptionKey, salt, KEY_LENGTH, SCRYPT_PARAMS);
+	derivedKeyCache = { secret: encryptionKey, key };
+
+	return key;
 }
 
 /**

@@ -14,15 +14,25 @@ export type ModelAnalyticsInsights = {
 	fastestModel: ModelPerformanceStats | null;
 };
 
+/** How long derived stats are considered fresh enough to serve without recomputing. */
+const STATS_TTL_MS = 60_000;
+
+/**
+ * `recalculate` unset means "recompute only if the stored stats have gone stale".
+ * It used to default to `true`, so every visit to /account/analytics — including
+ * every refresh — recomputed every model from scratch.
+ */
 export async function getModelAnalytics(
 	userId: string,
 	options?: { recalculate?: boolean }
 ): Promise<{ stats: ModelPerformanceStats[]; insights: ModelAnalyticsInsights }> {
-	const recalculate = options?.recalculate ?? true;
+	const cached = await getModelPerformanceStatsByUser(userId);
 
-	const stats = recalculate
-		? await calculateAllModelPerformanceStats(userId)
-		: await getModelPerformanceStatsByUser(userId);
+	const newest = cached.reduce((max, stat) => Math.max(max, stat.lastUpdated?.getTime() ?? 0), 0);
+	const stale = cached.length === 0 || Date.now() - newest > STATS_TTL_MS;
+
+	const stats =
+		(options?.recalculate ?? stale) ? await calculateAllModelPerformanceStats(userId) : cached;
 
 	const insights = buildModelAnalyticsInsights(stats);
 	return { stats, insights };

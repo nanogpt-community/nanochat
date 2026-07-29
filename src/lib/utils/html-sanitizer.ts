@@ -139,8 +139,22 @@ function escapeHtml(value: string): string {
 		.replaceAll("'", '&#39;');
 }
 
+/**
+ * Remove characters a browser discards while parsing a URL.
+ *
+ * Per the WHATWG URL spec, ASCII tab, LF and CR are stripped from anywhere in a URL
+ * before its scheme is parsed — so `java<TAB>script:alert(1)` is loaded as
+ * `javascript:alert(1)`. A scheme check run against the raw string simply fails to
+ * match, and the value sails through as if it were a relative URL. Other C0 controls
+ * are dropped for the same reason.
+ */
+function normalizeUrlValue(value: string): string {
+	// eslint-disable-next-line no-control-regex
+	return value.replace(/[\u0000-\u001F\u007F]/g, '').trim();
+}
+
 function isSafeUrl(value: string): boolean {
-	const trimmed = value.trim();
+	const trimmed = normalizeUrlValue(value);
 
 	if (!trimmed) {
 		return false;
@@ -182,8 +196,15 @@ function sanitizeAttribute(tagName: string, name: string, value: string): string
 
 	const trimmedValue = value.trim();
 
-	if (URL_ATTRIBUTES.has(normalizedName) && !isSafeUrl(trimmedValue)) {
-		return null;
+	if (URL_ATTRIBUTES.has(normalizedName)) {
+		// Validate AND emit the normalized form. Checking one string while writing back
+		// the original would leave the smuggled control characters in the output for the
+		// browser to strip, reconstituting the very scheme that was just rejected.
+		const normalizedUrl = normalizeUrlValue(value);
+		if (!isSafeUrl(normalizedUrl)) {
+			return null;
+		}
+		return normalizedUrl;
 	}
 
 	if (normalizedName === 'style' && !SAFE_STYLE_PATTERN.test(trimmedValue)) {

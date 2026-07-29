@@ -163,7 +163,7 @@ function createOptimisticAssistantMessage(
 	};
 }
 
-function upsertMessage(
+export function upsertMessage(
 	messages: Message[],
 	message: Message,
 	options: { replaceId?: string | null } = {}
@@ -194,7 +194,10 @@ function upsertMessage(
 	return next;
 }
 
-function applyLimit(messages: Message[], args: Record<string, unknown> | undefined): Message[] {
+export function applyLimit(
+	messages: Message[],
+	args: Record<string, unknown> | undefined
+): Message[] {
 	const limit = typeof args?.limit === 'number' ? args.limit : Number(args?.limit);
 	if (!Number.isFinite(limit) || limit <= 0 || messages.length <= limit) {
 		return messages;
@@ -218,22 +221,39 @@ function updateConversationMessageCaches(
 	);
 }
 
-function primeConversationMessageCaches(
-	conversationId: string,
-	messages: Message[]
-) {
+function primeConversationMessageCaches(conversationId: string, messages: Message[]) {
+	// Seed the standard entries. These may not exist yet — a brand new conversation
+	// has never been fetched — so they have to be written by key rather than matched.
 	for (const limit of DEFAULT_MESSAGE_QUERY_LIMITS) {
 		const queryArgs = limit === undefined ? { conversationId } : { conversationId, limit };
-		setCachedQueryData<Message[]>(
-			api.messages.getAllFromConversation,
-			queryArgs,
-			(current = []) =>
-				applyLimit(
-					messages.reduce((acc, message) => upsertMessage(acc, message), current),
-					queryArgs
-				)
+		setCachedQueryData<Message[]>(api.messages.getAllFromConversation, queryArgs, (current = []) =>
+			applyLimit(
+				messages.reduce((acc, message) => upsertMessage(acc, message), current),
+				queryArgs
+			)
 		);
 	}
+
+	// Then reach any other live entry for this conversation. "Load earlier messages"
+	// raises the page's query limit past the defaults above (121 -> 241 -> ...), and
+	// that entry is the one actually being rendered. Without this the optimistic user
+	// message was written only to keys nobody was reading, so after loading earlier
+	// messages your own message stayed invisible until the next refetch — while the
+	// assistant's appeared, because patchAssistantMessage already matches by id.
+	// upsertMessage is keyed on message id, so re-applying to the entries above is a
+	// no-op rather than a duplicate.
+	setCachedQueryDataMatching<Message[]>(
+		(entry) =>
+			entry.url === api.messages.getAllFromConversation.url &&
+			entry.args?.conversationId === conversationId,
+		(current, entry) => {
+			const safeCurrent = Array.isArray(current) ? current : [];
+			return applyLimit(
+				messages.reduce((acc, message) => upsertMessage(acc, message), safeCurrent),
+				entry.args
+			);
+		}
+	);
 }
 
 function patchAssistantMessage(
@@ -243,59 +263,51 @@ function patchAssistantMessage(
 	options: { replaceId?: string | null; fallback?: Message } = {}
 ) {
 	updateConversationMessageCaches(conversationId, (current = []) => {
-			const seeded =
-				options.fallback &&
-				!current.some(
-					(message) => message.id === messageId || message.id === options.replaceId
-				)
-					? upsertMessage(current, options.fallback, { replaceId: options.replaceId })
-					: current;
-			const index = seeded.findIndex(
-				(message) => message.id === messageId || message.id === options.replaceId
-			);
-			if (index === -1) {
-				return current;
-			}
+		const seeded =
+			options.fallback &&
+			!current.some((message) => message.id === messageId || message.id === options.replaceId)
+				? upsertMessage(current, options.fallback, { replaceId: options.replaceId })
+				: current;
+		const index = seeded.findIndex(
+			(message) => message.id === messageId || message.id === options.replaceId
+		);
+		if (index === -1) {
+			return current;
+		}
 
-			const next = [...seeded];
-			const existing = next[index];
-			if (!existing) {
-				return seeded;
-			}
-			next[index] = updater({
-				...existing,
-				id: messageId,
-			});
-			return next;
+		const next = [...seeded];
+		const existing = next[index];
+		if (!existing) {
+			return seeded;
+		}
+		next[index] = updater({
+			...existing,
+			id: messageId,
 		});
+		return next;
+	});
 }
 
 function setConversationGenerating(conversationId: string, generating: boolean) {
-	setCachedQueryData<Conversation>(
-		api.conversations.getById,
-		{ id: conversationId },
-		(current) => {
-			if (!current) {
-				return current;
-			}
-
-			return {
-				...current,
-				generating,
-				updatedAt: new Date(),
-			};
+	setCachedQueryData<Conversation>(api.conversations.getById, { id: conversationId }, (current) => {
+		if (!current) {
+			return current;
 		}
-	);
+
+		return {
+			...current,
+			generating,
+			updatedAt: new Date(),
+		};
+	});
 }
 
 function updateConversationCaches(
 	conversationId: string,
 	updater: (current: Conversation) => Conversation
 ) {
-	setCachedQueryData<Conversation>(
-		api.conversations.getById,
-		{ id: conversationId },
-		(current) => (current ? updater(current) : current)
+	setCachedQueryData<Conversation>(api.conversations.getById, { id: conversationId }, (current) =>
+		current ? updater(current) : current
 	);
 
 	setCachedQueryDataMatching<Conversation[]>(
@@ -473,12 +485,17 @@ export async function callGenerateMessageStream(
 							args,
 							assistantMessageId
 						);
-						patchAssistantMessage(conversationId, assistantMessageId, (current) => ({
-							...current,
-							content: current.content + event.data.content,
-							reasoning: `${current.reasoning ?? ''}${event.data.reasoning}` || null,
-							error: null,
-						}), { fallback: optimisticAssistant });
+						patchAssistantMessage(
+							conversationId,
+							assistantMessageId,
+							(current) => ({
+								...current,
+								content: current.content + event.data.content,
+								reasoning: `${current.reasoning ?? ''}${event.data.reasoning}` || null,
+								error: null,
+							}),
+							{ fallback: optimisticAssistant }
+						);
 						continue;
 					}
 
@@ -489,14 +506,19 @@ export async function callGenerateMessageStream(
 								args,
 								assistantMessageId
 							);
-							patchAssistantMessage(conversationId, assistantMessageId, (current) => ({
-								...current,
-								tokenCount: event.data.token_count ?? current.tokenCount,
-								costUsd: event.data.cost_usd ?? current.costUsd,
-								responseTimeMs: event.data.response_time_ms ?? current.responseTimeMs,
-								timeToFirstTokenMs:
-									event.data.time_to_first_token_ms ?? current.timeToFirstTokenMs,
-							}), { fallback: optimisticAssistant });
+							patchAssistantMessage(
+								conversationId,
+								assistantMessageId,
+								(current) => ({
+									...current,
+									tokenCount: event.data.token_count ?? current.tokenCount,
+									costUsd: event.data.cost_usd ?? current.costUsd,
+									responseTimeMs: event.data.response_time_ms ?? current.responseTimeMs,
+									timeToFirstTokenMs:
+										event.data.time_to_first_token_ms ?? current.timeToFirstTokenMs,
+								}),
+								{ fallback: optimisticAssistant }
+							);
 						}
 
 						setConversationGenerating(conversationId, false);
@@ -545,10 +567,15 @@ export async function callGenerateMessageStream(
 								args,
 								assistantMessageId
 							);
-							patchAssistantMessage(conversationId, assistantMessageId, (current) => ({
-								...current,
-								error: event.data.error,
-							}), { fallback: optimisticAssistant });
+							patchAssistantMessage(
+								conversationId,
+								assistantMessageId,
+								(current) => ({
+									...current,
+									error: event.data.error,
+								}),
+								{ fallback: optimisticAssistant }
+							);
 						}
 
 						setConversationGenerating(conversationId, false);
@@ -558,7 +585,10 @@ export async function callGenerateMessageStream(
 				}
 			}
 		} catch (error) {
-			if (handlers.signal?.aborted || (error instanceof DOMException && error.name === 'AbortError')) {
+			if (
+				handlers.signal?.aborted ||
+				(error instanceof DOMException && error.name === 'AbortError')
+			) {
 				return;
 			}
 

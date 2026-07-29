@@ -15,6 +15,7 @@
 	import CalendarIcon from '~icons/lucide/calendar-clock';
 	import PaletteIcon from '~icons/lucide/palette';
 	import CpuIcon from '~icons/lucide/cpu';
+	import PlugIcon from '~icons/lucide/plug';
 	import KeyIcon from '~icons/lucide/key';
 	import KeyboardIcon from '~icons/lucide/keyboard';
 	import BarChartIcon from '~icons/lucide/bar-chart-3';
@@ -57,6 +58,7 @@
 				{ title: 'Assistants', href: '/account/assistants', icon: SparklesIcon },
 				{ title: 'Prompts', href: '/account/prompts', icon: MessageSquareIcon },
 				{ title: 'Models', href: '/account/models', icon: CpuIcon },
+				{ title: 'MCP Servers', href: '/account/mcp', icon: PlugIcon },
 				{ title: 'Schedules', href: '/account/schedules', icon: CalendarIcon },
 			],
 		},

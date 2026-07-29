@@ -26,6 +26,21 @@ export function isImageOnlyModel(model: NanoGPTModel): boolean {
 	);
 }
 
+// https://docs.nano-gpt.com/api-reference/endpoint/chat-completion#reasoning-effort
+export const REASONING_EFFORTS = ['none', 'minimal', 'low', 'medium', 'high', 'xhigh'] as const;
+export type ReasoningEffort = (typeof REASONING_EFFORTS)[number];
+
+// 'auto' is UI-only: omit the param and let the provider decide.
+export const REASONING_EFFORT_LABELS: Record<ReasoningEffort | 'auto', string> = {
+	auto: 'Auto',
+	none: 'Off',
+	minimal: 'Minimal',
+	low: 'Low',
+	medium: 'Medium',
+	high: 'High',
+	xhigh: 'Max',
+};
+
 export function supportsReasoning(model: NanoGPTModel): boolean {
 	return model.capabilities?.reasoning ?? false;
 }

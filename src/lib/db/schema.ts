@@ -9,7 +9,7 @@ import {
 	index,
 	uniqueIndex,
 } from 'drizzle-orm/pg-core';
-import { relations } from 'drizzle-orm';
+import { relations, sql } from 'drizzle-orm';
 
 // ============================================================================
 // Better Auth Tables (required by better-auth)
@@ -149,6 +149,24 @@ export const userKeys = pgTable(
 	]
 );
 
+export const mcpServers = pgTable(
+	'mcp_servers',
+	{
+		id: text('id').primaryKey(),
+		userId: text('user_id')
+			.notNull()
+			.references(() => user.id, { onDelete: 'cascade' }),
+		name: text('name').notNull(), // also namespaces the tool names exposed to the model
+		url: text('url').notNull(),
+		authToken: text('auth_token'), // encrypted at rest, sent as `Authorization: Bearer`
+		headers: text('headers'), // encrypted JSON object of extra request headers
+		enabled: boolean('enabled').notNull().default(true),
+		createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
+		updatedAt: timestamp('updated_at', { withTimezone: true }).notNull(),
+	},
+	(table) => [index('mcp_servers_user_id_idx').on(table.userId)]
+);
+
 export const userEnabledModels = pgTable(
 	'user_enabled_models',
 	{
@@ -256,6 +274,9 @@ export const conversations = pgTable(
 	(table) => [
 		index('conversations_user_id_idx').on(table.userId),
 		index('conversations_project_id_idx').on(table.projectId),
+		// The sidebar list is `where user_id = ? order by updated_at desc`. `projects`
+		// already had the equivalent pair, so its absence here looked like an oversight.
+		index('conversations_user_updated_idx').on(table.userId, table.updatedAt),
 	]
 );
 
@@ -289,27 +310,47 @@ export const messages = pgTable(
 		costUsd: doublePrecision('cost_usd'),
 		generationId: text('generation_id'),
 		webSearchEnabled: boolean('web_search_enabled').default(false),
-		reasoningEffort: text('reasoning_effort'), // 'low' | 'medium' | 'high'
+		reasoningEffort: text('reasoning_effort'), // ReasoningEffort: none | minimal | low | medium | high | xhigh
 		annotations: jsonb('annotations').$type<Array<Record<string, unknown>>>(),
 		followUpSuggestions: jsonb('follow_up_suggestions').$type<string[] | null>(),
 		starred: boolean('starred').default(false),
 		createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
 	},
-	(table) => [index('messages_conversation_id_idx').on(table.conversationId)]
+	(table) => [
+		index('messages_conversation_id_idx').on(table.conversationId),
+		// Deliberately NOT a (conversation_id, created_at) composite: conversation reads
+		// order by (created_at, <CASE over role>, id), and the CASE expression as the
+		// second key means no plain btree can satisfy that ordering. Measured at 3000
+		// messages, Postgres sorts either way — the composite would only add write cost.
+		// Analytics groups by these two and they were unindexed, making each model's
+		// stats a sequential scan of the whole table across all users.
+		index('messages_model_provider_idx').on(table.modelId, table.provider),
+		// Starred messages are a tiny fraction of rows; a partial index keeps the
+		// starred-messages page off a full scan without bloating writes.
+		index('messages_starred_idx')
+			.on(table.conversationId)
+			.where(sql`${table.starred}`),
+	]
 );
 
 // Storage table for uploaded files (replacing Convex storage)
-export const storage = pgTable('storage', {
-	id: text('id').primaryKey(),
-	userId: text('user_id')
-		.notNull()
-		.references(() => user.id, { onDelete: 'cascade' }),
-	filename: text('filename').notNull(),
-	mimeType: text('mime_type').notNull(),
-	size: integer('size').notNull(),
-	path: text('path').notNull(), // Local path or S3 key
-	createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
-});
+export const storage = pgTable(
+	'storage',
+	{
+		id: text('id').primaryKey(),
+		userId: text('user_id')
+			.notNull()
+			.references(() => user.id, { onDelete: 'cascade' }),
+		filename: text('filename').notNull(),
+		mimeType: text('mime_type').notNull(),
+		size: integer('size').notNull(),
+		path: text('path').notNull(), // Local path or S3 key
+		createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
+	},
+	// The gallery and clear-storage endpoints both filter on user_id; without this
+	// the table had no indexes at all and every request scanned it globally.
+	(table) => [index('storage_user_id_idx').on(table.userId)]
+);
 
 // User memories for cross-conversation persistent memory
 export const userMemories = pgTable(
@@ -738,6 +779,8 @@ export type UserSettings = typeof userSettings.$inferSelect;
 export type NewUserSettings = typeof userSettings.$inferInsert;
 export type UserKey = typeof userKeys.$inferSelect;
 export type NewUserKey = typeof userKeys.$inferInsert;
+export type McpServer = typeof mcpServers.$inferSelect;
+export type NewMcpServer = typeof mcpServers.$inferInsert;
 export type UserEnabledModel = typeof userEnabledModels.$inferSelect;
 export type NewUserEnabledModel = typeof userEnabledModels.$inferInsert;
 export type UserRule = typeof userRules.$inferSelect;

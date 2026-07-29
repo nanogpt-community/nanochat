@@ -6,7 +6,7 @@
 	import '../../../markdown.css';
 	import MarkdownRenderer from './markdown-renderer.svelte';
 	import { ImageModal } from '$lib/components/ui/image-modal';
-	import { sanitizeHtml } from '$lib/utils/markdown-it';
+	import { sanitizeHtml } from '$lib/utils/html-sanitizer';
 	import { toSafeHttpUrl, toSafeResourceUrl } from '$lib/utils/html-sanitizer';
 	import { on } from 'svelte/events';
 	import { isHtmlElement } from '$lib/utils/is';
@@ -53,9 +53,17 @@
 	type Props = {
 		message: Doc<'messages'>;
 		childMessageId?: string;
+		initialRating?: {
+			thumbs?: 'up' | 'down';
+			rating?: number;
+			categories?: string[];
+			feedback?: string;
+		};
+		/** Shared/public view: hide interactive actions. */
+		readonly?: boolean;
 	};
 
-	let { message, childMessageId }: Props = $props();
+	let { message, childMessageId, initialRating, readonly = false }: Props = $props();
 
 	const safeContent = $derived.by(() =>
 		typeof message.content === 'string' ? message.content : ''
@@ -83,7 +91,6 @@
 		imageUrl: '',
 		fileName: '',
 	});
-	let renderedContentContainer: HTMLDivElement | null = $state(null);
 
 	function openImageModal(imageUrl: string, fileName: string) {
 		const safeImageUrl = toSafeResourceUrl(imageUrl);
@@ -95,35 +102,6 @@
 			fileName,
 		};
 	}
-
-	function handleRenderedContentClick(event: MouseEvent) {
-		const target = event.target;
-		if (!(target instanceof Element)) return;
-
-		const button = target.closest<HTMLButtonElement>(
-			'button.copy[data-code], button[data-copy-button][data-code]'
-		);
-		if (!button) return;
-
-		event.preventDefault();
-
-		const code = button.dataset.code;
-		if (!code) return;
-
-		void navigator.clipboard.writeText(code).then(() => {
-			button.classList.add('copied');
-			setTimeout(() => button.classList.remove('copied'), 3000);
-		});
-	}
-
-	$effect(() => {
-		if (!renderedContentContainer) return;
-		renderedContentContainer.addEventListener('click', handleRenderedContentClick);
-
-		return () => {
-			renderedContentContainer?.removeEventListener('click', handleRenderedContentClick);
-		};
-	});
 
 	async function createBranchedConversation() {
 		// Log regenerate interaction
@@ -256,10 +234,16 @@
 
 	let isEditing = $state(false);
 	let editedContent = $state('');
-	let isStarred = $state<boolean>(false);
+	// The server's view of the star, and an optimistic override that wins until the
+	// server catches up. This used to be a plain $state written by an $effect that
+	// re-ran on every change to `message` — which during streaming is every token — so
+	// an optimistic toggle was reverted almost immediately, and again on every refetch.
+	const serverStarred = $derived(message.starred ?? false);
+	let pendingStarred = $state<boolean | null>(null);
+	const isStarred = $derived(pendingStarred ?? serverStarred);
 
 	$effect(() => {
-		isStarred = message.starred ?? false;
+		if (pendingStarred !== null && serverStarred === pendingStarred) pendingStarred = null;
 	});
 
 	function startEditing() {
@@ -276,8 +260,8 @@
 		if (!session.current?.user.id) return;
 		if (message.role !== 'assistant') return;
 
-		const previous = isStarred;
-		isStarred = !isStarred;
+		const next = !isStarred;
+		pendingStarred = next;
 
 		try {
 			const res = await fetch(api.messages.setStarred.url, {
@@ -286,20 +270,20 @@
 				body: JSON.stringify({
 					action: 'setStarred',
 					messageId: message.id,
-					starred: isStarred,
+					starred: next,
 				}),
 			});
 
 			if (!res.ok) {
 				console.error('Failed to update starred state');
-				isStarred = previous;
+				pendingStarred = null;
 				return;
 			}
 
 			invalidateQueryPattern(api.messages.getAllFromConversation.url);
 		} catch (e) {
 			console.error('Error updating starred state:', e);
-			isStarred = previous;
+			pendingStarred = null;
 		}
 	}
 
@@ -389,17 +373,26 @@
 			'max-w-[92%] self-end md:max-w-[80%]': message.role === 'user',
 		})}
 		{@attach (node) => {
+			// The single copy-button handler for this message. There used to be three
+			// stacked on nested ancestors — here, on renderedContentContainer, and inside
+			// markdown-renderer — so one click bubbled through all of them and wrote to
+			// the clipboard three times. This outermost one is the only one that covers
+			// every render path: reasoning, contentHtml, and MarkdownRenderer alike.
 			return on(node, 'click', (e) => {
 				const el = e.target as HTMLElement;
-				const closestCopyButton = el.closest('.copy[data-code]');
+				const closestCopyButton = el.closest(
+					'button.copy[data-code], button[data-copy-button][data-code]'
+				);
 				if (!isHtmlElement(closestCopyButton)) return;
 
 				const code = closestCopyButton.dataset.code;
 				if (!code) return;
 
-				navigator.clipboard.writeText(code);
-				closestCopyButton.classList.add('copied');
-				setTimeout(() => closestCopyButton.classList.remove('copied'), 3000);
+				e.preventDefault();
+				void navigator.clipboard.writeText(code).then(() => {
+					closestCopyButton.classList.add('copied');
+					setTimeout(() => closestCopyButton.classList.remove('copied'), 3000);
+				});
 			});
 		}}
 	>
@@ -469,7 +462,13 @@
 								<div
 									class="prose prose-sm dark:prose-invert prose-p:text-muted-foreground prose-headings:text-muted-foreground prose-strong:text-muted-foreground prose-li:text-muted-foreground max-w-none text-sm leading-relaxed"
 								>
-									<MarkdownRenderer content={message.reasoning} />
+									<!-- Only render once expanded. The wrapper collapses with grid-rows-[0fr],
+									     so without this the reasoning stream is parsed and highlighted on every
+									     token while completely invisible. The transition still animates because
+									     it runs on the grid wrapper, not on this content. -->
+									{#if showReasoning}
+										<MarkdownRenderer content={message.reasoning} />
+									{/if}
 								</div>
 							</div>
 						</div>
@@ -477,10 +476,7 @@
 				</div>
 			</div>
 		{/if}
-		<div
-			bind:this={renderedContentContainer}
-			class={style({ role: message.role as 'user' | 'assistant' })}
-		>
+		<div class={style({ role: message.role as 'user' | 'assistant' })}>
 			{#if isEditing}
 				<div class="flex min-w-[300px] flex-col gap-2">
 					<textarea
@@ -493,8 +489,7 @@
 							} else if (e.key === 'Escape') {
 								cancelEditing();
 							}
-						}}
-					></textarea>
+						}}></textarea>
 					<div class="mt-1 flex justify-end gap-2">
 						<Button size="sm" variant="ghost" onclick={cancelEditing} class="h-7 text-xs"
 							>Cancel</Button
@@ -507,7 +502,7 @@
 					<pre class="!bg-sidebar"><code>{message.error}</code></pre>
 				</div>
 			{:else if message.role === 'user'}
-				<div class="not-prose whitespace-pre-wrap break-words">{userDisplayContent}</div>
+				<div class="not-prose break-words whitespace-pre-wrap">{userDisplayContent}</div>
 			{:else if message.contentHtml}
 				<!-- eslint-disable-next-line svelte/no-at-html-tags -->
 				{@html sanitizeHtml(message.contentHtml)}
@@ -595,75 +590,84 @@
 			)}
 		>
 			<!-- Action buttons - always visible on mobile -->
-			<Tooltip>
-				{#snippet trigger(tooltip)}
-					<Button
-						size="icon"
-						variant="ghost"
-						class={cn('group order-2 size-9 md:size-7', { 'order-1': message.role === 'user' })}
-						onClickPromise={createBranchedConversation}
-						{...tooltip.trigger}
-					>
-						{#if message.role === 'user'}
-							<BranchAndRegen class="group-data-[loading=true]:opacity-0" />
-						{:else}
-							<Branch class="group-data-[loading=true]:opacity-0" />
-						{/if}
-					</Button>
-				{/snippet}
-				{message.role === 'user' ? 'Branch and regenerate message' : 'Branch off this message'}
-			</Tooltip>
-
-			{#if message.role === 'assistant' && safeContent.length > 0}
+			{#if !readonly}
 				<Tooltip>
 					{#snippet trigger(tooltip)}
 						<Button
 							size="icon"
 							variant="ghost"
-							class={cn('group order-0 size-9 md:size-7')}
-							onclick={() => {
-								if (audioPlayer.isPlaying && audioPlayer.currentMessageId === message.id) {
-									audioPlayer.stop();
-								} else {
-									audioPlayer.play(displayContent, message.id);
-								}
-							}}
+							class={cn('group order-2 size-9 md:size-7', { 'order-1': message.role === 'user' })}
+							onClickPromise={createBranchedConversation}
+							aria-label={message.role === 'user'
+								? 'Branch and regenerate message'
+								: 'Branch off this message'}
 							{...tooltip.trigger}
 						>
-							{#if audioPlayer.isLoading && audioPlayer.currentMessageId === message.id}
-								<Loader2Icon class="size-4 animate-spin" />
-							{:else if audioPlayer.isPlaying && audioPlayer.currentMessageId === message.id}
-								<SquareIcon class="size-3 fill-current" />
+							{#if message.role === 'user'}
+								<BranchAndRegen class="group-data-[loading=true]:opacity-0" />
 							{:else}
-								<Volume2Icon class="size-4" />
+								<Branch class="group-data-[loading=true]:opacity-0" />
 							{/if}
 						</Button>
 					{/snippet}
-					{audioPlayer.isPlaying && audioPlayer.currentMessageId === message.id
-						? 'Stop reading'
-						: 'Read aloud'}
+					{message.role === 'user' ? 'Branch and regenerate message' : 'Branch off this message'}
 				</Tooltip>
-			{/if}
-			{#if message.role === 'assistant' && safeContent.length > 0 && !message.error}
-				<Tooltip>
-					{#snippet trigger(tooltip)}
-						<Button
-							size="icon"
-							variant="ghost"
-							class="order-1 size-9 md:size-7"
-							onclick={toggleStarred}
-							{...tooltip.trigger}
-						>
-							<StarIcon
-								class={cn('size-4', {
-									'fill-yellow-400 text-yellow-400': isStarred,
-									'text-muted-foreground/60': !isStarred,
-								})}
-							/>
-						</Button>
-					{/snippet}
-					{isStarred ? 'Unstar message' : 'Star message'}
-				</Tooltip>
+
+				{#if message.role === 'assistant' && safeContent.length > 0}
+					<Tooltip>
+						{#snippet trigger(tooltip)}
+							<Button
+								size="icon"
+								variant="ghost"
+								class={cn('group order-0 size-9 md:size-7')}
+								onclick={() => {
+									if (audioPlayer.isPlaying && audioPlayer.currentMessageId === message.id) {
+										audioPlayer.stop();
+									} else {
+										audioPlayer.play(displayContent, message.id);
+									}
+								}}
+								aria-label={audioPlayer.isPlaying && audioPlayer.currentMessageId === message.id
+									? 'Stop reading aloud'
+									: 'Read message aloud'}
+								{...tooltip.trigger}
+							>
+								{#if audioPlayer.isLoading && audioPlayer.currentMessageId === message.id}
+									<Loader2Icon class="size-4 animate-spin" />
+								{:else if audioPlayer.isPlaying && audioPlayer.currentMessageId === message.id}
+									<SquareIcon class="size-3 fill-current" />
+								{:else}
+									<Volume2Icon class="size-4" />
+								{/if}
+							</Button>
+						{/snippet}
+						{audioPlayer.isPlaying && audioPlayer.currentMessageId === message.id
+							? 'Stop reading'
+							: 'Read aloud'}
+					</Tooltip>
+				{/if}
+				{#if message.role === 'assistant' && safeContent.length > 0 && !message.error}
+					<Tooltip>
+						{#snippet trigger(tooltip)}
+							<Button
+								size="icon"
+								variant="ghost"
+								class="order-1 size-9 md:size-7"
+								onclick={toggleStarred}
+								aria-label={isStarred ? 'Unstar message' : 'Star message'}
+								{...tooltip.trigger}
+							>
+								<StarIcon
+									class={cn('size-4', {
+										'fill-yellow-400 text-yellow-400': isStarred,
+										'text-muted-foreground/60': !isStarred,
+									})}
+								/>
+							</Button>
+						{/snippet}
+						{isStarred ? 'Unstar message' : 'Star message'}
+					</Tooltip>
+				{/if}
 			{/if}
 
 			{#if safeContent.length > 0}
@@ -679,26 +683,29 @@
 					Copy
 				</Tooltip>
 			{/if}
-			<DropdownMenu.Root>
-				<DropdownMenu.Trigger
-					class={cn(
-						'hover:bg-accent order-3 flex size-9 items-center justify-center rounded-md transition-colors md:size-7',
-						{ 'order-3': message.role === 'user' }
-					)}
-				>
-					<ChevronDownIcon class="size-4" />
-				</DropdownMenu.Trigger>
-				<DropdownMenu.Content align="start" class="w-40">
-					<DropdownMenu.Item onclick={startEditing} class="cursor-pointer gap-2">
-						<PencilIcon class="size-4" />
-						<span>Edit</span>
-					</DropdownMenu.Item>
-					<DropdownMenu.Item onclick={regenerateInPlace} class="cursor-pointer gap-2">
-						<RefreshCwIcon class="size-4" />
-						<span>Regenerate</span>
-					</DropdownMenu.Item>
-				</DropdownMenu.Content>
-			</DropdownMenu.Root>
+			{#if !readonly}
+				<DropdownMenu.Root>
+					<DropdownMenu.Trigger
+						class={cn(
+							'hover:bg-accent order-3 flex size-9 items-center justify-center rounded-md transition-colors md:size-7',
+							{ 'order-3': message.role === 'user' }
+						)}
+						aria-label="More message actions"
+					>
+						<ChevronDownIcon class="size-4" />
+					</DropdownMenu.Trigger>
+					<DropdownMenu.Content align="start" class="w-40">
+						<DropdownMenu.Item onclick={startEditing} class="cursor-pointer gap-2">
+							<PencilIcon class="size-4" />
+							<span>Edit</span>
+						</DropdownMenu.Item>
+						<DropdownMenu.Item onclick={regenerateInPlace} class="cursor-pointer gap-2">
+							<RefreshCwIcon class="size-4" />
+							<span>Regenerate</span>
+						</DropdownMenu.Item>
+					</DropdownMenu.Content>
+				</DropdownMenu.Root>
+			{/if}
 
 			{#if message.role === 'assistant'}
 				<!-- Desktop: Show all metadata inline -->
@@ -769,9 +776,9 @@
 				</div>
 			{/if}
 		</div>
-		{#if message.role === 'assistant' && safeContent.length > 0 && !message.error}
+		{#if message.role === 'assistant' && safeContent.length > 0 && !message.error && !readonly}
 			<div class="mt-2">
-				<MessageRating messageId={message.id} onRate={handleRating} />
+				<MessageRating messageId={message.id} {initialRating} onRate={handleRating} />
 			</div>
 		{/if}
 	</div>

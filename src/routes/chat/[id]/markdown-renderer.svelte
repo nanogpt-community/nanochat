@@ -1,46 +1,20 @@
 <script lang="ts">
-	import { sanitizeHtml } from '$lib/utils/markdown-it';
+	import { sanitizeHtml } from '$lib/utils/html-sanitizer';
 	import { Markdown } from '$lib/utils/markdown.svelte';
 
-	function handleRenderedContentClick(event: MouseEvent) {
-		const target = event.target;
-		if (!(target instanceof Element)) return;
-
-		const button = target.closest<HTMLButtonElement>(
-			'button.copy[data-code], button[data-copy-button][data-code]'
-		);
-		if (!button) return;
-
-		event.preventDefault();
-
-		const code = button.dataset.code;
-		if (!code) return;
-
-		void navigator.clipboard.writeText(code).then(() => {
-			button.classList.add('copied');
-			setTimeout(() => button.classList.remove('copied'), 3000);
-		});
-	}
+	// Copy-button clicks are handled once, by the delegated listener on the message
+	// wrapper in message.svelte. This component used to attach its own as well, which
+	// meant a single click ran the clipboard write on every ancestor that had one.
 
 	type Props = {
 		content: string;
 	};
 
 	let { content }: Props = $props();
-	let container: HTMLDivElement | null = $state(null);
 
 	const markdown = new Markdown(() => content);
-
-	$effect(() => {
-		if (!container) return;
-		container.addEventListener('click', handleRenderedContentClick);
-
-		return () => {
-			container?.removeEventListener('click', handleRenderedContentClick);
-		};
-	});
 </script>
 
-<div bind:this={container}>
+<div>
 	{@html sanitizeHtml(markdown.current ?? '')}
 </div>

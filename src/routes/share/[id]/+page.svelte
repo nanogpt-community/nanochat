@@ -2,10 +2,10 @@
 	import { page } from '$app/state';
 	import { useCachedQuery, api } from '$lib/cache/cached-query.svelte.js';
 	import type { Conversation, Message } from '$lib/api';
-	import { GitHub, Svelte } from '$lib/components/icons';
 	import { Button } from '$lib/components/ui/button';
 	import { ThemeToggle } from '$lib/components/ui/light-switch/index.js';
-	import Tooltip from '$lib/components/ui/tooltip.svelte';
+	import ArrowRightIcon from '~icons/lucide/arrow-right';
+	import GlobeIcon from '~icons/lucide/globe';
 	import MessageComponent from '../../chat/[id]/message.svelte';
 
 	const conversationId = page.params.id;
@@ -35,103 +35,73 @@
 	<meta name="description" content="A shared conversation from nanochat" />
 </svelte:head>
 
-<div class="fill-device-height">
-	<!-- Header -->
+<div class="fill-device-height scroll-momentum overflow-y-auto overscroll-contain">
 	<header
-		class="border-border bg-background/95 supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50 border-b backdrop-blur"
+		class="border-border/60 bg-background/80 supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50 border-b
+			backdrop-blur-lg"
 	>
-		<div class="mx-auto flex h-14 max-w-4xl items-center justify-between px-4">
-			<div class="flex items-center gap-4">
-				<a
-					href="/"
-					class="text-foreground hover:text-foreground/80 flex items-center gap-2 transition-colors"
+		<div class="mx-auto flex h-14 max-w-3xl items-center justify-between gap-3 px-3 sm:px-4">
+			<a href="/" class="font-sans text-lg font-bold tracking-tight">nanochat</a>
+			<div class="flex items-center gap-1">
+				<Button
+					href="/chat"
+					variant="ghost"
+					size="sm"
+					class="text-muted-foreground hover:text-foreground"
 				>
-					<span class="font-serif font-semibold">nanochat</span>
-				</a>
-				<div class="text-muted-foreground text-sm">Shared conversation</div>
-			</div>
-			<div class="flex items-center gap-2">
-				<Tooltip>
-					{#snippet trigger(tooltip)}
-						<Button variant="ghost" size="sm" href="/chat" {...tooltip.trigger}>
-							Start your own chat
-						</Button>
-					{/snippet}
-					Create your own conversation
-				</Tooltip>
+					Start your own chat
+				</Button>
 				<ThemeToggle variant="ghost" class="size-8" />
 			</div>
 		</div>
 	</header>
 
-	<!-- Main content -->
-	<main class="mx-auto max-w-4xl px-4 py-8">
+	<main class="mx-auto max-w-3xl px-3 pt-8 pb-16 sm:px-4">
 		{#if conversationQuery.isLoading || messagesQuery.isLoading}
-			<div class="text-muted-foreground flex items-center justify-center py-12 text-center">
-				<p>Loading conversation...</p>
-			</div>
+			<div class="text-muted-foreground py-20 text-center text-sm">Loading conversation...</div>
 		{:else if !conversationQuery.data}
-			<div
-				class="text-muted-foreground flex flex-col items-center justify-center py-12 text-center"
-			>
-				<p class="mb-2 text-lg">Conversation not found</p>
-				<p class="text-sm">This conversation doesn't exist or isn't shared publicly.</p>
+			<div class="py-20 text-center">
+				<p class="mb-1 text-lg font-semibold">Conversation not found</p>
+				<p class="text-muted-foreground text-sm">
+					This conversation doesn't exist or isn't shared publicly.
+				</p>
 			</div>
 		{:else}
-			<div class="space-y-6">
-				<!-- Conversation header -->
-				<div class="border-border rounded-lg border p-6">
-					<h1 class="text-foreground mb-2 text-2xl font-bold">{conversationQuery.data.title}</h1>
-					<div class="text-muted-foreground flex items-center gap-4 text-sm">
-						{#if conversationQuery.data.updatedAt}
-							<span>Updated {formatDate(conversationQuery.data.updatedAt)}</span>
-						{/if}
-						<span>Public conversation</span>
-					</div>
-				</div>
-
-				<!-- Messages -->
-				<div class="flex flex-col space-y-0">
-					{#if messagesQuery.data && messagesQuery.data.length > 0}
-						{#each messagesQuery.data as message (message.id)}
-							<MessageComponent {message} />
-						{/each}
-					{:else}
-						<div
-							class="text-muted-foreground flex flex-col items-center justify-center py-12 text-center"
-						>
-							<p class="mb-2 text-lg">No messages in this conversation yet.</p>
-							<p class="text-sm">The conversation appears to be empty.</p>
-						</div>
+			<div class="mb-8">
+				<h1 class="font-sans text-3xl font-bold tracking-tight text-balance">
+					{conversationQuery.data.title}
+				</h1>
+				<div class="text-muted-foreground mt-2 flex items-center gap-2 text-xs">
+					<GlobeIcon class="size-3.5" />
+					<span>Public conversation</span>
+					{#if conversationQuery.data.updatedAt}
+						<span class="text-muted-foreground/50">·</span>
+						<span>Updated {formatDate(conversationQuery.data.updatedAt)}</span>
 					{/if}
 				</div>
 			</div>
+
+			<div class="flex flex-col">
+				{#if messagesQuery.data && messagesQuery.data.length > 0}
+					{#each messagesQuery.data as message (message.id)}
+						<MessageComponent {message} readonly />
+					{/each}
+				{:else}
+					<div class="text-muted-foreground py-20 text-center text-sm">
+						No messages in this conversation yet.
+					</div>
+				{/if}
+			</div>
+
+			<div
+				class="border-border/60 mt-12 flex flex-col items-center gap-3 border-t pt-8 text-center"
+			>
+				<p class="text-muted-foreground text-sm">Want to pick up where this left off?</p>
+				<Button href="/chat" size="sm">
+					Start your own chat
+					<ArrowRightIcon class="size-4" />
+				</Button>
+			</div>
 		{/if}
 	</main>
-
-	<!-- Footer -->
-	<footer class="border-border mt-16 border-t py-8">
-		<div class="mx-auto max-w-4xl px-4">
-			<div
-				class="text-muted-foreground flex flex-col items-center gap-4 text-center text-sm sm:flex-row sm:justify-between"
-			>
-				<div class="flex items-center gap-4">
-					<a
-						href="https://github.com/nanogpt-community/nanochat"
-						class="hover:text-foreground flex items-center gap-1 transition-colors"
-					>
-						Source on <GitHub class="inline size-3" />
-					</a>
-					<span class="flex items-center gap-1">
-						Crafted by <Svelte class="inline size-3" /> wizards.
-					</span>
-				</div>
-				<div>
-					<a href="/chat" class="hover:text-foreground transition-colors">
-						Create your own conversation →
-					</a>
-				</div>
-			</div>
-		</div>
-	</footer>
 </div>

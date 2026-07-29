@@ -1,8 +1,6 @@
 <div align="center">
   <h1>nanochat</h1>
   <p><em>Open-source self-hostable chat client for <a href="nano-gpt.com">Nano-GPT</a>.</em></p>
-  <p>Test it out at <a href="https://nanochat.app">nanochat.app</a></p>
-  <p>Get 25 Free Daily prompts using any nano-gpt subscription model without needing an API key</p>
   <img src="image.png">
 </div>
 
@@ -23,12 +21,12 @@ Get the native NanoChat experience on your devices:
 - Yarn -> Bun
 - Openrouter -> Nano-GPT (nano-gpt.com)
 - Theme inspired by T3 Chat
-- Nano-GPT Web Search / Deep Search (Linkup / Tavily / Exa / Kagi)
+- Nano-GPT Web Search / Deep Search
 - Nano-GPT Web Scraping when you enter a URL (adds to context)
 - Nano-GPT Context Memory (Single Chat)
 - Cross-Conversation Memory (All Chats)
 - Nano-GPT Image Generation + img2img support
-- Nano-GPT Speech-to-Text (Whisper/Wizper/ElevenLabs)
+- Nano-GPT Speech-to-Text
 - Passkey support (requires HTTPS)
 - Nano-GPT Video Generation
 - Selectable System Prompts (Assistants)
@@ -41,6 +39,7 @@ Get the native NanoChat experience on your devices:
 - Benchmark Data from artificialanalysis.ai API
 - Provider Selection for Models (NanoGPT)
 - Nano-GPT Video Generation
+- MCP Server Support
 
 ## Setup (Docker)
 

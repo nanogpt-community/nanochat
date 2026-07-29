@@ -21,17 +21,57 @@
 	const LOAD_MORE_MESSAGES = 120;
 	const MESSAGE_QUERY_BUFFER = 1;
 
-	const messages = useCachedQuery<Message[]>(api.messages.getAllFromConversation, () => ({
-		conversationId: page.params.id ?? '',
-		limit: visibleCount + MESSAGE_QUERY_BUFFER,
-	}), {
-		enabled: () => !!page.params.id,
-		staleWhileRevalidate: false,
-	});
+	const messages = useCachedQuery<Message[]>(
+		api.messages.getAllFromConversation,
+		() => ({
+			conversationId: page.params.id ?? '',
+			limit: visibleCount + MESSAGE_QUERY_BUFFER,
+		}),
+		{
+			enabled: () => !!page.params.id,
+			staleWhileRevalidate: false,
+		}
+	);
 
 	const conversation = useCachedQuery<Conversation>(api.conversations.getById, () => ({
 		id: page.params.id as Id<'conversations'>,
 	}));
+
+	type StoredRating = {
+		messageId: string;
+		thumbs?: 'up' | 'down' | null;
+		rating?: number | null;
+		categories?: string[] | null;
+		feedback?: string | null;
+	};
+
+	// Loaded so the rating widget can show what you already submitted; without it
+	// thumbs and stars reset to empty on every reload.
+	const ratings = useCachedQuery<StoredRating[]>(
+		api.message_ratings.getForConversation,
+		() => ({ conversationId: page.params.id ?? '' }),
+		{ enabled: () => !!page.params.id && !!session.current?.user?.id }
+	);
+
+	const ratingByMessageId = $derived.by(() => {
+		const map = new Map<string, NonNullable<MessageRatingValue>>();
+		for (const entry of Array.isArray(ratings.data) ? ratings.data : []) {
+			map.set(entry.messageId, {
+				thumbs: entry.thumbs ?? undefined,
+				rating: entry.rating ?? undefined,
+				categories: entry.categories ?? undefined,
+				feedback: entry.feedback ?? undefined,
+			});
+		}
+		return map;
+	});
+
+	type MessageRatingValue = {
+		thumbs?: 'up' | 'down';
+		rating?: number;
+		categories?: string[];
+		feedback?: string;
+	} | null;
 
 	const safeMessages = $derived(Array.isArray(messages.data) ? messages.data : []);
 	const lastMessage = $derived(safeMessages[safeMessages.length - 1] ?? null);
@@ -73,7 +113,8 @@
 	);
 
 	const shouldPollConversation = $derived(
-		(conversation.data?.generating ?? false) && !activeGeneration.isStreamingConversation(page.params.id)
+		(conversation.data?.generating ?? false) &&
+			!activeGeneration.isStreamingConversation(page.params.id)
 	);
 
 	$effect(() => {
@@ -94,7 +135,9 @@
 	const lastMessageWithSuggestions = $derived.by(() => {
 		const lastMsg = safeMessages[safeMessages.length - 1];
 		const suggestions = Array.isArray(lastMsg?.followUpSuggestions)
-			? lastMsg.followUpSuggestions.filter((suggestion): suggestion is string => typeof suggestion === 'string')
+			? lastMsg.followUpSuggestions.filter(
+					(suggestion): suggestion is string => typeof suggestion === 'string'
+				)
 			: [];
 
 		if (suggestions.length === 0) {
@@ -117,7 +160,30 @@
 </svelte:head>
 
 <div class="flex h-full flex-1 flex-col gap-4 py-2 pt-4 md:gap-6 md:py-4 md:pt-6">
-	{#if !conversation.data && !conversation.isLoading}
+	{#if !conversation.data && (conversation.isLoading || messages.isLoading)}
+		<!-- Navigating between conversations clears the previous one's data, so without
+		     this branch the thread area rendered an empty {#each} — a blank screen. -->
+		<div class="flex flex-col gap-6" aria-busy="true" aria-label="Loading conversation">
+			{#each [78, 46, 90] as width, i (i)}
+				<div class="flex flex-col gap-2" class:self-end={i % 2 === 0}>
+					<div class="bg-muted h-4 animate-pulse rounded" style="width: {width}%"></div>
+					<div class="bg-muted h-4 w-[62%] animate-pulse rounded"></div>
+				</div>
+			{/each}
+		</div>
+	{:else if !conversation.data && conversation.error}
+		<!-- A failed request is not the same as a missing conversation; claiming 404 on a
+		     network error told the user their chat was gone when it was not. -->
+		<div class="flex flex-1 flex-col items-center justify-center gap-4 pt-[25svh]">
+			<div>
+				<h1 class="text-center font-mono text-4xl font-semibold">Couldn't load this chat</h1>
+				<p class="text-muted-foreground text-center text-lg">
+					Check your connection and try again.
+				</p>
+			</div>
+			<Button size="sm" variant="outline" onclick={() => location.reload()}>Retry</Button>
+		</div>
+	{:else if !conversation.data}
 		<div class="flex flex-1 flex-col items-center justify-center gap-4 pt-[25svh]">
 			<div>
 				<h1 class="text-center font-mono text-8xl font-semibold">404</h1>
@@ -136,7 +202,11 @@
 		{#each visibleMessages as message, i (message.id)}
 			{@const nextMessage = visibleMessages[i + 1]}
 			{@const childMessageId = nextMessage?.role === 'assistant' ? nextMessage.id : undefined}
-			<MessageComponent {message} {childMessageId} />
+			<MessageComponent
+				{message}
+				{childMessageId}
+				initialRating={ratingByMessageId.get(message.id)}
+			/>
 		{/each}
 		{#if conversation.data?.generating}
 			{#if lastMessage?.webSearchEnabled}

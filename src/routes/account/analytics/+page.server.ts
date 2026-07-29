@@ -15,7 +15,7 @@ export const load: PageServerLoad = async ({ request }) => {
 	try {
 		console.log(`[analytics] Loading analytics for user ${userId}`);
 
-		const { stats, insights } = await getModelAnalytics(userId, { recalculate: true });
+		const { stats, insights } = await getModelAnalytics(userId);
 		console.log(`[analytics] Calculated stats for ${stats.length} models`);
 		console.log(
 			`[analytics] Generated insights: ${insights.totalMessages} messages, $${insights.totalCost.toFixed(2)} cost`
