@@ -112,7 +112,7 @@ client_max_body_size 50M;
 
 The follow-up questions feature automatically generates 2-3 contextual questions after each AI response. Key details:
 
-- **Generation**: Uses openai/gpt-oss-120b model via Nano-GPT
+- **Generation**: Uses deepseek/deepseek-v4-flash model via Nano-GPT
 - **Display**: Shows 1 second after message generation completes
 - **Persistence**: Suggestions are stored in the database and shown when loading historical conversations
 - **User Control**: Can be toggled on/off in Account Settings

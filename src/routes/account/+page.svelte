@@ -1016,7 +1016,7 @@
 								value={titleModelId}
 								onchange={(e) => updateTitleModel(e.currentTarget.value)}
 							>
-								<option value="">Default (GPT-OSS-120B)</option>
+								<option value="">Default (DeepSeek V4 Flash)</option>
 								{#each enabledModels as model}
 									<option value={model.value}>{model.label}</option>
 								{/each}
@@ -1046,7 +1046,7 @@
 								value={followUpModelId}
 								onchange={(e) => updateFollowUpModel(e.currentTarget.value)}
 							>
-								<option value="">Default (GPT-OSS-120B)</option>
+								<option value="">Default (DeepSeek V4 Flash)</option>
 								{#each enabledModels as model}
 									<option value={model.value}>{model.label}</option>
 								{/each}

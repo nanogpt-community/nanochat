@@ -265,7 +265,7 @@ Requirements:
 
 	const titleResult = await ResultAsync.fromPromise(
 		openai.chat.completions.create({
-			model: userSettingsData?.titleModelId || 'openai/gpt-oss-120b',
+			model: userSettingsData?.titleModelId || 'deepseek/deepseek-v4-flash',
 			messages: [{ role: 'user', content: titlePrompt }],
 			max_tokens: 20,
 			temperature: 0.5,
@@ -326,7 +326,7 @@ async function generateFollowUpSuggestions({
 		return null;
 	}
 
-	const modelId = userSettingsData?.followUpModelId || 'openai/gpt-oss-120b';
+	const modelId = userSettingsData?.followUpModelId || 'deepseek/deepseek-v4-flash';
 	const prompt = FOLLOW_UP_QUESTIONS_PROMPT(userMessage, assistantMessage);
 
 	const openai = new OpenAI({
