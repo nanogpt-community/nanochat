@@ -1,0 +1,920 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>nanochat — self-hosted chat client for Nano-GPT</title>
+		<meta
+			name="description"
+			content="Open-source, self-hostable AI chat client for Nano-GPT. Every frontier model, image and video generation, web search, memory, MCP — running on your own box."
+		/>
+		<link rel="icon" href="/favicon.png" />
+		<meta property="og:title" content="nanochat" />
+		<meta
+			property="og:description"
+			content="Open-source, self-hostable AI chat client for Nano-GPT."
+		/>
+		<meta property="og:image" content="/screenshot.png" />
+		<meta property="og:url" content="https://nanochat.app" />
+		<meta name="twitter:card" content="summary_large_image" />
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<link
+			href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap"
+			rel="stylesheet"
+		/>
+		<script>
+			document.documentElement.classList.add('js');
+		</script>
+		<style>
+			:root {
+				--bg: #0a090d;
+				--raised: #101014;
+				--line: #1c1a22;
+				--line-soft: rgba(255, 255, 255, 0.045);
+				--fg: #f4f3f7;
+				--muted: #8a8593;
+				--dim: #5f5c68;
+				--accent: #c026d3;
+				--accent-soft: #e879f9;
+				--max: 1440px;
+			}
+
+			* {
+				box-sizing: border-box;
+				margin: 0;
+				padding: 0;
+			}
+
+			html {
+				scroll-behavior: smooth;
+				font-size: 16px;
+			}
+
+			/* Scale the whole page on big displays instead of stranding it in a strip */
+			@media (min-width: 1700px) {
+				html {
+					font-size: 17.5px;
+				}
+			}
+
+			@media (min-width: 2200px) {
+				html {
+					font-size: 19px;
+				}
+			}
+
+			body {
+				background: var(--bg);
+				color: var(--fg);
+				font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+				font-size: 16px;
+				line-height: 1.55;
+				letter-spacing: -0.011em;
+				-webkit-font-smoothing: antialiased;
+				overflow-x: hidden;
+			}
+
+			/* App's own noise, dialled down — texture, not effect */
+			body::before {
+				content: '';
+				position: fixed;
+				inset: 0;
+				background-image: url(/noise.png);
+				background-size: 96px 96px;
+				opacity: 0.16;
+				pointer-events: none;
+				z-index: 5;
+			}
+
+			a {
+				color: inherit;
+				text-decoration: none;
+			}
+
+			.wrap {
+				position: relative;
+				z-index: 2;
+				max-width: var(--max);
+				margin-inline: auto;
+				padding-inline: 1.5rem;
+			}
+
+			/* ---------- shared type ---------- */
+			.eyebrow {
+				display: block;
+				font-family: 'Geist Mono', ui-monospace, monospace;
+				font-size: 0.68rem;
+				font-weight: 500;
+				letter-spacing: 0.16em;
+				text-transform: uppercase;
+				color: var(--accent-soft);
+				opacity: 0.85;
+			}
+
+			h1,
+			h2 {
+				font-weight: 600;
+				letter-spacing: -0.038em;
+				line-height: 1.06;
+				background: linear-gradient(180deg, #fff 25%, #b7b2c0);
+				-webkit-background-clip: text;
+				background-clip: text;
+				color: transparent;
+			}
+
+			h1 .soft,
+			h2 .soft {
+				color: var(--dim);
+				-webkit-text-fill-color: var(--dim);
+			}
+
+			/* ---------- nav ---------- */
+			nav {
+				position: sticky;
+				top: 0;
+				z-index: 20;
+				background: rgba(10, 9, 13, 0.72);
+				backdrop-filter: blur(14px) saturate(140%);
+				border-bottom: 1px solid transparent;
+				transition: border-color 0.25s ease;
+			}
+
+			nav.scrolled {
+				border-bottom-color: var(--line);
+			}
+
+			nav .wrap {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				height: 56px;
+			}
+
+			.wordmark {
+				display: flex;
+				align-items: center;
+				gap: 0.55rem;
+				font-size: 0.95rem;
+				font-weight: 600;
+				letter-spacing: -0.025em;
+			}
+
+			.wordmark i {
+				width: 6px;
+				height: 6px;
+				border-radius: 50%;
+				background: var(--accent);
+				box-shadow: 0 0 10px 1px rgba(192, 38, 211, 0.75);
+			}
+
+			.nav-links {
+				display: flex;
+				align-items: center;
+				gap: 1.75rem;
+				font-size: 0.82rem;
+				color: var(--muted);
+			}
+
+			.nav-links a {
+				transition: color 0.15s ease;
+			}
+
+			.nav-links a:hover {
+				color: var(--fg);
+			}
+
+			@media (max-width: 640px) {
+				.hide-sm {
+					display: none;
+				}
+			}
+
+			/* ---------- buttons ---------- */
+			.btn {
+				display: inline-flex;
+				align-items: center;
+				gap: 0.45rem;
+				height: 38px;
+				padding: 0 1.1rem;
+				border-radius: 8px;
+				font-size: 0.875rem;
+				font-weight: 500;
+				border: 1px solid transparent;
+				transition:
+					background 0.16s ease,
+					border-color 0.16s ease,
+					color 0.16s ease;
+			}
+
+			.btn-primary {
+				background: var(--fg);
+				color: #0a090d;
+			}
+
+			.btn-primary:hover {
+				background: #fff;
+			}
+
+			.btn-ghost {
+				border-color: var(--line);
+				color: var(--muted);
+				background: rgba(255, 255, 255, 0.015);
+			}
+
+			.btn-ghost:hover {
+				border-color: #322e3a;
+				color: var(--fg);
+			}
+
+			/* ---------- hero ---------- */
+			.hero {
+				position: relative;
+				padding-top: 7.5rem;
+				text-align: center;
+				overflow: hidden;
+			}
+
+			.hero::before {
+				content: '';
+				position: absolute;
+				top: -24rem;
+				left: 50%;
+				width: 70rem;
+				height: 42rem;
+				transform: translateX(-50%);
+				background: radial-gradient(
+					50% 50% at 50% 50%,
+					rgba(192, 38, 211, 0.14),
+					rgba(192, 38, 211, 0) 70%
+				);
+				pointer-events: none;
+			}
+
+			.tag {
+				display: inline-flex;
+				align-items: center;
+				gap: 0.55rem;
+				height: 26px;
+				padding: 0 0.75rem;
+				border-radius: 999px;
+				border: 1px solid var(--line);
+				background: var(--raised);
+				font-family: 'Geist Mono', ui-monospace, monospace;
+				font-size: 0.7rem;
+				color: var(--muted);
+			}
+
+			.tag b {
+				color: var(--accent-soft);
+				font-weight: 500;
+			}
+
+			h1 {
+				margin: 1.7rem auto 0;
+				max-width: 16ch;
+				font-size: clamp(2.5rem, 5.6vw, 4.6rem);
+			}
+
+			.lede {
+				margin: 1.4rem auto 0;
+				max-width: 52ch;
+				color: var(--muted);
+				font-size: 1.02rem;
+				line-height: 1.62;
+			}
+
+			.actions {
+				display: flex;
+				gap: 0.6rem;
+				justify-content: center;
+				flex-wrap: wrap;
+				margin-top: 2.1rem;
+			}
+
+			/* ---------- hero terminal ---------- */
+			.term {
+				margin: 2.5rem auto 0;
+				max-width: 36rem;
+				text-align: left;
+				border: 1px solid var(--line);
+				border-radius: 10px;
+				background:
+					linear-gradient(180deg, rgba(255, 255, 255, 0.022), transparent 40%), var(--raised);
+				overflow: hidden;
+			}
+
+			.term-head {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				padding: 0.5rem 0.5rem 0.5rem 0.9rem;
+				border-bottom: 1px solid var(--line);
+				font-family: 'Geist Mono', ui-monospace, monospace;
+				font-size: 0.66rem;
+				letter-spacing: 0.14em;
+				text-transform: uppercase;
+				color: var(--dim);
+			}
+
+			.term-head button {
+				height: 24px;
+				padding: 0 0.6rem;
+				border: 0;
+				border-radius: 6px;
+				background: transparent;
+				color: var(--dim);
+				font: inherit;
+				letter-spacing: 0.1em;
+				cursor: pointer;
+				transition:
+					color 0.15s ease,
+					background 0.15s ease;
+			}
+
+			.term-head button:hover {
+				background: #1a1820;
+				color: var(--fg);
+			}
+
+			pre {
+				font-family: 'Geist Mono', ui-monospace, SFMono-Regular, monospace;
+				font-size: 0.775rem;
+				line-height: 2.05;
+				overflow-x: auto;
+			}
+
+			.term pre {
+				padding: 0.9rem 1.1rem 1rem;
+			}
+
+			pre .c {
+				color: var(--dim);
+			}
+
+			pre .s {
+				color: var(--accent-soft);
+				user-select: none;
+			}
+
+			/* ---------- product shot ---------- */
+			.shot {
+				position: relative;
+				z-index: 1;
+				margin: 5.5rem auto 0;
+				max-width: min(1800px, 94vw);
+				padding-inline: 1.5rem;
+			}
+
+			.shot img {
+				display: block;
+				width: 100%;
+				height: auto;
+				border: 1px solid var(--line);
+				border-bottom: 0;
+				border-radius: 14px 14px 0 0;
+				/* fade into the page instead of hard-cropping */
+				-webkit-mask-image: linear-gradient(180deg, #000 58%, transparent 100%);
+				mask-image: linear-gradient(180deg, #000 58%, transparent 100%);
+			}
+
+			/* ---------- sections ---------- */
+			section {
+				margin-top: 8rem;
+			}
+
+			.head {
+				display: grid;
+				grid-template-columns: 1.15fr 1fr;
+				align-items: end;
+				gap: 2.5rem;
+				padding-bottom: 2.5rem;
+			}
+
+			@media (max-width: 760px) {
+				.head {
+					grid-template-columns: 1fr;
+					align-items: start;
+					gap: 1rem;
+				}
+			}
+
+			.head h2 {
+				margin-top: 1rem;
+				font-size: clamp(1.6rem, 3.2vw, 2.15rem);
+			}
+
+			.head p {
+				color: var(--muted);
+				font-size: 0.9rem;
+				max-width: 38ch;
+			}
+
+			/* ---------- feature table ---------- */
+			.features {
+				display: grid;
+				grid-template-columns: repeat(3, 1fr);
+				gap: 1px;
+				background: var(--line);
+				border: 1px solid var(--line);
+				border-radius: 12px;
+				overflow: hidden;
+			}
+
+			.f {
+				position: relative;
+				background: var(--bg);
+				padding: 1.7rem 1.5rem 1.9rem;
+				transition: background 0.2s ease;
+			}
+
+			.f::after {
+				content: '';
+				position: absolute;
+				inset: 0 0 auto;
+				height: 1px;
+				background: linear-gradient(90deg, var(--accent), transparent);
+				opacity: 0;
+				transition: opacity 0.2s ease;
+			}
+
+			.f:hover {
+				background: var(--raised);
+			}
+
+			.f:hover::after {
+				opacity: 0.8;
+			}
+
+			.f .n {
+				font-family: 'Geist Mono', ui-monospace, monospace;
+				font-size: 0.68rem;
+				color: var(--dim);
+				transition: color 0.2s ease;
+			}
+
+			.f:hover .n {
+				color: var(--accent-soft);
+			}
+
+			.f h3 {
+				margin: 0.95rem 0 0.45rem;
+				font-size: 0.94rem;
+				font-weight: 600;
+				letter-spacing: -0.018em;
+			}
+
+			.f p {
+				color: var(--muted);
+				font-size: 0.86rem;
+				line-height: 1.55;
+			}
+
+			@media (max-width: 900px) {
+				.features {
+					grid-template-columns: repeat(2, 1fr);
+				}
+			}
+
+			@media (max-width: 560px) {
+				.features {
+					grid-template-columns: 1fr;
+				}
+			}
+
+			/* ---------- install ---------- */
+			.panes {
+				display: grid;
+				grid-template-columns: 1fr 1fr;
+				gap: 1px;
+				background: var(--line);
+				border: 1px solid var(--line);
+				border-radius: 12px;
+				overflow: hidden;
+			}
+
+			@media (max-width: 760px) {
+				.panes {
+					grid-template-columns: 1fr;
+				}
+			}
+
+			.pane {
+				background: var(--bg);
+			}
+
+			.pane-head {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				gap: 1rem;
+				padding: 0.85rem 1.25rem;
+				border-bottom: 1px solid var(--line);
+				font-family: 'Geist Mono', ui-monospace, monospace;
+				font-size: 0.68rem;
+				letter-spacing: 0.16em;
+				text-transform: uppercase;
+			}
+
+			.pane-head .who {
+				color: var(--fg);
+			}
+
+			.pane-head .note {
+				color: var(--dim);
+			}
+
+			.pane pre {
+				padding: 1.25rem;
+			}
+
+			.after-note {
+				margin-top: 1.1rem;
+				font-size: 0.83rem;
+				line-height: 1.7;
+				color: var(--dim);
+			}
+
+			.after-note code {
+				font-family: 'Geist Mono', ui-monospace, monospace;
+				font-size: 0.78rem;
+				color: var(--muted);
+			}
+
+			/* ---------- apps ---------- */
+			.apps {
+				display: grid;
+				grid-template-columns: repeat(3, 1fr);
+				gap: 1px;
+				background: var(--line);
+				border: 1px solid var(--line);
+				border-radius: 12px;
+				overflow: hidden;
+			}
+
+			@media (max-width: 640px) {
+				.apps {
+					grid-template-columns: 1fr;
+				}
+			}
+
+			.app {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				gap: 1rem;
+				background: var(--bg);
+				padding: 1.2rem 1.4rem;
+				font-size: 0.9rem;
+				transition: background 0.2s ease;
+			}
+
+			.app:hover {
+				background: var(--raised);
+			}
+
+			.app small {
+				display: block;
+				margin-top: 0.15rem;
+				color: var(--dim);
+				font-family: 'Geist Mono', ui-monospace, monospace;
+				font-size: 0.72rem;
+			}
+
+			.app .arrow {
+				color: var(--dim);
+				transition:
+					transform 0.2s ease,
+					color 0.2s ease;
+			}
+
+			.app:hover .arrow {
+				transform: translate(2px, -2px);
+				color: var(--accent-soft);
+			}
+
+			/* ---------- closer ---------- */
+			.closer {
+				position: relative;
+				margin-top: 9rem;
+				padding: 7rem 0;
+				border-top: 1px solid var(--line);
+				text-align: center;
+				overflow: hidden;
+			}
+
+			.closer::before {
+				content: '';
+				position: absolute;
+				bottom: -20rem;
+				left: 50%;
+				width: 60rem;
+				height: 34rem;
+				transform: translateX(-50%);
+				background: radial-gradient(
+					50% 50% at 50% 50%,
+					rgba(192, 38, 211, 0.1),
+					rgba(192, 38, 211, 0) 70%
+				);
+				pointer-events: none;
+			}
+
+			.closer h2 {
+				font-size: clamp(1.8rem, 4vw, 2.5rem);
+			}
+
+			.closer p {
+				margin: 1.1rem auto 0;
+				max-width: 46ch;
+				color: var(--muted);
+				font-size: 0.98rem;
+			}
+
+			/* ---------- footer ---------- */
+			footer {
+				border-top: 1px solid var(--line);
+				padding: 1.7rem 0;
+			}
+
+			footer .wrap {
+				display: flex;
+				justify-content: space-between;
+				gap: 1rem;
+				flex-wrap: wrap;
+				font-family: 'Geist Mono', ui-monospace, monospace;
+				font-size: 0.72rem;
+				color: var(--dim);
+			}
+
+			footer a:hover {
+				color: var(--fg);
+			}
+
+			/* ---------- entrance ---------- */
+			.js .rise {
+				opacity: 0;
+				transform: translateY(14px);
+				transition:
+					opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1),
+					transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+			}
+
+			.js .rise.in {
+				opacity: 1;
+				transform: none;
+			}
+
+			@media (prefers-reduced-motion: reduce) {
+				*,
+				.js .rise {
+					transition: none !important;
+					opacity: 1 !important;
+					transform: none !important;
+					scroll-behavior: auto !important;
+				}
+			}
+		</style>
+	</head>
+
+	<body>
+		<nav id="nav">
+			<div class="wrap">
+				<a class="wordmark" href="/"><i></i>nanochat</a>
+				<div class="nav-links">
+					<a class="hide-sm" href="#features">Features</a>
+					<a class="hide-sm" href="#install">Self-host</a>
+					<a class="hide-sm" href="#apps">Apps</a>
+					<a href="https://github.com/nanogpt-community/nanochat">GitHub ↗</a>
+				</div>
+			</div>
+		</nav>
+
+		<div class="hero">
+			<div class="wrap">
+				<span class="tag"><b>v2.0</b> · now on Postgres</span>
+				<h1>Your own everything chat client.</h1>
+				<p class="lede">
+					Open-source, self-hostable chat for Nano-GPT. Every frontier model, image and video
+					generation, search, memory and MCP — on your box, in your database.
+				</p>
+
+				<div class="actions">
+					<a class="btn btn-primary" href="#install">Self-host it</a>
+					<a class="btn btn-ghost" href="https://github.com/nanogpt-community/nanochat"
+						>View source ↗</a
+					>
+				</div>
+
+				<div class="term">
+					<div class="term-head">
+						<span>quickstart</span>
+						<button id="copy" type="button">Copy</button>
+					</div>
+					<pre><span class="s">$</span> git clone https://github.com/nanogpt-community/nanochat
+<span class="s">$</span> cd nanochat && cp .env.example .env
+<span class="c"># fill in .env, then:</span>
+<span class="s">$</span> docker compose up</pre>
+				</div>
+			</div>
+
+			<div class="shot">
+				<img src="/screenshot.png" alt="nanochat running locally" width="2852" height="1788" />
+			</div>
+		</div>
+
+		<section id="features" class="wrap">
+			<div class="head rise">
+				<div>
+					<span class="eyebrow">Features</span>
+					<h2>Everything you'd bolt on,<br /><span class="soft">already bolted on.</span></h2>
+				</div>
+				<p>One deploy, one database, no per-feature SaaS. Powered end-to-end by the Nano-GPT API.</p>
+			</div>
+
+			<div class="features rise">
+				<div class="f">
+					<span class="n">01</span>
+					<h3>Every model</h3>
+					<p>
+						All the frontier models through one key, with per-model provider selection and benchmark
+						data from artificialanalysis.ai.
+					</p>
+				</div>
+				<div class="f">
+					<span class="n">02</span>
+					<h3>Images &amp; video</h3>
+					<p>Image generation with img2img, plus full video generation — inline, in the thread.</p>
+				</div>
+				<div class="f">
+					<span class="n">03</span>
+					<h3>Search &amp; scraping</h3>
+					<p>
+						Web Search and Deep Search built in. Paste a URL and the page is scraped into context
+						automatically.
+					</p>
+				</div>
+				<div class="f">
+					<span class="n">04</span>
+					<h3>Memory that persists</h3>
+					<p>Context memory per chat plus cross-conversation memory spanning every thread you own.</p>
+				</div>
+				<div class="f">
+					<span class="n">05</span>
+					<h3>Voice in and out</h3>
+					<p>Speech-to-text for dictation, text-to-speech for replies, YouTube transcripts on demand.</p>
+				</div>
+				<div class="f">
+					<span class="n">06</span>
+					<h3>MCP servers</h3>
+					<p>Connect Model Context Protocol servers and give your chat real tools to work with.</p>
+				</div>
+				<div class="f">
+					<span class="n">07</span>
+					<h3>Projects &amp; assistants</h3>
+					<p>
+						Group threads into projects, pick selectable system prompts, get generated follow-ups
+						after every response.
+					</p>
+				</div>
+				<div class="f">
+					<span class="n">08</span>
+					<h3>Themes that fit</h3>
+					<p>Configurable system themes, light and dark, tuned to feel like the client you'd have built.</p>
+				</div>
+				<div class="f">
+					<span class="n">09</span>
+					<h3>Passkeys &amp; API keys</h3>
+					<p>Passkey login over HTTPS, plus a documented REST API so your scripts reach your instance.</p>
+				</div>
+			</div>
+		</section>
+
+		<section id="install" class="wrap">
+			<div class="head rise">
+				<div>
+					<span class="eyebrow">Self-host</span>
+					<h2>Clone it, fill in <span class="soft">one env file.</span></h2>
+				</div>
+				<p>
+					Compose brings its own Postgres and wires DATABASE_URL for you. Data lives in
+					./data/postgres.
+				</p>
+			</div>
+
+			<div class="rise">
+				<div class="panes">
+					<div class="pane">
+						<div class="pane-head">
+							<span class="who">Docker</span>
+							<span class="note">recommended</span>
+						</div>
+						<pre><span class="s">$</span> git clone https://github.com/nanogpt-community/nanochat
+<span class="s">$</span> cd nanochat
+<span class="s">$</span> cp .env.example .env
+<span class="c"># fill in .env, then:</span>
+<span class="s">$</span> docker compose up</pre>
+					</div>
+					<div class="pane">
+						<div class="pane-head">
+							<span class="who">Bun</span>
+							<span class="note">for hacking on it</span>
+						</div>
+						<pre><span class="c"># needs Postgres 14+ and Bun</span>
+<span class="s">$</span> cp .env.example .env
+<span class="s">$</span> bun install
+<span class="s">$</span> bun run db:migrate
+<span class="s">$</span> bun run dev</pre>
+					</div>
+				</div>
+
+				<p class="after-note">
+					In <code>.env</code>: set <code>POSTGRES_PASSWORD</code>, then generate
+					<code>BETTER_AUTH_SECRET</code> and <code>ENCRYPTION_KEY</code> with
+					<code>openssl rand -base64 32</code>. Not using Compose? Point <code>DATABASE_URL</code> at
+					your own Postgres. Either way, the app comes up on <code>localhost:3432</code>.
+				</p>
+			</div>
+		</section>
+
+		<section id="apps" class="wrap">
+			<div class="head rise">
+				<div>
+					<span class="eyebrow">Apps</span>
+					<h2>Native clients, <span class="soft">same instance.</span></h2>
+				</div>
+				<p>Point them at your server and carry your threads with you.</p>
+			</div>
+
+			<div class="apps rise">
+				<a class="app" href="https://github.com/jcrabapple/nanochat-android">
+					<span>Android<small>nanochat-android</small></span>
+					<span class="arrow">↗</span>
+				</a>
+				<a class="app" href="https://testflight.apple.com/join/afmPp2xW">
+					<span>iOS<small>TestFlight beta</small></span>
+					<span class="arrow">↗</span>
+				</a>
+				<a class="app" href="https://github.com/nanogpt-community/nanochat-desktop">
+					<span>Desktop<small>Linux, for now</small></span>
+					<span class="arrow">↗</span>
+				</a>
+			</div>
+		</section>
+
+		<div class="closer">
+			<div class="wrap rise">
+				<h2>Self-hosted, <span class="soft">on purpose.</span></h2>
+				<p>
+					No hosted tier, no seats, no waiting on us. Clone it, run it, change it — the whole thing
+					is open source.
+				</p>
+				<div class="actions">
+					<a class="btn btn-primary" href="https://github.com/nanogpt-community/nanochat"
+						>Get nanochat</a
+					>
+					<a class="btn btn-ghost" href="https://nano-gpt.com">Get a Nano-GPT key ↗</a>
+				</div>
+			</div>
+		</div>
+
+		<footer>
+			<div class="wrap">
+				<span>nanochat — open source, self-hosted</span>
+				<span>
+					<a href="https://github.com/nanogpt-community/nanochat">GitHub</a> ·
+					<a href="https://nano-gpt.com">Nano-GPT</a> ·
+					<a href="https://github.com/nanogpt-community/nanochat/blob/main/api-docs.md">API</a>
+				</span>
+			</div>
+		</footer>
+
+		<script>
+			const QUICKSTART = [
+				'git clone https://github.com/nanogpt-community/nanochat',
+				'cd nanochat && cp .env.example .env',
+				'docker compose up'
+			].join('\n');
+
+			const btn = document.getElementById('copy');
+			btn.addEventListener('click', async () => {
+				await navigator.clipboard.writeText(QUICKSTART);
+				btn.textContent = 'Copied';
+				setTimeout(() => (btn.textContent = 'Copy'), 1500);
+			});
+
+			const nav = document.getElementById('nav');
+			const onScroll = () => nav.classList.toggle('scrolled', window.scrollY > 8);
+			addEventListener('scroll', onScroll, { passive: true });
+			onScroll();
+
+			const io = new IntersectionObserver(
+				(entries) =>
+					entries.forEach(
+						(e) => e.isIntersecting && (e.target.classList.add('in'), io.unobserve(e.target))
+					),
+				{ rootMargin: '-40px' }
+			);
+			document.querySelectorAll('.rise').forEach((el) => io.observe(el));
+		</script>
+	</body>
+</html>
