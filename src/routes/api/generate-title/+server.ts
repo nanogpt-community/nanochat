@@ -107,7 +107,7 @@ Requirements:
 
 	const titleResult = await ResultAsync.fromPromise(
 		openai.chat.completions.create({
-			model: userSettingsData?.titleModelId || 'zai-org/GLM-4.5-Air',
+			model: userSettingsData?.titleModelId || 'openai/gpt-oss-120b',
 			messages: [{ role: 'user', content: titlePrompt }],
 			max_tokens: 20,
 			temperature: 0.5,
