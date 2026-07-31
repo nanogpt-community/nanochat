@@ -149,7 +149,8 @@
 				{#snippet trigger(tooltip)}
 					<div class="flex items-center gap-1.5" {...tooltip.trigger}>
 						<ServerIcon class="text-muted-foreground size-3.5" />
-						<span class="hidden max-w-[80px] truncate sm:inline">{currentProviderName}</span>
+						<!-- Collapses with the other composer chips — see chipLabelClass in chat/+layout. -->
+					<span class="hidden max-w-[80px] truncate @[48rem]:inline">{currentProviderName}</span>
 						<ChevronDownIcon class="text-muted-foreground size-3" />
 					</div>
 				{/snippet}

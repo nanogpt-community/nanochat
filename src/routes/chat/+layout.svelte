@@ -756,6 +756,10 @@
 		'bg-secondary/50 hover:bg-secondary text-muted-foreground flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50';
 	const iconChipClass =
 		'hover:bg-secondary text-muted-foreground relative flex size-9 shrink-0 items-center justify-center rounded-lg transition-colors disabled:cursor-not-allowed disabled:opacity-50';
+	// Chip labels are all-or-nothing: a row of half-labelled chips reads as broken.
+	// Below the threshold every chip is icon-only (state stays legible via the active
+	// ring and the title tooltip) and the model name keeps the width it frees up.
+	const chipLabelClass = 'hidden @[48rem]:inline';
 	// ponytail: one active look for every toggle — the label carries the level, not the colour.
 	const chipActiveClass =
 		'bg-primary/10 hover:bg-primary/15 text-primary ring-primary/30 ring-1 ring-inset';
@@ -1595,12 +1599,16 @@
 									autocomplete="off"
 									use:autosize.attachment></textarea>
 							</div>
-							<div class="mt-1 flex w-full items-center gap-2 px-2 pb-2 md:pb-1">
+							<!-- @container: the chip labels below collapse to bare icons when the row
+							     itself runs out of room (long model name, sidebar open), which the
+							     viewport-based md: breakpoints can't see. -->
+							<div class="@container mt-1 flex w-full items-center gap-2 px-2 pb-2 md:pb-1">
 								<svelte:boundary>
 									<!-- Left: model pickers, then generation options, then input tools -->
 									<div class="flex min-w-0 flex-1 items-center gap-1.5">
 										<!-- Only shrinkable chip in the row: a long model name truncates
-										     instead of pushing the send button off the composer. -->
+										     instead of pushing the send button off the composer, but never
+										     below a width where the name is still readable. -->
 										<ModelPicker
 											class={cn(chipClass, 'min-w-0 shrink')}
 											onlyImageModels={selectedImages.length > 0}
@@ -1608,9 +1616,12 @@
 										<ProviderPicker class={cn(chipClass, 'px-2')} modelId={settings.modelId} />
 										{#if safeAssistants.length > 0}
 											<DropdownMenu.Root>
-												<DropdownMenu.Trigger class={cn(chipClass, 'hidden md:flex')}>
+												<DropdownMenu.Trigger
+													class={cn(chipClass, 'hidden md:flex')}
+													title={selectedAssistant?.name ?? 'Assistant'}
+												>
 													<BotIcon class="size-4" />
-													<span class="max-w-[100px] truncate">
+													<span class={cn('max-w-[100px] truncate', chipLabelClass)}>
 														{selectedAssistant?.name ?? 'Assistant'}
 													</span>
 													<ChevronDownIcon class="size-3 opacity-50" />
@@ -1650,9 +1661,14 @@
 														'hidden md:flex',
 														settings.webSearchMode !== 'off' && chipActiveClass
 													)}
+													title={settings.webSearchMode === 'off'
+														? 'Search'
+														: settings.webSearchMode === 'standard'
+															? 'Search: On'
+															: 'Search: Deep'}
 												>
 													<SearchIcon class="size-4" />
-													<span>
+													<span class={chipLabelClass}>
 														{settings.webSearchMode === 'off'
 															? 'Search'
 															: settings.webSearchMode === 'standard'
@@ -1755,9 +1771,12 @@
 											<DropdownMenu.Root>
 												<DropdownMenu.Trigger
 													class={cn(chipClass, 'hidden md:flex', thinkingActive && chipActiveClass)}
+													title={settings.reasoningEffort === 'auto'
+														? 'Thinking'
+														: `Thinking: ${REASONING_EFFORT_LABELS[settings.reasoningEffort]}`}
 												>
 													<BrainIcon class="size-4" />
-													<span>
+													<span class={chipLabelClass}>
 														{settings.reasoningEffort === 'auto'
 															? 'Thinking'
 															: `Thinking: ${REASONING_EFFORT_LABELS[settings.reasoningEffort]}`}

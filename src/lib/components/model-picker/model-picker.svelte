@@ -701,7 +701,7 @@
 <!-- Mobile Drawer -->
 {#if isMobile.current}
 	{@const CLOSE_THRESHOLD = 100}
-	<button type="button" class="flex min-w-0 shrink" onclick={() => (open = true)}>
+	<button type="button" class="flex min-w-[6rem] shrink" onclick={() => (open = true)}>
 		{@render trigger()}
 	</button>
 
@@ -757,7 +757,7 @@
 {:else}
 	<!-- Desktop Popover -->
 	<Popover.Root bind:open>
-		<Popover.Trigger class="flex min-w-0 shrink">
+		<Popover.Trigger class="flex min-w-[6rem] shrink">
 			{@render trigger()}
 		</Popover.Trigger>
 
