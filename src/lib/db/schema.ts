@@ -310,7 +310,7 @@ export const messages = pgTable(
 		costUsd: doublePrecision('cost_usd'),
 		generationId: text('generation_id'),
 		webSearchEnabled: boolean('web_search_enabled').default(false),
-		reasoningEffort: text('reasoning_effort'), // ReasoningEffort: none | minimal | low | medium | high | xhigh
+		reasoningEffort: text('reasoning_effort'), // ReasoningEffort: none | minimal | low | medium | high | xhigh | max
 		annotations: jsonb('annotations').$type<Array<Record<string, unknown>>>(),
 		followUpSuggestions: jsonb('follow_up_suggestions').$type<string[] | null>(),
 		starred: boolean('starred').default(false),

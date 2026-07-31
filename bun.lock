@@ -5,6 +5,7 @@
     "": {
       "name": "nanochat",
       "dependencies": {
+        "@better-auth/core": "1.6.25",
         "@better-auth/passkey": "1.6.25",
         "@better-auth/sso": "1.6.25",
         "@floating-ui/dom": "^1.8.0",

@@ -683,7 +683,7 @@
 			className
 		)}
 	>
-		<div class="flex items-center gap-1.5">
+		<div class="flex min-w-0 items-center gap-1.5">
 			<span class="truncate">
 				{#if enabledArr.length === 0}
 					Loading...
@@ -701,7 +701,7 @@
 <!-- Mobile Drawer -->
 {#if isMobile.current}
 	{@const CLOSE_THRESHOLD = 100}
-	<button type="button" onclick={() => (open = true)}>
+	<button type="button" class="flex min-w-0 shrink" onclick={() => (open = true)}>
 		{@render trigger()}
 	</button>
 
@@ -757,7 +757,7 @@
 {:else}
 	<!-- Desktop Popover -->
 	<Popover.Root bind:open>
-		<Popover.Trigger>
+		<Popover.Trigger class="flex min-w-0 shrink">
 			{@render trigger()}
 		</Popover.Trigger>
 

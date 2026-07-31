@@ -98,7 +98,7 @@ Notes:
 		"aspect_ratio": "string (optional)",
 		"seed": "number (optional, set -1 for random)"
 	},
-	"reasoning_effort": "enum: 'none' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh' (optional)",
+	"reasoning_effort": "enum: 'none' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh' | 'max' (optional)",
 	"temporary": "boolean (optional)",
 	"provider_id": "string (optional) - Select specific provider for this generation"
 }
@@ -1257,7 +1257,7 @@ Create a scheduled task.
 		"conversation_id": "string (optional)",
 		"web_search_mode": "off | standard | deep (optional)",
 		"web_search_provider": "linkup | tavily | exa | kagi | perplexity | valyu | brave | brave-pro | brave-research (optional)",
-		"reasoning_effort": "none | minimal | low | medium | high | xhigh (optional)"
+		"reasoning_effort": "none | minimal | low | medium | high | xhigh | max (optional)"
 	}
 }
 ```

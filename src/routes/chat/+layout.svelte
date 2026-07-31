@@ -1599,7 +1599,12 @@
 								<svelte:boundary>
 									<!-- Left: model pickers, then generation options, then input tools -->
 									<div class="flex min-w-0 flex-1 items-center gap-1.5">
-										<ModelPicker class={chipClass} onlyImageModels={selectedImages.length > 0} />
+										<!-- Only shrinkable chip in the row: a long model name truncates
+										     instead of pushing the send button off the composer. -->
+										<ModelPicker
+											class={cn(chipClass, 'min-w-0 shrink')}
+											onlyImageModels={selectedImages.length > 0}
+										/>
 										<ProviderPicker class={cn(chipClass, 'px-2')} modelId={settings.modelId} />
 										{#if safeAssistants.length > 0}
 											<DropdownMenu.Root>
