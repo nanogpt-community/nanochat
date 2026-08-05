@@ -26,32 +26,51 @@ export const GET: RequestHandler = async () => {
     }
 
     try {
-        // Fetch LLM and image model data in parallel
-        const [llmResponse, imageResponse] = await Promise.all([
-            fetch('https://artificialanalysis.ai/api/v2/data/llms/models', {
-                headers: { 'x-api-key': apiKey }
-            }),
-            fetch('https://artificialanalysis.ai/api/v2/data/media/text-to-image', {
-                headers: { 'x-api-key': apiKey }
-            })
+        // Fetch LLM (paginated) and image model data in parallel.
+        // Free-tier endpoints accept any key tier and include all fields we use.
+        const [llms, imageModels] = await Promise.all([
+            (async () => {
+                const models: AALLMModel[] = [];
+                let page = 1;
+                let hasMore = true;
+                while (hasMore) {
+                    const res = await fetch(`https://artificialanalysis.ai/api/v2/language/models/free?page=${page}`, {
+                        headers: { 'x-api-key': apiKey }
+                    });
+                    if (!res.ok) {
+                        console.error('Failed to fetch LLM benchmarks:', res.status);
+                        break;
+                    }
+                    const body = await res.json();
+                    // Flatten nested performance medians to keep the legacy shape consumers use
+                    for (const m of body.data || []) {
+                        models.push({
+                            ...m,
+                            median_output_tokens_per_second: m.performance?.median_output_tokens_per_second,
+                            median_time_to_first_token_seconds: m.performance?.median_time_to_first_token_seconds
+                        });
+                    }
+                    hasMore = body.pagination?.has_more === true;
+                    page++;
+                }
+                return models;
+            })(),
+            (async () => {
+                const res = await fetch('https://artificialanalysis.ai/api/v2/media/text-to-image/models/free', {
+                    headers: { 'x-api-key': apiKey }
+                });
+                if (!res.ok) {
+                    console.error('Failed to fetch image model benchmarks:', res.status);
+                    return [] as AAImageModel[];
+                }
+                const body = await res.json();
+                // The V2 API no longer returns rank; derive it from Elo order
+                const models: AAImageModel[] = (body.data || []).sort(
+                    (a: AAImageModel, b: AAImageModel) => (b.elo ?? 0) - (a.elo ?? 0)
+                );
+                return models.map((m, i) => ({ ...m, rank: i + 1 }));
+            })()
         ]);
-
-        let llms: AALLMModel[] = [];
-        let imageModels: AAImageModel[] = [];
-
-        if (llmResponse.ok) {
-            const llmData = await llmResponse.json();
-            llms = llmData.data || [];
-        } else {
-            console.error('Failed to fetch LLM benchmarks:', llmResponse.status);
-        }
-
-        if (imageResponse.ok) {
-            const imageData = await imageResponse.json();
-            imageModels = imageData.data || [];
-        } else {
-            console.error('Failed to fetch image model benchmarks:', imageResponse.status);
-        }
 
         // Update cache
         cachedData = { llms, imageModels };

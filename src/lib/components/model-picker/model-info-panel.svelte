@@ -340,12 +340,12 @@
 								>
 							</div>
 						{/if}
-						{#if llmBenchmark.evaluations?.artificial_analysis_math_index}
+						{#if llmBenchmark.evaluations?.artificial_analysis_agentic_index}
 							<div class="flex justify-between text-sm">
-								<span class="text-muted-foreground">Math</span>
+								<span class="text-muted-foreground">Agentic</span>
 								<span class="font-medium text-purple-400"
 									>{formatBenchmarkScore(
-										llmBenchmark.evaluations.artificial_analysis_math_index
+										llmBenchmark.evaluations.artificial_analysis_agentic_index
 									)}</span
 								>
 							</div>

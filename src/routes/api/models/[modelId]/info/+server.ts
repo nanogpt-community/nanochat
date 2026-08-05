@@ -265,7 +265,7 @@ export const GET: RequestHandler = async ({ params, request }) => {
 					slug: llmBenchmark.slug,
 					intelligence: llmBenchmark.evaluations?.artificial_analysis_intelligence_index,
 					coding: llmBenchmark.evaluations?.artificial_analysis_coding_index,
-					math: llmBenchmark.evaluations?.artificial_analysis_math_index,
+					agentic: llmBenchmark.evaluations?.artificial_analysis_agentic_index,
 					speed_tokens_per_second: llmBenchmark.median_output_tokens_per_second,
 				}
 				: null,

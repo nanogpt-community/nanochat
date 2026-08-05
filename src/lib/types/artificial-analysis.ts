@@ -12,14 +12,7 @@ export interface AAModelCreator {
 export interface AAEvaluations {
     artificial_analysis_intelligence_index?: number;
     artificial_analysis_coding_index?: number;
-    artificial_analysis_math_index?: number;
-    mmlu_pro?: number;
-    gpqa?: number;
-    hle?: number;
-    livecodebench?: number;
-    scicode?: number;
-    math_500?: number;
-    aime?: number;
+    artificial_analysis_agentic_index?: number;
 }
 
 export interface AAPricing {
@@ -28,16 +21,25 @@ export interface AAPricing {
     price_1m_output_tokens?: number;
 }
 
+export interface AAPerformance {
+    median_output_tokens_per_second?: number;
+    median_time_to_first_token_seconds?: number;
+    median_time_to_first_answer_token_seconds?: number;
+    median_end_to_end_response_time_seconds?: number;
+}
+
 export interface AALLMModel {
     id: string;
     name: string;
     slug: string;
+    release_date?: string | null;
     model_creator: AAModelCreator;
     evaluations?: AAEvaluations;
     pricing?: AAPricing;
+    performance?: AAPerformance;
+    // Flattened from performance by our benchmarks endpoint (legacy shape)
     median_output_tokens_per_second?: number;
     median_time_to_first_token_seconds?: number;
-    median_time_to_first_answer_token?: number;
 }
 
 export interface AAImageModel {
@@ -46,10 +48,9 @@ export interface AAImageModel {
     slug: string;
     model_creator: AAModelCreator;
     elo?: number;
+    ci_95?: number | null;
+    // Derived from Elo order by our benchmarks endpoint (not returned by the V2 API)
     rank?: number;
-    ci95?: string;
-    appearances?: number;
-    release_date?: string;
 }
 
 export interface AABenchmarkData {

@@ -2922,7 +2922,7 @@ Get detailed model info (including benchmarks) for a single model. Intended to b
 			"slug": "string",
 			"intelligence": "number",
 			"coding": "number",
-			"math": "number",
+			"agentic": "number",
 			"speed_tokens_per_second": "number"
 		},
 		"image": {
@@ -3068,9 +3068,9 @@ Get cached benchmark data from Artificial Analysis for LLM and image models.
 			"name": "Claude 3.5 Sonnet",
 			"slug": "claude-35-sonnet",
 			"evaluations": {
-				"intelligence_index": 64.2,
-				"coding_index": 72.1,
-				"math_index": 68.5
+				"artificial_analysis_intelligence_index": 64.2,
+				"artificial_analysis_coding_index": 72.1,
+				"artificial_analysis_agentic_index": 68.5
 			},
 			"median_output_tokens_per_second": 92.5
 		}
@@ -3089,6 +3089,8 @@ Get cached benchmark data from Artificial Analysis for LLM and image models.
 **Notes**:
 
 - Returns `{ "available": false }` if `ARTIFICIAL_ANALYSIS_API_KEY` is not configured
+- Sourced from the Artificial Analysis V2 free-tier endpoints (`/api/v2/language/models/free`, `/api/v2/media/text-to-image/models/free`); works with any AA key tier
+- Image model `rank` is derived from Elo order (the V2 API no longer returns it)
 - Data is cached server-side for 1 hour to minimize API calls
 - Used by the model info panel to display performance benchmarks
 
