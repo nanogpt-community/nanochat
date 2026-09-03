@@ -29,6 +29,13 @@
       "when": 1785303907584,
       "tag": "0003_handy_grim_reaper",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1788396148329,
+      "tag": "0004_memory_compaction",
+      "breakpoints": true
     }
   ]
 }

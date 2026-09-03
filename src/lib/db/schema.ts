@@ -106,8 +106,9 @@ export const userSettings = pgTable(
 			.references(() => user.id, { onDelete: 'cascade' }),
 		timezone: text('timezone').notNull().default('UTC'),
 		privacyMode: boolean('privacy_mode').notNull().default(false),
-		contextMemoryEnabled: boolean('context_memory_enabled').notNull().default(false),
 		persistentMemoryEnabled: boolean('persistent_memory_enabled').notNull().default(false),
+		autoCompactEnabled: boolean('auto_compact_enabled').notNull().default(true),
+		autoCompactThreshold: integer('auto_compact_threshold').notNull().default(80), // percent of model context
 		youtubeTranscriptsEnabled: boolean('youtube_transcripts_enabled').notNull().default(false),
 		webScrapingEnabled: boolean('web_scraping_enabled').notNull().default(false),
 		mcpEnabled: boolean('mcp_enabled').notNull().default(false),
@@ -125,6 +126,8 @@ export const userSettings = pgTable(
 		titleProviderId: text('title_provider_id'),
 		followUpModelId: text('follow_up_model_id'),
 		followUpProviderId: text('follow_up_provider_id'),
+		memoryModelId: text('memory_model_id'),
+		memoryProviderId: text('memory_provider_id'),
 		createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
 		updatedAt: timestamp('updated_at', { withTimezone: true }).notNull(),
 	},
@@ -269,6 +272,10 @@ export const conversations = pgTable(
 		assistantId: text('assistant_id').references(() => assistants.id),
 		projectId: text('project_id').references(() => projects.id, { onDelete: 'set null' }),
 		temporary: boolean('temporary').default(false),
+		// Auto-compaction: messages up to and including compactedThroughMessageId are
+		// replaced by compactionSummary when building the prompt.
+		compactionSummary: text('compaction_summary'),
+		compactedThroughMessageId: text('compacted_through_message_id'),
 		createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
 	},
 	(table) => [
@@ -352,7 +359,7 @@ export const storage = pgTable(
 	(table) => [index('storage_user_id_idx').on(table.userId)]
 );
 
-// User memories for cross-conversation persistent memory
+// User memories: one row per remembered fact, shared across all conversations
 export const userMemories = pgTable(
 	'user_memories',
 	{
@@ -360,9 +367,7 @@ export const userMemories = pgTable(
 		userId: text('user_id')
 			.notNull()
 			.references(() => user.id, { onDelete: 'cascade' }),
-		content: text('content').notNull(), // Compressed memory content from NanoGPT
-		tokenCount: integer('token_count'),
-		expiresAt: timestamp('expires_at', { withTimezone: true }),
+		content: text('content').notNull(),
 		createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
 		updatedAt: timestamp('updated_at', { withTimezone: true }).notNull(),
 	},

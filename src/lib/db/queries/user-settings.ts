@@ -77,8 +77,9 @@ export async function createUserSettings(
 			userId,
 			timezone: preparedData.timezone ?? 'UTC',
 			privacyMode: preparedData.privacyMode ?? false,
-			contextMemoryEnabled: preparedData.contextMemoryEnabled ?? false,
 			persistentMemoryEnabled: preparedData.persistentMemoryEnabled ?? false,
+			autoCompactEnabled: preparedData.autoCompactEnabled ?? true,
+			autoCompactThreshold: preparedData.autoCompactThreshold ?? 80,
 			youtubeTranscriptsEnabled: preparedData.youtubeTranscriptsEnabled ?? false,
 			webScrapingEnabled: preparedData.webScrapingEnabled ?? false,
 			mcpEnabled: preparedData.mcpEnabled ?? false,
@@ -92,6 +93,7 @@ export async function createUserSettings(
 			themeAccentColor: preparedData.themeAccentColor ?? null,
 			titleModelId: preparedData.titleModelId ?? null,
 			followUpModelId: preparedData.followUpModelId ?? null,
+			memoryModelId: preparedData.memoryModelId ?? null,
 			createdAt: now,
 			updatedAt: now,
 		})

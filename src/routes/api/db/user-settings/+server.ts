@@ -36,6 +36,11 @@ function normalizeOptionalString(value: unknown): string | null | undefined {
 	return trimmed.length === 0 ? null : trimmed;
 }
 
+function normalizeThreshold(value: unknown): number | undefined {
+	if (typeof value !== 'number' || !Number.isFinite(value)) return undefined;
+	return Math.min(95, Math.max(30, Math.round(value)));
+}
+
 // GET - get user settings
 export const GET: RequestHandler = async ({ request }) => {
 	const userId = await getAuthenticatedUserId(request);
@@ -64,8 +69,9 @@ export const POST: RequestHandler = async ({ request }) => {
 
 			const updateData: Parameters<typeof updateUserSettings>[1] = {
 				privacyMode: body.privacyMode,
-				contextMemoryEnabled: body.contextMemoryEnabled,
 				persistentMemoryEnabled: body.persistentMemoryEnabled,
+				autoCompactEnabled: body.autoCompactEnabled,
+				autoCompactThreshold: normalizeThreshold(body.autoCompactThreshold),
 				youtubeTranscriptsEnabled: body.youtubeTranscriptsEnabled,
 				followUpQuestionsEnabled: body.followUpQuestionsEnabled,
 				suggestedPromptsEnabled: body.suggestedPromptsEnabled,
@@ -80,6 +86,8 @@ export const POST: RequestHandler = async ({ request }) => {
 				titleProviderId: body.titleProviderId,
 				followUpModelId: body.followUpModelId,
 				followUpProviderId: body.followUpProviderId,
+				memoryModelId: body.memoryModelId,
+				memoryProviderId: body.memoryProviderId,
 			};
 
 			const normalizedTimezone = normalizeTimezone(body.timezone);

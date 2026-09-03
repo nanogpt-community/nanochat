@@ -12,7 +12,7 @@ import { decryptApiKey, isEncrypted } from '$lib/encryption';
 import { getAuthenticatedUserId } from '$lib/backend/auth-utils';
 import { nanoGptUrl } from '$lib/backend/nano-gpt-url.server';
 
-const MODEL = 'zai-org/glm-4.6v';
+const MODEL = 'z-ai/glm-5.3-flash';
 
 const reqBodySchema = z.object({
 	prompt: z.string(),

@@ -207,6 +207,16 @@
 				{childMessageId}
 				initialRating={ratingByMessageId.get(message.id)}
 			/>
+			{#if message.id === conversation.data?.compactedThroughMessageId}
+				<div
+					class="text-muted-foreground flex items-center gap-3 text-xs"
+					title={conversation.data?.compactionSummary ?? ''}
+				>
+					<div class="bg-border h-px flex-1"></div>
+					<span>Earlier messages compacted into a summary</span>
+					<div class="bg-border h-px flex-1"></div>
+				</div>
+			{/if}
 		{/each}
 		{#if conversation.data?.generating}
 			{#if lastMessage?.webSearchEnabled}

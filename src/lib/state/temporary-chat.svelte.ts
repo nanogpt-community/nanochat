@@ -85,6 +85,8 @@ export function createTemporaryConversation(title: string = 'Temporary Chat'): T
         costUsd: null,
         public: false,
         branchedFrom: null,
+        compactionSummary: null,
+        compactedThroughMessageId: null,
         assistantId: null,
         isTemporary: true,
         projectId: null,

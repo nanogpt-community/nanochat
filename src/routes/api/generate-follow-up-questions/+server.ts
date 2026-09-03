@@ -12,7 +12,7 @@ import { decryptApiKey, isEncrypted } from '$lib/encryption';
 import { getAuthenticatedUserId } from '$lib/backend/auth-utils';
 import { nanoGptUrl } from '$lib/backend/nano-gpt-url.server';
 
-const MODEL = 'deepseek/deepseek-v4-flash';
+const MODEL = 'deepseek/deepseek-v4-flash-0731';
 
 const reqBodySchema = z.object({
 	conversationId: z.string(),

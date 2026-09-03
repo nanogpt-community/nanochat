@@ -219,7 +219,7 @@ export const mcpToolDefinitions: ChatCompletionTool[] = [
 					},
 					model: {
 						type: 'string',
-						description: 'Optional vision model to use (default: glm-4.6v)',
+						description: 'Optional vision model to use (default: glm-5.3-flash)',
 					},
 				},
 				required: ['prompt'],
@@ -620,7 +620,7 @@ async function executeVision(
 ): Promise<{ success: boolean; result: string; error?: string }> {
 	const prompt = args.prompt as string;
 	const imageUrl = args.image_url as string;
-	const model = (args.model as string) || 'zai-org/glm-4.6v';
+	const model = (args.model as string) || 'z-ai/glm-5.3-flash';
 
 	const requestBody = {
 		model,

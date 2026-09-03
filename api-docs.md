@@ -1957,6 +1957,8 @@ List all conversations for the user, or get a specific conversation by ID.
 		"pinned": "boolean",
 		"generating": "boolean",
 		"costUsd": "number | null",
+		"compactionSummary": "string | null (summary replacing compacted messages)",
+		"compactedThroughMessageId": "string | null (last message covered by the summary)",
 		"createdAt": "date",
 		"updatedAt": "date"
 	}
@@ -2443,8 +2445,11 @@ Get user settings.
   "userId": "string",
   "timezone": "string (IANA timezone, e.g. America/Los_Angeles)",
   "privacyMode": "boolean",
-  "contextMemoryEnabled": "boolean",
   "persistentMemoryEnabled": "boolean",
+  "autoCompactEnabled": "boolean",
+  "autoCompactThreshold": "number (percent of the model context length, 30-95)",
+  "memoryModelId": "string | null",
+  "memoryProviderId": "string | null",
   "suggestedPromptsEnabled": "boolean",
   "theme": "string | null",
   "themePrimaryColor": "string | null",
@@ -2478,7 +2483,11 @@ Update user settings.
   "action": "update",
   "timezone": "string (optional, IANA timezone)",
   "privacyMode": "boolean (optional)",
-  "contextMemoryEnabled": "boolean (optional)",
+  "persistentMemoryEnabled": "boolean (optional)",
+  "autoCompactEnabled": "boolean (optional)",
+  "autoCompactThreshold": "number (optional, clamped to 30-95)",
+  "memoryModelId": "string (optional, model used to extract memories)",
+  "memoryProviderId": "string (optional)",
   "karakeepUrl": "string | null (optional)",
   "karakeepApiKey": "string | null (optional, write-only)",
   "theme": "string (optional, theme id or null)",
@@ -2500,6 +2509,94 @@ curl -X POST "http://localhost:3432/api/db/user-settings" \
   -H "Content-Type: application/json" \
   -b "session_cookie=your_session" \
   -d '{"action": "update", "privacyMode": true}'
+```
+
+---
+
+### User Memories
+
+Facts remembered about the user across conversations. When `persistentMemoryEnabled` is on,
+a background model extracts memories from each completed exchange and they are injected
+into every chat's system prompt. Max 200 memories of 500 characters each.
+
+#### GET `/api/db/user-memories`
+
+List all memories.
+
+**Authentication**: Session or API Key
+
+**Response**:
+
+```json
+[
+	{
+		"id": "string",
+		"userId": "string",
+		"content": "string",
+		"createdAt": "date",
+		"updatedAt": "date"
+	}
+]
+```
+
+**CURL Example**:
+
+```bash
+curl -X GET "http://localhost:3432/api/db/user-memories" \
+  -H "Authorization: Bearer your_api_key"
+```
+
+#### POST `/api/db/user-memories`
+
+Create or update a memory.
+
+**Authentication**: Session or API Key
+
+**Request Body**:
+
+```json
+{
+  "action": "create | update",
+  "id": "string (required for update)",
+  "content": "string"
+}
+```
+
+**Response**: The created or updated memory object.
+
+**CURL Example**:
+
+```bash
+curl -X POST "http://localhost:3432/api/db/user-memories" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your_api_key" \
+  -d '{"action": "create", "content": "User prefers concise answers."}'
+```
+
+#### DELETE `/api/db/user-memories`
+
+Delete one memory, or all of them.
+
+**Authentication**: Session or API Key
+
+**Query Parameters**:
+
+- `id`: Memory ID to delete.
+- `all`: Set to `true` to delete every memory (ignores `id`).
+
+**Response**:
+
+```json
+{
+	"ok": true
+}
+```
+
+**CURL Example**:
+
+```bash
+curl -X DELETE "http://localhost:3432/api/db/user-memories?id=mem_abc123" \
+  -H "Authorization: Bearer your_api_key"
 ```
 
 ---

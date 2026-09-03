@@ -94,6 +94,8 @@ function createOptimisticConversation(
 		costUsd: 0,
 		public: false,
 		branchedFrom: null,
+		compactionSummary: null,
+		compactedThroughMessageId: null,
 		assistantId: args.assistant_id ?? null,
 		projectId: args.project_id ?? null,
 		temporary: args.temporary ?? false,

@@ -5,6 +5,7 @@
 	import { ResultAsync } from 'neverthrow';
 	import { mutate } from '$lib/client/mutation.svelte';
 	import type { UserSettings } from '$lib/api';
+	import type { UserMemory } from '$lib/db/schema';
 	import { Switch } from '$lib/components/ui/switch';
 	import { Input } from '$lib/components/ui/input';
 	import { Button } from '$lib/components/ui/button';
@@ -29,7 +30,17 @@
 	const settings = useCachedQuery<UserSettings>(api.user_settings.get, {});
 
 	let privacyMode = $derived(settings.data?.privacyMode ?? false);
-	let contextMemoryEnabled = $derived(settings.data?.contextMemoryEnabled ?? false);
+	let autoCompactEnabled = $derived(settings.data?.autoCompactEnabled ?? true);
+	let autoCompactThreshold = $state(80);
+	let memoryModelId = $state(settings.data?.memoryModelId ?? '');
+	let memoryProviderId = $state(settings.data?.memoryProviderId ?? '');
+	let memoryModelProviders = $state<ProviderInfo[]>([]);
+	let memorySupportsProviderSelection = $state(false);
+	const memories = useCachedQuery<UserMemory[]>(api.user_memories.list, {});
+	const memoryInvalidate = { invalidatePatterns: [api.user_memories.list.url] };
+	let newMemory = $state('');
+	let editingMemoryId = $state<string | null>(null);
+	let editingMemoryText = $state('');
 	let persistentMemoryEnabled = $derived(settings.data?.persistentMemoryEnabled ?? false);
 	let youtubeTranscriptsEnabled = $derived(settings.data?.youtubeTranscriptsEnabled ?? false);
 	let webScrapingEnabled = $derived(settings.data?.webScrapingEnabled ?? false);
@@ -57,6 +68,9 @@
 		if (settings.data?.titleProviderId) titleProviderId = settings.data.titleProviderId;
 		if (settings.data?.followUpModelId) followUpModelId = settings.data.followUpModelId;
 		if (settings.data?.followUpProviderId) followUpProviderId = settings.data.followUpProviderId;
+		if (settings.data?.memoryModelId) memoryModelId = settings.data.memoryModelId;
+		if (settings.data?.memoryProviderId) memoryProviderId = settings.data.memoryProviderId;
+		if (settings.data?.autoCompactThreshold) autoCompactThreshold = settings.data.autoCompactThreshold;
 		if (settings.data?.timezone) timezone = settings.data.timezone;
 	});
 
@@ -164,6 +178,75 @@
 			followUpModelProviders = [];
 		}
 	});
+
+	$effect(() => {
+		if (memoryModelId) {
+			fetchModelProviders(memoryModelId).then((data) => {
+				if (data) {
+					memorySupportsProviderSelection = data.supportsProviderSelection;
+					memoryModelProviders = data.providers?.filter((p) => p.available) || [];
+					if (memoryProviderId && !memoryModelProviders.some((p) => p.provider === memoryProviderId)) {
+						saveSetting({ memoryProviderId: '' });
+						memoryProviderId = '';
+					}
+				} else {
+					memorySupportsProviderSelection = false;
+					memoryModelProviders = [];
+				}
+			});
+		} else {
+			memorySupportsProviderSelection = false;
+			memoryModelProviders = [];
+		}
+	});
+
+	async function saveSetting(fields: Record<string, unknown>) {
+		if (!session.current?.user.id) return;
+		await mutate(
+			api.user_settings.set.url,
+			{ action: 'update', ...fields },
+			{ invalidatePatterns: [api.user_settings.get.url] }
+		);
+	}
+
+	async function addMemory(e: SubmitEvent) {
+		e.preventDefault();
+		const content = newMemory.trim();
+		if (!content) return;
+		await mutate(api.user_memories.save.url, { action: 'create', content }, memoryInvalidate);
+		newMemory = '';
+	}
+
+	async function saveMemoryEdit() {
+		if (!editingMemoryId) return;
+		const content = editingMemoryText.trim();
+		if (content) {
+			await mutate(
+				api.user_memories.save.url,
+				{ action: 'update', id: editingMemoryId, content },
+				memoryInvalidate
+			);
+		}
+		editingMemoryId = null;
+	}
+
+	async function deleteMemory(id: string) {
+		await mutate(
+			`${api.user_memories.remove.url}?id=${encodeURIComponent(id)}`,
+			{ method: 'DELETE' },
+			memoryInvalidate
+		);
+	}
+
+	async function clearMemories() {
+		const res = await callModal({
+			title: 'Clear All Memories',
+			description: 'Delete everything the AI remembers about you? This cannot be undone.',
+			actions: { cancel: 'outline', delete: 'destructive' },
+		});
+		if (res !== 'delete') return;
+		await mutate(`${api.user_memories.remove.url}?all=true`, { method: 'DELETE' }, memoryInvalidate);
+	}
 
 	async function updateTitleProvider(id: string) {
 		titleProviderId = id;
@@ -315,25 +398,10 @@
 		if (res.isErr()) privacyMode = !v;
 	}
 
-	async function toggleContextMemory(v: boolean) {
-		contextMemoryEnabled = v;
-		if (!session.current?.user.id) return;
-
-		const res = await ResultAsync.fromPromise(
-			mutate(
-				api.user_settings.set.url,
-				{
-					action: 'update',
-					contextMemoryEnabled: v,
-				},
-				{
-					invalidatePatterns: [api.user_settings.get.url],
-				}
-			),
-			(e) => e
-		);
-
-		if (res.isErr()) contextMemoryEnabled = !v;
+	async function toggleAutoCompact(v: boolean) {
+		autoCompactEnabled = v;
+		const res = await ResultAsync.fromPromise(saveSetting({ autoCompactEnabled: v }), (e) => e);
+		if (res.isErr()) autoCompactEnabled = !v;
 	}
 
 	async function togglePersistentMemory(v: boolean) {
@@ -906,27 +974,110 @@
 			<div class="flex flex-col gap-3">
 				<div class="flex flex-col gap-0.5">
 					<h3 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Memory</h3>
-					<p class="text-muted-foreground text-xs">How the AI remembers conversation context.</p>
+					<p class="text-muted-foreground text-xs">
+						What the AI remembers across chats, and how long chats stay within the model's context.
+					</p>
 				</div>
 				<div class="bg-card border-border divide-border divide-y rounded-lg border">
 					<div class="flex items-center justify-between gap-4 p-5">
 						<div class="flex flex-col gap-1">
-							<span class="font-medium">Context Memory</span>
-							<span class="text-muted-foreground text-sm"
-								>Compress long conversations for better context retention.</span
-							>
-						</div>
-						<Switch bind:value={() => contextMemoryEnabled, toggleContextMemory} />
-					</div>
-					<div class="flex items-center justify-between gap-4 p-5">
-						<div class="flex flex-col gap-1">
 							<span class="font-medium">Persistent Memory</span>
 							<span class="text-muted-foreground text-sm"
-								>Remember facts about you across different conversations.</span
+								>Remember facts about you across different conversations. Extracted after each reply
+								by the memory model below; you can edit them any time.</span
 							>
 						</div>
 						<Switch bind:value={() => persistentMemoryEnabled, togglePersistentMemory} />
 					</div>
+					<div class="flex flex-col gap-3 p-5">
+						<div class="flex items-center justify-between gap-4">
+							<span class="text-sm font-medium">Memories ({memories.data?.length ?? 0})</span>
+							{#if (memories.data?.length ?? 0) > 0}
+								<Button size="sm" variant="ghost" onclick={clearMemories}>Clear all</Button>
+							{/if}
+						</div>
+						{#if memories.data && memories.data.length > 0}
+							<ul class="divide-border divide-y rounded-md border">
+								{#each memories.data as memory (memory.id)}
+									<li class="flex items-start gap-2 px-3 py-2 text-sm">
+										{#if editingMemoryId === memory.id}
+											<Input
+												class="flex-1"
+												bind:value={editingMemoryText}
+												onkeydown={(e) => {
+													if (e.key === 'Enter') saveMemoryEdit();
+													if (e.key === 'Escape') editingMemoryId = null;
+												}}
+											/>
+											<Button size="sm" variant="outline" onclick={saveMemoryEdit}>Save</Button>
+										{:else}
+											<button
+												type="button"
+												class="flex-1 text-left"
+												title="Click to edit"
+												onclick={() => {
+													editingMemoryId = memory.id;
+													editingMemoryText = memory.content;
+												}}>{memory.content}</button
+											>
+											<Button
+												size="icon"
+												variant="ghost"
+												class="size-7 shrink-0"
+												aria-label="Delete memory"
+												onclick={() => deleteMemory(memory.id)}
+											>
+												<Trash2 class="size-3.5" />
+											</Button>
+										{/if}
+									</li>
+								{/each}
+							</ul>
+						{:else}
+							<p class="text-muted-foreground text-sm">Nothing remembered yet.</p>
+						{/if}
+						<form class="flex gap-2" onsubmit={addMemory}>
+							<Input
+								class="flex-1"
+								placeholder="Add a memory, e.g. I prefer short answers"
+								maxlength={500}
+								bind:value={newMemory}
+							/>
+							<Button type="submit" size="sm" variant="outline" disabled={!newMemory.trim()}>Add</Button>
+						</form>
+					</div>
+					<div class="flex items-center justify-between gap-4 p-5">
+						<div class="flex flex-col gap-1">
+							<span class="font-medium">Auto-compact Chats</span>
+							<span class="text-muted-foreground text-sm"
+								>When a chat nears the model's context limit, older messages are summarized so the
+								conversation can keep going.</span
+							>
+						</div>
+						<Switch bind:value={() => autoCompactEnabled, toggleAutoCompact} />
+					</div>
+					{#if autoCompactEnabled}
+						<div class="flex items-center justify-between gap-4 p-5">
+							<div class="flex flex-col gap-1">
+								<label for="compact-threshold" class="font-medium">Compact at</label>
+								<span class="text-muted-foreground text-sm"
+									>Percent of the model's context length that triggers compaction (30-95).</span
+								>
+							</div>
+							<div class="flex items-center gap-2">
+								<Input
+									id="compact-threshold"
+									type="number"
+									min={30}
+									max={95}
+									class="w-20"
+									bind:value={autoCompactThreshold}
+									onchange={() => saveSetting({ autoCompactThreshold: Number(autoCompactThreshold) })}
+								/>
+								<span class="text-muted-foreground text-sm">%</span>
+							</div>
+						</div>
+					{/if}
 				</div>
 			</div>
 
@@ -1016,7 +1167,7 @@
 								value={titleModelId}
 								onchange={(e) => updateTitleModel(e.currentTarget.value)}
 							>
-								<option value="">Default (DeepSeek V4 Flash)</option>
+								<option value="">Default (DeepSeek V4 Flash 0731)</option>
 								{#each enabledModels as model}
 									<option value={model.value}>{model.label}</option>
 								{/each}
@@ -1046,7 +1197,7 @@
 								value={followUpModelId}
 								onchange={(e) => updateFollowUpModel(e.currentTarget.value)}
 							>
-								<option value="">Default (DeepSeek V4 Flash)</option>
+								<option value="">Default (DeepSeek V4 Flash 0731)</option>
 								{#each enabledModels as model}
 									<option value={model.value}>{model.label}</option>
 								{/each}
@@ -1066,6 +1217,42 @@
 								</select>
 							{/if}
 							<p class="text-muted-foreground text-xs">Generates follow-up questions.</p>
+						</div>
+
+						<div class="flex flex-col gap-2">
+							<label for="memory-model" class="text-sm font-medium">Memory Model</label>
+							<select
+								id="memory-model"
+								class="border-input bg-background focus:ring-ring flex h-10 w-full items-center rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-offset-2 focus:outline-none"
+								value={memoryModelId}
+								onchange={(e) => {
+									memoryModelId = e.currentTarget.value;
+									saveSetting({ memoryModelId: memoryModelId });
+								}}
+							>
+								<option value="">Default (DeepSeek V4 Flash 0731)</option>
+								{#each enabledModels as model}
+									<option value={model.value}>{model.label}</option>
+								{/each}
+							</select>
+							{#if memorySupportsProviderSelection && memoryModelProviders.length > 0}
+								<select
+									class="border-input bg-background focus:ring-ring mt-1 flex h-10 w-full items-center rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-offset-2 focus:outline-none"
+									value={memoryProviderId}
+									onchange={(e) => {
+										memoryProviderId = e.currentTarget.value;
+										saveSetting({ memoryProviderId: memoryProviderId });
+									}}
+								>
+									<option value="">Provider: Auto</option>
+									{#each memoryModelProviders as provider}
+										<option value={provider.provider}>
+											{formatProviderName(provider.provider)} ({formatPrice(provider.pricing)})
+										</option>
+									{/each}
+								</select>
+							{/if}
+							<p class="text-muted-foreground text-xs">Extracts persistent memories from your chats.</p>
 						</div>
 					</div>
 				</div>

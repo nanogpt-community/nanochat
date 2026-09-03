@@ -107,7 +107,7 @@ Requirements:
 
 	const titleResult = await ResultAsync.fromPromise(
 		openai.chat.completions.create({
-			model: userSettingsData?.titleModelId || 'deepseek/deepseek-v4-flash',
+			model: userSettingsData?.titleModelId || 'deepseek/deepseek-v4-flash-0731',
 			messages: [{ role: 'user', content: titlePrompt }],
 			max_tokens: 20,
 			temperature: 0.5,

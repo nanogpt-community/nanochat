@@ -30,7 +30,9 @@ import { md } from '$lib/utils/markdown-it.js';
 import * as array from '$lib/utils/array';
 import { parseMessageForRules } from '$lib/utils/rules.js';
 import { getNanoGPTModels } from '$lib/backend/models/nano-gpt';
-import { getUserMemory, upsertUserMemory } from '$lib/db/queries/user-memories';
+import { listUserMemories } from '$lib/db/queries/user-memories';
+import { formatMemoriesForPrompt, updateMemoriesFromExchange } from '$lib/backend/memory';
+import { compactIfNeeded, estimateTokens, formatSummaryForPrompt } from '$lib/backend/compaction';
 import {
 	extractUrlsByType,
 	scrapeUrls,
@@ -243,7 +245,7 @@ Requirements:
 
 	const titleResult = await ResultAsync.fromPromise(
 		openai.chat.completions.create({
-			model: userSettingsData?.titleModelId || 'deepseek/deepseek-v4-flash',
+			model: userSettingsData?.titleModelId || 'deepseek/deepseek-v4-flash-0731',
 			messages: [{ role: 'user', content: titlePrompt }],
 			max_tokens: 20,
 			temperature: 0.5,
@@ -358,16 +360,11 @@ async function generateAIResponse({
 	const lastUserMessage = conversationMessages.filter((m) => m.role === 'user').pop();
 	const modelId = model.modelId;
 
-	// Fetch persistent memory if enabled
-	let storedMemory: string | null = null;
+	let memoryBlock = '';
 	if (userSettingsData?.persistentMemoryEnabled) {
-		log('Background: Fetching persistent memory', startTime);
 		try {
-			const memory = await getUserMemory(userId);
-			if (memory?.content) {
-				storedMemory = memory.content;
-				log(`Background: Persistent memory loaded (${memory.content.length} chars)`, startTime);
-			}
+			memoryBlock = formatMemoriesForPrompt(await listUserMemories(userId));
+			log(`Background: Persistent memory loaded (${memoryBlock.length} chars)`, startTime);
 		} catch (e) {
 			log(`Background: Failed to fetch persistent memory: ${e}`, startTime);
 		}
@@ -624,9 +621,7 @@ async function generateAIResponse({
 	let systemContent = '';
 
 	// Add persistent memory context first (if available)
-	if (storedMemory) {
-		systemContent += `[MEMORY FROM PREVIOUS CONVERSATIONS]\n${storedMemory}\n\n[CURRENT CONVERSATION]\n`;
-	}
+	systemContent += memoryBlock;
 
 	const conversation = await db.query.conversations.findFirst({
 		where: eq(conversations.id, conversationId),
@@ -702,53 +697,26 @@ Rules to follow:
 ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 	}
 
-	// Apply context memory compression if enabled (skip if features disabled for server key users)
-	let finalMessages = formattedMessages;
-	if (
-		userSettingsData?.contextMemoryEnabled &&
-		formattedMessages.length > 4 &&
-		!webFeaturesDisabled
-	) {
-		log('Background: Applying context memory compression', startTime);
-		try {
-			const memoryResponse = await fetch(nanoGptUrl('/api/v1/memory'), {
-				method: 'POST',
-				headers: {
-					Authorization: `Bearer ${apiKey}`,
-					'Content-Type': 'application/json',
-				},
-				body: JSON.stringify({
-					messages: formattedMessages.map((m) => ({
-						role: m.role,
-						content: typeof m.content === 'string' ? m.content : JSON.stringify(m.content),
-					})),
-					expiration_days: 30,
-				}),
-			});
-
-			if (memoryResponse.ok) {
-				const memoryData = await memoryResponse.json();
-				if (memoryData.messages && Array.isArray(memoryData.messages)) {
-					finalMessages = memoryData.messages;
-					log(
-						`Background: Context memory compression applied, reduced to ${finalMessages.length} messages`,
-						startTime
-					);
-				}
-			} else {
-				log(
-					`Background: Context memory API returned ${memoryResponse.status}, using original messages`,
-					startTime
-				);
-			}
-		} catch (e) {
-			log(
-				`Background: Context memory compression failed: ${e}, using original messages`,
-				startTime
-			);
-		}
-	} else if (webFeaturesDisabled && userSettingsData?.contextMemoryEnabled) {
-		log('Background: Skipping context memory - features disabled for this user', startTime);
+	// Auto-compaction: fold older messages into a stored summary once the prompt
+	// approaches the model's context limit.
+	const compaction = await compactIfNeeded({
+		conversation: conversation ?? {
+			id: conversationId,
+			compactionSummary: null,
+			compactedThroughMessageId: null,
+		},
+		messageIds: conversationMessages.map((m) => m.id),
+		messages: formattedMessages,
+		systemTokens: estimateTokens(systemContent),
+		enabled: userSettingsData?.autoCompactEnabled ?? true,
+		thresholdPercent: userSettingsData?.autoCompactThreshold ?? 80,
+		modelId,
+		openai,
+		log: (m) => log(`Background: ${m}`, startTime),
+	});
+	const finalMessages = formattedMessages.slice(compaction.startIndex);
+	if (compaction.summary) {
+		systemContent = formatSummaryForPrompt(compaction.summary) + systemContent;
 	}
 
 	// Only include system message if there is content
@@ -1372,48 +1340,17 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 			})
 			.where(eq(conversations.id, conversationId));
 
-		// Update persistent memory if enabled
-		if (userSettingsData?.persistentMemoryEnabled) {
-			log('Background: Updating persistent memory', startTime);
-			try {
-				// Include the new messages in memory compression
-				const allMessages = [
-					...(storedMemory ? [{ role: 'system' as const, content: storedMemory }] : []),
-					...formattedMessages.map((m) => ({
-						role: m.role as 'user' | 'assistant' | 'system',
-						content: typeof m.content === 'string' ? m.content : JSON.stringify(m.content),
-					})),
-					{ role: 'assistant' as const, content },
-				];
-
-				const memoryResponse = await fetch(nanoGptUrl('/api/v1/memory'), {
-					method: 'POST',
-					headers: {
-						Authorization: `Bearer ${apiKey}`,
-						'Content-Type': 'application/json',
-					},
-					body: JSON.stringify({
-						messages: allMessages,
-						expiration_days: 30,
-					}),
-				});
-
-				if (memoryResponse.ok) {
-					const memoryData = await memoryResponse.json();
-					if (memoryData.messages?.[0]?.content) {
-						const compressedMemory = memoryData.messages[0].content;
-						await upsertUserMemory(userId, compressedMemory, memoryData.usage?.total_tokens);
-						log(
-							`Background: Persistent memory updated (${compressedMemory.length} chars)`,
-							startTime
-						);
-					}
-				} else {
-					log(`Background: Memory API returned ${memoryResponse.status}`, startTime);
-				}
-			} catch (e) {
-				log(`Background: Failed to update persistent memory: ${e}`, startTime);
-			}
+		// Extract durable facts from this exchange into cross-chat memory (fire-and-forget)
+		if (userSettingsData?.persistentMemoryEnabled && !isTemporary && lastUserMessage) {
+			void updateMemoriesFromExchange({
+				userId,
+				apiKey,
+				modelId: userSettingsData.memoryModelId,
+				providerId: userSettingsData.memoryProviderId,
+				userMessage: lastUserMessage.content,
+				assistantMessage: content,
+				log: (m) => log(`Background: ${m}`, startTime),
+			}).catch((e) => log(`Background: Failed to update persistent memory: ${e}`, startTime));
 		}
 
 		log('Background: Message and conversation updated', startTime);

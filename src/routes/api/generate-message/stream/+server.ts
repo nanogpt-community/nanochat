@@ -28,7 +28,9 @@ import { md } from '$lib/utils/markdown-it.js';
 import * as array from '$lib/utils/array';
 import { parseMessageForRules } from '$lib/utils/rules.js';
 import { getNanoGPTModels } from '$lib/backend/models/nano-gpt';
-import { getUserMemory, upsertUserMemory } from '$lib/db/queries/user-memories';
+import { listUserMemories } from '$lib/db/queries/user-memories';
+import { formatMemoriesForPrompt, updateMemoriesFromExchange } from '$lib/backend/memory';
+import { compactIfNeeded, estimateTokens, formatSummaryForPrompt } from '$lib/backend/compaction';
 import {
 	extractUrlsByType,
 	scrapeUrls,
@@ -265,7 +267,7 @@ Requirements:
 
 	const titleResult = await ResultAsync.fromPromise(
 		openai.chat.completions.create({
-			model: userSettingsData?.titleModelId || 'deepseek/deepseek-v4-flash',
+			model: userSettingsData?.titleModelId || 'deepseek/deepseek-v4-flash-0731',
 			messages: [{ role: 'user', content: titlePrompt }],
 			max_tokens: 20,
 			temperature: 0.5,
@@ -326,7 +328,7 @@ async function generateFollowUpSuggestions({
 		return null;
 	}
 
-	const modelId = userSettingsData?.followUpModelId || 'deepseek/deepseek-v4-flash';
+	const modelId = userSettingsData?.followUpModelId || 'deepseek/deepseek-v4-flash-0731';
 	const prompt = FOLLOW_UP_QUESTIONS_PROMPT(userMessage, assistantMessage);
 
 	const openai = new OpenAI({
@@ -898,16 +900,11 @@ async function streamAIResponse({
 	const lastUserMessage = conversationMessages.filter((m) => m.role === 'user').pop();
 	const modelId = model.modelId;
 
-	// Fetch persistent memory if enabled
-	let storedMemory: string | null = null;
+	let memoryBlock = '';
 	if (userSettingsData?.persistentMemoryEnabled) {
-		log('Fetching persistent memory', startTime);
 		try {
-			const memory = await getUserMemory(userId);
-			if (memory?.content) {
-				storedMemory = memory.content;
-				log(`Persistent memory loaded (${memory.content.length} chars)`, startTime);
-			}
+			memoryBlock = formatMemoriesForPrompt(await listUserMemories(userId));
+			log(`Persistent memory loaded (${memoryBlock.length} chars)`, startTime);
 		} catch (e) {
 			log(`Failed to fetch persistent memory: ${e}`, startTime);
 		}
@@ -1158,9 +1155,7 @@ async function streamAIResponse({
 	// Construct system message content
 	let systemContent = '';
 
-	if (storedMemory) {
-		systemContent += `[MEMORY FROM PREVIOUS CONVERSATIONS]\n${storedMemory}\n\n[CURRENT CONVERSATION]\n`;
-	}
+	systemContent += memoryBlock;
 
 	const conversation = await db.query.conversations.findFirst({
 		where: eq(conversations.id, conversationId),
@@ -1234,43 +1229,26 @@ Rules to follow:
 ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 	}
 
-	// Apply context memory compression if enabled
-	let finalMessages = formattedMessages;
-	if (
-		userSettingsData?.contextMemoryEnabled &&
-		formattedMessages.length > 4 &&
-		!webFeaturesDisabled
-	) {
-		log('Applying context memory compression', startTime);
-		try {
-			const memoryResponse = await fetch(nanoGptUrl('/api/v1/memory'), {
-				method: 'POST',
-				headers: {
-					Authorization: `Bearer ${apiKey}`,
-					'Content-Type': 'application/json',
-				},
-				body: JSON.stringify({
-					messages: formattedMessages.map((m) => ({
-						role: m.role,
-						content: typeof m.content === 'string' ? m.content : JSON.stringify(m.content),
-					})),
-					expiration_days: 30,
-				}),
-			});
-
-			if (memoryResponse.ok) {
-				const memoryData = await memoryResponse.json();
-				if (memoryData.messages && Array.isArray(memoryData.messages)) {
-					finalMessages = memoryData.messages;
-					log(
-						`Context memory compression applied, reduced to ${finalMessages.length} messages`,
-						startTime
-					);
-				}
-			}
-		} catch (e) {
-			log(`Context memory compression failed: ${e}, using original messages`, startTime);
-		}
+	// Auto-compaction: fold older messages into a stored summary once the prompt
+	// approaches the model's context limit.
+	const compaction = await compactIfNeeded({
+		conversation: conversation ?? {
+			id: conversationId,
+			compactionSummary: null,
+			compactedThroughMessageId: null,
+		},
+		messageIds: conversationMessages.map((m) => m.id),
+		messages: formattedMessages,
+		systemTokens: estimateTokens(systemContent),
+		enabled: userSettingsData?.autoCompactEnabled ?? true,
+		thresholdPercent: userSettingsData?.autoCompactThreshold ?? 80,
+		modelId,
+		openai,
+		log: (m) => log(`${m}`, startTime),
+	});
+	const finalMessages = formattedMessages.slice(compaction.startIndex);
+	if (compaction.summary) {
+		systemContent = formatSummaryForPrompt(compaction.summary) + systemContent;
 	}
 
 	const messagesToSend =
@@ -2035,42 +2013,17 @@ ${attachedRules.map((r) => `- ${r.name}: ${r.rule}`).join('\n')}`;
 			}
 		}
 
-		// Update persistent memory if enabled
-		if (userSettingsData?.persistentMemoryEnabled) {
-			log('Updating persistent memory', startTime);
-			try {
-				const allMessages = [
-					...(storedMemory ? [{ role: 'system' as const, content: storedMemory }] : []),
-					...formattedMessages.map((m) => ({
-						role: m.role as 'user' | 'assistant' | 'system',
-						content: typeof m.content === 'string' ? m.content : JSON.stringify(m.content),
-					})),
-					{ role: 'assistant' as const, content },
-				];
-
-				const memoryResponse = await fetch(nanoGptUrl('/api/v1/memory'), {
-					method: 'POST',
-					headers: {
-						Authorization: `Bearer ${apiKey}`,
-						'Content-Type': 'application/json',
-					},
-					body: JSON.stringify({
-						messages: allMessages,
-						expiration_days: 30,
-					}),
-				});
-
-				if (memoryResponse.ok) {
-					const memoryData = await memoryResponse.json();
-					if (memoryData.messages?.[0]?.content) {
-						const compressedMemory = memoryData.messages[0].content;
-						await upsertUserMemory(userId, compressedMemory, memoryData.usage?.total_tokens);
-						log(`Persistent memory updated (${compressedMemory.length} chars)`, startTime);
-					}
-				}
-			} catch (e) {
-				log(`Failed to update persistent memory: ${e}`, startTime);
-			}
+		// Extract durable facts from this exchange into cross-chat memory (fire-and-forget)
+		if (userSettingsData?.persistentMemoryEnabled && !isTemporary && lastUserMessage) {
+			void updateMemoriesFromExchange({
+				userId,
+				apiKey,
+				modelId: userSettingsData.memoryModelId,
+				providerId: userSettingsData.memoryProviderId,
+				userMessage: lastUserMessage.content,
+				assistantMessage: content,
+				log: (m) => log(`${m}`, startTime),
+			}).catch((e) => log(`Failed to update persistent memory: ${e}`, startTime));
 		}
 
 		log('SSE stream completed successfully', startTime);

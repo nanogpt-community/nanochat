@@ -319,6 +319,11 @@ export const api = {
 		create: { url: '/api/db/user-settings', method: 'POST' } as QueryConfig,
 		incrementFreeMessageCount: { url: '/api/db/user-settings', method: 'POST' } as QueryConfig,
 	},
+	user_memories: {
+		list: { url: '/api/db/user-memories', method: 'GET' } as QueryConfig,
+		save: { url: '/api/db/user-memories', method: 'POST' } as QueryConfig,
+		remove: { url: '/api/db/user-memories', method: 'DELETE' } as QueryConfig,
+	},
 	user_keys: {
 		all: { url: '/api/db/user-keys', method: 'GET' } as QueryConfig,
 		get: { url: '/api/db/user-keys', method: 'GET' } as QueryConfig,
