@@ -1,3 +1,6 @@
+import { resolveNanoGptApiKey } from '$lib/backend/nanogpt-key.server';
+import { assertSharedKeyUse } from '$lib/backend/shared-key-policy';
+import { DEFAULT_BACKGROUND_MODEL } from '$lib/backend/default-models';
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from '@sveltejs/kit';
 import { ResultAsync } from 'neverthrow';
@@ -12,7 +15,7 @@ import { decryptApiKey, isEncrypted } from '$lib/encryption';
 import { getAuthenticatedUserId } from '$lib/backend/auth-utils';
 import { nanoGptUrl } from '$lib/backend/nano-gpt-url.server';
 
-const MODEL = 'deepseek/deepseek-v4-flash-0731';
+const MODEL = DEFAULT_BACKGROUND_MODEL;
 
 const reqBodySchema = z.object({
 	conversationId: z.string(),
@@ -48,27 +51,23 @@ export const POST: RequestHandler = async ({ request }) => {
 
 	const userId = await getAuthenticatedUserId(request);
 
-	const keyRecord = await db.query.userKeys.findFirst({
-		where: and(eq(userKeys.userId, userId), eq(userKeys.provider, Provider.NanoGPT)),
-	});
-
-	let apiKey = keyRecord?.key;
-	if (apiKey && isEncrypted(apiKey)) {
-		apiKey = decryptApiKey(apiKey);
-	}
-	if (!apiKey && process.env.NANOGPT_API_KEY) {
-		apiKey = process.env.NANOGPT_API_KEY;
-	}
-
-	if (!apiKey) {
+	const key = await resolveNanoGptApiKey(userId);
+	if (!key) {
 		return error(403, 'NanoGPT API key required');
 	}
+	const apiKey = key.apiKey;
 
 	const userSettingsData = await db.query.userSettings.findFirst({
 		where: eq(userSettings.userId, userId),
 	});
 
 	const modelId = userSettingsData?.followUpModelId || MODEL;
+	await assertSharedKeyUse({
+		userId,
+		usingServerKey: key.usingServerKey,
+		modelId,
+		consumeQuota: false,
+	});
 
 	// Resolved through the owning conversation. Looking the message up by id alone
 	// let any authenticated caller generate suggestions from — and then overwrite

@@ -1,3 +1,4 @@
+import { assertPublicHttpUrl } from '$lib/backend/egress';
 /**
  * Remote MCP servers configured by the user.
  *
@@ -26,23 +27,13 @@ export type RemoteMcpTools = {
 const EMPTY: RemoteMcpTools = { tools: [], routes: new Map() };
 
 /**
- * Only remote HTTP(S) servers — no stdio, nothing that runs a local process.
- *
- * ponytail: private/link-local addresses are deliberately allowed, because
- * self-hosted deployments routinely run their MCP server on the same network.
- * Same trust model as the user-supplied `karakeepUrl`. Add an allowlist (or a
- * DENY_PRIVATE_MCP_HOSTS flag) if this ever serves untrusted signups.
+ * Only remote HTTP(S) servers — no stdio, nothing that runs a local process — and
+ * only public destinations unless ALLOW_PRIVATE_INTEGRATIONS is set. Checked on
+ * every connect, not just at save time, so a DNS change can't move a stored
+ * server onto the LAN later.
  */
-function assertRemoteUrl(raw: string): URL {
-	const url = new URL(raw);
-	if (url.protocol !== 'https:' && url.protocol !== 'http:') {
-		throw new Error(`Unsupported MCP URL protocol: ${url.protocol}`);
-	}
-	return url;
-}
-
 async function connect(server: McpServer): Promise<Client> {
-	const url = assertRemoteUrl(server.url);
+	const url = await assertPublicHttpUrl(server.url, 'MCP server');
 
 	// Bearer token first so an explicit Authorization header can override it.
 	const extra: Record<string, string> = {
@@ -50,14 +41,14 @@ async function connect(server: McpServer): Promise<Client> {
 		...parseHeaders(server.headers),
 	};
 
-	const authFetch: typeof fetch =
-		Object.keys(extra).length > 0
-			? (input, init) =>
-					fetch(input, {
-						...init,
-						headers: { ...Object.fromEntries(new Headers(init?.headers)), ...extra },
-					})
-			: fetch;
+	// Redirects are refused: a public host answering 302 to an internal address
+	// would otherwise carry the account's headers there.
+	const authFetch: typeof fetch = (input, init) =>
+		fetch(input, {
+			...init,
+			redirect: 'error',
+			headers: { ...Object.fromEntries(new Headers(init?.headers)), ...extra },
+		});
 
 	const client = new Client({ name: 'nanochat', version: '1.0.0' });
 	try {

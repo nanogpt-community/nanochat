@@ -24,6 +24,7 @@
 	import { DocumentModal } from '$lib/components/ui/document-modal';
 	import { ThemeToggle } from '$lib/components/ui/light-switch/index.js';
 	import { ShareButton } from '$lib/components/ui/share-button';
+	import { CompactButton } from '$lib/components/ui/compact-button';
 	import { ExportButton } from '$lib/components/ui/export-button';
 	import * as Sidebar from '$lib/components/ui/sidebar';
 	// import SettingsModal from '$lib/components/ui/settings-modal/settings-modal.svelte';
@@ -759,7 +760,9 @@
 	// Chip labels are all-or-nothing: a row of half-labelled chips reads as broken.
 	// Below the threshold every chip is icon-only (state stays legible via the active
 	// ring and the title tooltip) and the model name keeps the width it frees up.
-	const chipLabelClass = 'hidden @[48rem]:inline';
+	// The composer maxes out at 48rem, so a 48rem breakpoint never fired and the
+	// labels were invisible at every size.
+	const chipLabelClass = 'hidden @[40rem]:inline';
 	// ponytail: one active look for every toggle — the label carries the level, not the colour.
 	const chipActiveClass =
 		'bg-primary/10 hover:bg-primary/15 text-primary ring-primary/30 ring-1 ring-inset';
@@ -1274,6 +1277,7 @@
 									conversation={currentConversationQuery.data}
 								/>
 								<ShareButton conversationId={page.params.id as Id<'conversations'>} />
+								<CompactButton conversationId={page.params.id} />
 							</div>
 							<DropdownMenu.Separator />
 						{/if}
@@ -1326,6 +1330,7 @@
 						conversation={currentConversationQuery.data}
 					/>
 					<ShareButton conversationId={page.params.id as Id<'conversations'>} />
+					<CompactButton conversationId={page.params.id} />
 				{/if}
 				<Tooltip>
 					{#snippet trigger(tooltip)}
@@ -1360,7 +1365,9 @@
 			>
 				<div
 					bind:this={conversationContent}
-					class={cn('mx-auto flex max-w-3xl flex-col px-3 sm:px-4 md:px-0', {
+					class={cn('mx-auto flex flex-col px-3 sm:px-4 md:px-0', {
+						'max-w-3xl': !settings.wideChat,
+						'max-w-5xl': settings.wideChat,
 						'pt-[calc(3rem+env(safe-area-inset-top))] md:pt-10': page.url.pathname !== '/chat',
 					})}
 					style="padding-bottom: {page.url.pathname !== '/chat' ? wrapperSize.height : 0}px;"
@@ -1380,7 +1387,7 @@
 									: 'pointer-events-none translate-y-2 scale-95 opacity-0',
 							]}
 							{...mergeAttrs(tooltip.trigger, {
-								style: `bottom: ${wrapperSize.height + 10}px;`,
+								style: `bottom: ${wrapperSize.height + 24}px;`,
 							})}
 						>
 							<span class="hidden md:inline">Scroll to bottom</span>
@@ -1393,7 +1400,8 @@
 
 			<div
 				class={cn(
-					'group absolute right-0 left-0 mx-auto flex w-full max-w-3xl flex-col gap-1 px-2 md:px-4',
+					'group absolute right-0 left-0 mx-auto flex w-full flex-col gap-1 px-2 md:px-4',
+					settings.wideChat ? 'max-w-5xl' : 'max-w-3xl',
 					'pr-[max(0.5rem,env(safe-area-inset-right))] pl-[max(0.5rem,env(safe-area-inset-left))] md:pr-4 md:pl-4',
 					promptDockClass
 				)}
@@ -1861,6 +1869,8 @@
 											<DropdownMenu.Root>
 												<DropdownMenu.Trigger
 													class={cn(iconChipClass, moreActive && 'text-primary')}
+													title={moreActive ? 'More options (some are on)' : 'More options'}
+													aria-label="More options"
 												>
 													<EllipsisVerticalIcon class="size-4" />
 													{#if moreActive}
@@ -1955,7 +1965,7 @@
 															/>
 															Video Settings
 															{#if Object.keys(videoParams).length > 0}
-																<span class="ml-auto text-xs text-primary">•</span>
+																<span class="text-primary ml-auto text-xs">•</span>
 															{/if}
 														</DropdownMenu.Item>
 													{/if}
@@ -1969,7 +1979,7 @@
 															/>
 															Image Settings
 															{#if Object.keys(imageParams).length > 0}
-																<span class="ml-auto text-xs text-primary">•</span>
+																<span class="text-primary ml-auto text-xs">•</span>
 															{/if}
 														</DropdownMenu.Item>
 													{/if}

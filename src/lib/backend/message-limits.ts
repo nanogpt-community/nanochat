@@ -5,7 +5,7 @@
 
 import { db, generateId } from '$lib/db';
 import { userSettings } from '$lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { and, eq, isNull, lt, ne, or, sql } from 'drizzle-orm';
 
 /**
  * Get the daily message limit from environment variable
@@ -70,76 +70,60 @@ export async function checkAndUpdateDailyLimit(
         return { allowed: true, remaining: Infinity, limit: 0 };
     }
 
-    const currentDate = getCurrentDateString();
+    const today = getCurrentDateString();
+    const denied: DailyLimitResult = {
+        allowed: false,
+        remaining: 0,
+        limit,
+        error: `Daily message limit of ${limit} messages reached. Your limit will reset at midnight.`,
+    };
 
-    // Get or create user settings
-    let settings = await db.query.userSettings.findFirst({
+    const existing = await db.query.userSettings.findFirst({
         where: eq(userSettings.userId, userId),
+        columns: { dailyMessagesUsed: true, lastMessageDate: true },
     });
-
-    if (!settings) {
-        // Create settings record
+    if (!existing) {
         const now = new Date();
-        const newId = generateId();
         await db.insert(userSettings).values({
-            id: newId,
+            id: generateId(),
             userId,
             dailyMessagesUsed: 0,
-            lastMessageDate: currentDate,
+            lastMessageDate: today,
             createdAt: now,
             updatedAt: now,
         });
-        settings = await db.query.userSettings.findFirst({
-            where: eq(userSettings.userId, userId),
-        });
     }
 
-    if (!settings) {
-        return { allowed: false, remaining: 0, limit, error: 'Failed to create user settings' };
+    if (!incrementCounter) {
+        const used =
+            existing && existing.lastMessageDate === today ? (existing.dailyMessagesUsed ?? 0) : 0;
+        return used >= limit ? denied : { allowed: true, remaining: limit - used, limit };
     }
 
-    // Check if we need to reset the counter (new day)
-    let dailyMessagesUsed = settings.dailyMessagesUsed ?? 0;
-    if (settings.lastMessageDate !== currentDate) {
-        // Reset counter for new day
-        dailyMessagesUsed = 0;
-        if (incrementCounter) {
-            await db
-                .update(userSettings)
-                .set({
-                    dailyMessagesUsed: 0,
-                    lastMessageDate: currentDate,
-                    updatedAt: new Date(),
-                })
-                .where(eq(userSettings.id, settings.id));
-        }
-    }
+    // Consume in one conditional UPDATE. Reading the count, comparing in JS and
+    // writing count+1 let N concurrent requests all see the same stale value and
+    // all pass; here the day rollover and the limit check are part of the
+    // statement, so the row lock serializes them and only `limit` of them win.
+    const [row] = await db
+        .update(userSettings)
+        .set({
+            dailyMessagesUsed: sql`CASE WHEN ${userSettings.lastMessageDate} = ${today} THEN COALESCE(${userSettings.dailyMessagesUsed}, 0) + 1 ELSE 1 END`,
+            lastMessageDate: today,
+            updatedAt: new Date(),
+        })
+        .where(
+            and(
+                eq(userSettings.userId, userId),
+                or(
+                    isNull(userSettings.lastMessageDate),
+                    ne(userSettings.lastMessageDate, today),
+                    isNull(userSettings.dailyMessagesUsed),
+                    lt(userSettings.dailyMessagesUsed, limit)
+                )
+            )
+        )
+        .returning({ used: userSettings.dailyMessagesUsed });
 
-    // Check if limit exceeded
-    if (dailyMessagesUsed >= limit) {
-        return {
-            allowed: false,
-            remaining: 0,
-            limit,
-            error: `Daily message limit of ${limit} messages reached. Your limit will reset at midnight.`,
-        };
-    }
-
-    // Increment counter if allowed and requested
-    if (incrementCounter) {
-        await db
-            .update(userSettings)
-            .set({
-                dailyMessagesUsed: dailyMessagesUsed + 1,
-                lastMessageDate: currentDate,
-                updatedAt: new Date(),
-            })
-            .where(eq(userSettings.id, settings.id));
-    }
-
-    return {
-        allowed: true,
-        remaining: limit - dailyMessagesUsed - 1,
-        limit,
-    };
+    if (!row) return denied;
+    return { allowed: true, remaining: Math.max(0, limit - (row.used ?? 0)), limit };
 }

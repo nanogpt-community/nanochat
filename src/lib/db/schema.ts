@@ -128,6 +128,9 @@ export const userSettings = pgTable(
 		followUpProviderId: text('follow_up_provider_id'),
 		memoryModelId: text('memory_model_id'),
 		memoryProviderId: text('memory_provider_id'),
+		// Prompt enhancer + MCP image analysis; needs a vision-capable model
+		utilityModelId: text('utility_model_id'),
+		utilityProviderId: text('utility_provider_id'),
 		createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
 		updatedAt: timestamp('updated_at', { withTimezone: true }).notNull(),
 	},
@@ -302,6 +305,8 @@ export const messages = pgTable(
 		modelId: text('model_id'),
 		provider: text('provider'),
 		tokenCount: integer('token_count'),
+		// Prompt-side usage reported by the provider; drives compaction estimates and cost.
+		promptTokens: integer('prompt_tokens'),
 		// Total generation time for this assistant response in milliseconds
 		responseTimeMs: integer('response_time_ms'),
 		timeToFirstTokenMs: integer('time_to_first_token_ms'),

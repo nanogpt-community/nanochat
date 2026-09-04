@@ -1,3 +1,6 @@
+import { resolveNanoGptApiKey } from '$lib/backend/nanogpt-key.server';
+import { assertSharedKeyUse } from '$lib/backend/shared-key-policy';
+import { DEFAULT_BACKGROUND_MODEL } from '$lib/backend/default-models';
 import { db } from '$lib/db';
 import { conversations, messages, userSettings, userKeys } from '$lib/db/schema';
 import { eq, and, asc } from 'drizzle-orm';
@@ -57,21 +60,18 @@ export const POST: RequestHandler = async ({ request }) => {
 		where: eq(userSettings.userId, userId),
 	});
 
-	// Get API key
-	let apiKey = env.NANOGPT_API_KEY;
-
-	const userKeyRecord = await db.query.userKeys.findFirst({
-		where: and(eq(userKeys.userId, userId), eq(userKeys.provider, 'nanogpt')),
-	});
-
-	if (userKeyRecord?.key) {
-		const key = userKeyRecord.key;
-		apiKey = isEncrypted(key) ? decryptApiKey(key) : key;
-	}
-
-	if (!apiKey) {
+	const key = await resolveNanoGptApiKey(userId);
+	if (!key) {
 		return error(500, 'No API key available');
 	}
+	const titleModel = userSettingsData?.titleModelId || DEFAULT_BACKGROUND_MODEL;
+	await assertSharedKeyUse({
+		userId,
+		usingServerKey: key.usingServerKey,
+		modelId: titleModel,
+		consumeQuota: false,
+	});
+	const apiKey = key.apiKey;
 
 	// Get conversation messages to build context for title
 	const conversationMessages = await db.query.messages.findMany({
@@ -107,7 +107,7 @@ Requirements:
 
 	const titleResult = await ResultAsync.fromPromise(
 		openai.chat.completions.create({
-			model: userSettingsData?.titleModelId || 'deepseek/deepseek-v4-flash-0731',
+			model: titleModel,
 			messages: [{ role: 'user', content: titlePrompt }],
 			max_tokens: 20,
 			temperature: 0.5,

@@ -10,6 +10,7 @@ export type SSEEvent =
 			event: 'message_complete';
 			data: {
 				token_count?: number;
+				prompt_tokens?: number;
 				cost_usd?: number;
 				response_time_ms?: number;
 				time_to_first_token_ms?: number;

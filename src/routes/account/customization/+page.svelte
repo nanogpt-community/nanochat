@@ -18,6 +18,7 @@
 	import { Provider } from '$lib/types';
 	import { models } from '$lib/state/models.svelte';
 	import { settings as clientSettings } from '$lib/state/settings.svelte';
+	import { Switch } from '$lib/components/ui/switch';
 	import { toast } from 'svelte-sonner';
 
 	const newRuleCollapsible = new Collapsible({
@@ -290,6 +291,23 @@
 </div>
 
 <div class="mt-6 flex flex-col gap-8">
+	<!-- Layout -->
+	<section class="flex flex-col gap-3">
+		<div class="flex flex-col gap-0.5">
+			<h2 class="text-muted-foreground text-sm font-semibold tracking-wide uppercase">Layout</h2>
+			<p class="text-muted-foreground text-xs">How the chat uses your screen.</p>
+		</div>
+		<div class="bg-card border-border flex items-center justify-between gap-4 rounded-lg border p-5">
+			<div class="flex flex-col gap-1">
+				<span class="font-medium">Wide chat</span>
+				<span class="text-muted-foreground text-sm">
+					Let messages and the composer use more of the width on large screens.
+				</span>
+			</div>
+			<Switch bind:value={clientSettings.wideChat} />
+		</div>
+	</section>
+
 	<!-- Theme -->
 	<section class="flex flex-col gap-3">
 		<div class="flex flex-col gap-0.5">

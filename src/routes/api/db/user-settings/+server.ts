@@ -14,6 +14,7 @@ import { scheduledTasks } from '$lib/db/schema';
 import { computeNextRunAt } from '$lib/backend/scheduler';
 import { assertEncryptionEnabled } from '$lib/encryption';
 import { jsonNoStore } from '$lib/backend/http-security';
+import { assertPublicHttpUrl } from '$lib/backend/egress';
 
 function normalizeTimezone(value: unknown): string | undefined {
 	if (typeof value !== 'string') return undefined;
@@ -67,6 +68,15 @@ export const POST: RequestHandler = async ({ request }) => {
 				}
 			}
 
+			const karakeepUrl = normalizeOptionalString(body.karakeepUrl);
+			if (karakeepUrl) {
+				try {
+					await assertPublicHttpUrl(karakeepUrl, 'Karakeep');
+				} catch (e) {
+					return error(400, e instanceof Error ? e.message : 'Invalid Karakeep URL');
+				}
+			}
+
 			const updateData: Parameters<typeof updateUserSettings>[1] = {
 				privacyMode: body.privacyMode,
 				persistentMemoryEnabled: body.persistentMemoryEnabled,
@@ -77,7 +87,7 @@ export const POST: RequestHandler = async ({ request }) => {
 				suggestedPromptsEnabled: body.suggestedPromptsEnabled,
 				webScrapingEnabled: body.webScrapingEnabled,
 				mcpEnabled: body.mcpEnabled,
-				karakeepUrl: normalizeOptionalString(body.karakeepUrl),
+				karakeepUrl,
 				karakeepApiKey: normalizeOptionalString(body.karakeepApiKey),
 				theme: body.theme,
 				themePrimaryColor: body.themePrimaryColor,
@@ -88,6 +98,8 @@ export const POST: RequestHandler = async ({ request }) => {
 				followUpProviderId: body.followUpProviderId,
 				memoryModelId: body.memoryModelId,
 				memoryProviderId: body.memoryProviderId,
+				utilityModelId: body.utilityModelId,
+				utilityProviderId: body.utilityProviderId,
 			};
 
 			const normalizedTimezone = normalizeTimezone(body.timezone);

@@ -2,8 +2,10 @@ import { assertEncryptionEnabled } from '$lib/encryption';
 export {
 	apiKeysEqual,
 	CURRENT_DEVELOPER_API_KEY_HASH_PREFIX,
+	DEVELOPER_API_KEY_PATTERN,
 	hashDeveloperApiKey,
 	isCurrentDeveloperApiKeyHash,
+	legacyHashDeveloperApiKey,
 } from '$lib/backend/api-key-hash';
 
 // ponytail: api_keys.key_hash is created by the initial migration, so the old

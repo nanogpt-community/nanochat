@@ -1,9 +1,11 @@
 // PDF text extraction utility
 import { readFileSync } from 'fs';
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import { promisify } from 'util';
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
+/** pdftotext on a hostile file can spin; a minute is generous for anything legitimate. */
+const PDF_TIMEOUT_MS = 60_000;
 
 import { writeFile, unlink } from 'fs/promises';
 import { randomUUID } from 'crypto';
@@ -25,9 +27,11 @@ export async function extractTextFromPDF(input: string | Buffer): Promise<string
 
 		// Try using pdftotext (part of poppler-utils)
 		try {
-			const { stdout } = await execAsync(`pdftotext "${filePath}" -`, {
+			const { stdout } = await execFileAsync('pdftotext', [filePath, '-'], {
 				encoding: 'utf8',
 				maxBuffer: 10 * 1024 * 1024, // 10MB buffer
+				timeout: PDF_TIMEOUT_MS,
+				killSignal: 'SIGKILL',
 			});
 			return stdout.trim();
 		} catch (error) {

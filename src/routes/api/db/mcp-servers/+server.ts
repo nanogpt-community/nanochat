@@ -13,14 +13,14 @@ import { assertEncryptionEnabled } from '$lib/encryption';
 import { jsonNoStore } from '$lib/backend/http-security';
 import { invalidateRemoteMcpTools, listServerTools } from '$lib/backend/remote-mcp';
 import { sanitizeHeaders, type HttpHeaders } from '$lib/utils/http-headers';
+import { assertPublicHttpUrl } from '$lib/backend/egress';
 
-function validUrl(raw: unknown): string | null {
-	if (typeof raw !== 'string') return null;
+/** Vetted destination or a 400 with the reason. */
+async function requireUrl(raw: unknown): Promise<string> {
 	try {
-		const url = new URL(raw);
-		return url.protocol === 'https:' || url.protocol === 'http:' ? url.toString() : null;
-	} catch {
-		return null;
+		return (await assertPublicHttpUrl(String(raw ?? ''), 'MCP server')).toString();
+	} catch (e) {
+		throw error(400, e instanceof Error ? e.message : 'A valid http(s) URL is required');
 	}
 }
 
@@ -51,7 +51,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			? await getMcpServer(userId, body.id)
 			: {
 					name: 'test',
-					url: validUrl(body.url) ?? '',
+					url: await requireUrl(body.url),
 					authToken: typeof body.authToken === 'string' ? body.authToken : null,
 					headers: headers ? JSON.stringify(headers) : null,
 				};
@@ -82,11 +82,11 @@ export const POST: RequestHandler = async ({ request }) => {
 
 	if (action === 'update') {
 		if (!body.id) return error(400, 'Missing id');
-		if (body.url !== undefined && !validUrl(body.url)) return error(400, 'Invalid url');
+		const nextUrl = body.url === undefined ? undefined : await requireUrl(body.url);
 
 		const updated = await updateMcpServer(userId, body.id, {
 			name: body.name,
-			url: body.url === undefined ? undefined : validUrl(body.url)!,
+			url: nextUrl,
 			authToken: body.authToken,
 			headers,
 			enabled: body.enabled,
@@ -98,9 +98,8 @@ export const POST: RequestHandler = async ({ request }) => {
 	}
 
 	const name = typeof body.name === 'string' ? body.name.trim() : '';
-	const url = validUrl(body.url);
 	if (!name) return error(400, 'Missing name');
-	if (!url) return error(400, 'A valid http(s) URL is required');
+	const url = await requireUrl(body.url);
 
 	const created = await createMcpServer(userId, {
 		name,

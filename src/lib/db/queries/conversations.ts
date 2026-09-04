@@ -1,3 +1,4 @@
+import { resolveConversationRefs } from '$lib/backend/conversation-refs';
 import { db, generateId } from '../index';
 import { conversations, messages, type Conversation, type Message } from '../schema';
 import { eq, desc, and, or, isNull, asc, sql, inArray } from 'drizzle-orm';
@@ -71,13 +72,14 @@ export async function createConversation(
 	projectId?: string | null
 ): Promise<Conversation> {
 	const now = new Date();
+	const refs = await resolveConversationRefs(userId, { projectId });
 	const [result] = await db
 		.insert(conversations)
 		.values({
 			id: generateId(),
 			userId,
 			title: title ?? 'Untitled',
-			projectId,
+			projectId: refs.projectId,
 			createdAt: now,
 			updatedAt: now,
 		})
@@ -101,13 +103,14 @@ export async function createConversationWithMessage(
 	const messageId = generateId();
 	const contentHtml =
 		messageData.contentHtml === undefined ? undefined : sanitizeHtml(messageData.contentHtml);
+	const refs = await resolveConversationRefs(userId, { projectId: messageData.projectId });
 
 	// Create conversation
 	await db.insert(conversations).values({
 		id: conversationId,
 		userId,
 		title: getFirstSentence(messageData.content)[0] || 'Untitled',
-		projectId: messageData.projectId,
+		projectId: refs.projectId,
 		generating: true,
 		createdAt: now,
 		updatedAt: now,

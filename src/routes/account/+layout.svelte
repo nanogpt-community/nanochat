@@ -10,6 +10,11 @@
 	import CameraIcon from '~icons/lucide/camera';
 	import LoaderCircle from '~icons/lucide/loader-circle';
 	import UserIcon from '~icons/lucide/user';
+	import ShieldIcon from '~icons/lucide/shield';
+	import BrainIcon from '~icons/lucide/brain';
+	import Volume2Icon from '~icons/lucide/volume-2';
+	import DatabaseIcon from '~icons/lucide/database';
+	import LinkIcon from '~icons/lucide/link';
 	import SparklesIcon from '~icons/lucide/sparkles';
 	import MessageSquareIcon from '~icons/lucide/message-square-text';
 	import CalendarIcon from '~icons/lucide/calendar-clock';
@@ -43,28 +48,35 @@
 	type NavItem = { title: string; href: string; icon: typeof UserIcon };
 	type NavGroup = { label: string; items: NavItem[] };
 
+	// One level of navigation: the account page's sections are entries here rather
+	// than a second tab bar inside the page.
 	const navGroups: NavGroup[] = [
 		{
 			label: 'Profile',
 			items: [
-				{ title: 'Account', href: '/account', icon: UserIcon },
+				{ title: 'General', href: '/account', icon: UserIcon },
 				{ title: 'Customization', href: '/account/customization', icon: PaletteIcon },
 				{ title: 'Keybinds', href: '/account/keybinds', icon: KeyboardIcon },
+				{ title: 'Security', href: '/account?section=security', icon: ShieldIcon },
 			],
 		},
 		{
 			label: 'AI',
 			items: [
+				{ title: 'AI & Memory', href: '/account?section=ai', icon: BrainIcon },
 				{ title: 'Assistants', href: '/account/assistants', icon: SparklesIcon },
 				{ title: 'Prompts', href: '/account/prompts', icon: MessageSquareIcon },
 				{ title: 'Models', href: '/account/models', icon: CpuIcon },
 				{ title: 'MCP Servers', href: '/account/mcp', icon: PlugIcon },
 				{ title: 'Schedules', href: '/account/schedules', icon: CalendarIcon },
+				{ title: 'Audio', href: '/account?section=audio', icon: Volume2Icon },
 			],
 		},
 		{
 			label: 'Data',
 			items: [
+				{ title: 'Files & History', href: '/account?section=data', icon: DatabaseIcon },
+				{ title: 'Integrations', href: '/account?section=integrations', icon: LinkIcon },
 				{ title: 'Analytics', href: '/account/analytics', icon: BarChartIcon },
 				{ title: 'Starred', href: '/account/starred', icon: StarIcon },
 				{ title: 'API Keys', href: '/account/api-keys', icon: KeyIcon },
@@ -74,7 +86,12 @@
 	];
 
 	const flatNav = $derived(navGroups.flatMap((g) => g.items));
-	const currentPath = $derived(page.url.pathname);
+	const currentPath = $derived(
+		page.url.pathname +
+			(page.url.searchParams.get('section')
+				? `?section=${page.url.searchParams.get('section')}`
+				: '')
+	);
 	const currentNavItem = $derived(flatNav.find((i) => i.href === currentPath) ?? flatNav[0]);
 
 	async function signOut() {

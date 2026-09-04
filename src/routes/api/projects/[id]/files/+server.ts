@@ -1,11 +1,12 @@
-import { json, type RequestEvent } from '@sveltejs/kit';
+import { withParserSlot } from '$lib/backend/document-text';
+import { isHttpError, json, type RequestEvent } from '@sveltejs/kit';
 import { db, generateId } from '$lib/db';
 import { projects, projectMembers, projectFiles, storage } from '$lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { z } from 'zod';
 import { extractTextFromPDF } from '$lib/utils/pdf-extraction';
 import { extractTextFromEPUB } from '$lib/utils/epub-extraction';
-import { MAX_UPLOAD_BYTES, saveFile } from '$lib/backend/storage';
+import { MAX_UPLOAD_BYTES, saveFile, deleteFile } from '$lib/backend/storage';
 import path from 'path';
 import { getAuthenticatedUserId } from '$lib/backend/auth-utils';
 
@@ -124,9 +125,9 @@ export async function POST({ params, request }: RequestEvent) {
 		let extractedContent: string | null = null;
 		try {
 			if (fileType === 'pdf') {
-				extractedContent = await extractTextFromPDF(buffer);
+				extractedContent = await withParserSlot(() => extractTextFromPDF(buffer));
 			} else if (fileType === 'epub') {
-				extractedContent = await extractTextFromEPUB(buffer);
+				extractedContent = await withParserSlot(() => extractTextFromEPUB(buffer));
 			} else if (fileType === 'markdown' || fileType === 'text') {
 				extractedContent = buffer.toString('utf-8');
 			}
@@ -159,6 +160,9 @@ export async function POST({ params, request }: RequestEvent) {
 			{ status: 201 }
 		);
 	} catch (error) {
+		if (isHttpError(error)) {
+			return json({ error: error.body.message }, { status: error.status });
+		}
 		console.error('File upload error:', error);
 		return json({ error: 'Failed to upload file' }, { status: 500 });
 	}
@@ -194,8 +198,8 @@ export async function DELETE({ params, url, request }: RequestEvent) {
 		return json({ error: 'File not found' }, { status: 404 });
 	}
 
-	// Delete the project file (storage cleanup can be done separately)
 	await db.delete(projectFiles).where(eq(projectFiles.id, fileId));
+	await deleteFile(file.storageId);
 
 	// Update project's updatedAt
 	await db.update(projects).set({ updatedAt: new Date() }).where(eq(projects.id, projectId));

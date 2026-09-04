@@ -23,10 +23,15 @@
 		titleMatch: boolean;
 	};
 
-	const search = useCachedQuery<SearchResult[]>(api.conversations.search, () => ({
-		search: debouncedInput.current,
-		mode: searchMode,
-	}));
+	// An empty term must never reach the endpoint: `?search=` is treated as "no
+	// search" there and returns the plain conversation list, which this modal would
+	// then render as a page of untitled, zero-match results.
+	const hasQuery = $derived(debouncedInput.current.trim().length > 0);
+	const search = useCachedQuery<SearchResult[]>(
+		api.conversations.search,
+		() => ({ search: debouncedInput.current.trim(), mode: searchMode }),
+		{ enabled: () => hasQuery }
+	);
 
 	// Reset selected index when search results change
 	$effect(() => {
@@ -118,13 +123,13 @@
 			</div>
 		</div>
 
-		{#if search.isLoading}
+		{#if hasQuery && search.isLoading}
 			<div class="flex justify-center py-8">
 				<div
 					class="size-6 animate-spin rounded-full border-2 border-current border-t-transparent"
 				></div>
 			</div>
-		{:else if search.data?.length}
+		{:else if hasQuery && search.data?.length}
 			<div class="max-h-96 space-y-2 overflow-y-auto">
 				{#each search.data as { conversation, messages, titleMatch }, index}
 					<div

@@ -7,6 +7,7 @@
 
 import type { ChatCompletionTool } from 'openai/resources/chat/completions';
 import { nanoGptUrl } from '$lib/backend/nano-gpt-url.server';
+import { DEFAULT_UTILITY_MODEL } from '$lib/backend/default-models';
 
 /**
  * MCP tool definitions in OpenAI-compatible format
@@ -219,7 +220,7 @@ export const mcpToolDefinitions: ChatCompletionTool[] = [
 					},
 					model: {
 						type: 'string',
-						description: 'Optional vision model to use (default: glm-5.3-flash)',
+						description: 'Optional vision model override (defaults to the Utility Model setting)',
 					},
 				},
 				required: ['prompt'],
@@ -231,10 +232,16 @@ export const mcpToolDefinitions: ChatCompletionTool[] = [
 /**
  * Execute an MCP tool and return the result
  */
+export type McpToolOptions = {
+	visionModel?: string | null;
+	visionProvider?: string | null;
+};
+
 export async function executeMcpTool(
 	toolName: string,
 	toolArgs: Record<string, unknown>,
-	apiKey: string
+	apiKey: string,
+	options: McpToolOptions = {}
 ): Promise<{ success: boolean; result: string; error?: string }> {
 	try {
 		switch (toolName) {
@@ -257,7 +264,7 @@ export async function executeMcpTool(
 			case 'nanogpt_list_video_models':
 				return await executeListModels('video', toolArgs, apiKey);
 			case 'nanogpt_vision':
-				return await executeVision(toolArgs, apiKey);
+				return await executeVision(toolArgs, apiKey, options);
 			default:
 				return { success: false, result: '', error: `Unknown tool: ${toolName}` };
 		}
@@ -616,11 +623,12 @@ async function executeListAudioModels(
 
 async function executeVision(
 	args: Record<string, unknown>,
-	apiKey: string
+	apiKey: string,
+	options: McpToolOptions = {}
 ): Promise<{ success: boolean; result: string; error?: string }> {
 	const prompt = args.prompt as string;
 	const imageUrl = args.image_url as string;
-	const model = (args.model as string) || 'z-ai/glm-5.3-flash';
+	const model = (args.model as string) || options.visionModel || DEFAULT_UTILITY_MODEL;
 
 	const requestBody = {
 		model,
@@ -639,6 +647,7 @@ async function executeVision(
 	const response = await fetch(nanoGptUrl('/v1/chat/completions'), {
 		method: 'POST',
 		headers: {
+			...(options.visionProvider ? { 'X-Provider': options.visionProvider } : {}),
 			Authorization: `Bearer ${apiKey}`,
 			'Content-Type': 'application/json',
 		},

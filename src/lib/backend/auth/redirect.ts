@@ -25,6 +25,20 @@ export function redirectToAuthorized(url: URL, fallback = '/account'): never {
 	redirect(303, to);
 }
 
+/**
+ * Only a same-site path is honoured. `//evil.example`, `/\\evil.example`, absolute
+ * URLs and anything with a scheme would otherwise turn a login link into an open
+ * redirect off a trusted domain.
+ */
 export function getRedirectTo(url: URL): string | null {
-	return url.searchParams.get(PARAM_NAME);
+	const raw = url.searchParams.get(PARAM_NAME);
+	if (!raw) return null;
+	if (!/^\/(?![\/\\])/.test(raw)) return null;
+	try {
+		const resolved = new URL(raw, url.origin);
+		if (resolved.origin !== url.origin) return null;
+		return resolved.pathname + resolved.search + resolved.hash;
+	} catch {
+		return null;
+	}
 }

@@ -13,8 +13,10 @@ import { decryptApiKey, isEncrypted } from '$lib/encryption';
 import {
 	apiKeysEqual,
 	CURRENT_DEVELOPER_API_KEY_HASH_PREFIX,
+	DEVELOPER_API_KEY_PATTERN,
 	hashDeveloperApiKey,
 	isCurrentDeveloperApiKeyHash,
+	legacyHashDeveloperApiKey,
 } from '$lib/backend/api-key-security';
 
 function getStoredApiKeyValue(storedKey: string): string {
@@ -56,11 +58,31 @@ type ApiKeyAuthRecord = {
 	keyHash: string | null;
 };
 
-async function findApiKeyByStoredValue(legacyOnly = false): Promise<ApiKeyAuthRecord[]> {
-	return db.query.apiKeys.findMany({
-		where: legacyOnly
-			? sql`${apiKeys.keyHash} is null or ${apiKeys.keyHash} not like ${`${CURRENT_DEVELOPER_API_KEY_HASH_PREFIX}%`}`
-			: undefined,
+/**
+ * Whether any key row still carries a pre-v3 hash. Cached so the question costs
+ * one COUNT every few minutes instead of a full-table decrypt per failed login;
+ * once the backfill script has run this stays false and the PBKDF2 path is dead.
+ */
+const LEGACY_CHECK_TTL_MS = 5 * 60 * 1000;
+let legacyRowsKnownAt = 0;
+let legacyRowsExist = true;
+
+async function hasLegacyApiKeyRows(): Promise<boolean> {
+	if (Date.now() - legacyRowsKnownAt < LEGACY_CHECK_TTL_MS) return legacyRowsExist;
+	const [row] = await db
+		.select({ count: sql<number>`count(*)` })
+		.from(apiKeys)
+		.where(
+			sql`${apiKeys.keyHash} is null or ${apiKeys.keyHash} not like ${`${CURRENT_DEVELOPER_API_KEY_HASH_PREFIX}%`}`
+		);
+	legacyRowsExist = Number(row?.count ?? 0) > 0;
+	legacyRowsKnownAt = Date.now();
+	return legacyRowsExist;
+}
+
+async function findApiKeyByHash(keyHash: string): Promise<ApiKeyAuthRecord | undefined> {
+	return db.query.apiKeys.findFirst({
+		where: eq(apiKeys.keyHash, keyHash),
 		columns: {
 			id: true,
 			userId: true,
@@ -94,7 +116,8 @@ export async function getUserIdFromApiKey(
 		return err('Empty API key. Provide your key after "Bearer "');
 	}
 
-	if (!keyValue.startsWith('nc_')) {
+	// Exact format first: junk never reaches hashing or the database.
+	if (!DEVELOPER_API_KEY_PATTERN.test(keyValue)) {
 		return err(
 			'Invalid API key format. Keys should start with "nc_". Generate one at /account/developer'
 		);
@@ -103,25 +126,13 @@ export async function getUserIdFromApiKey(
 	try {
 		const keyHash = hashDeveloperApiKey(keyValue);
 
-		let apiKeyRecord = await db.query.apiKeys.findFirst({
-			where: eq(apiKeys.keyHash, keyHash),
-			columns: {
-				id: true,
-				userId: true,
-				key: true,
-				keyHash: true,
-			},
-		});
+		let apiKeyRecord = await findApiKeyByHash(keyHash);
 
-		if (!apiKeyRecord) {
-			const legacyApiKeys = await findApiKeyByStoredValue(true);
-			apiKeyRecord = legacyApiKeys.find((record) => {
-				try {
-					return apiKeysEqual(getStoredApiKeyValue(record.key), keyValue);
-				} catch {
-					return false;
-				}
-			});
+		// Rows the backfill hasn't rewritten yet are still findable by their old
+		// hash; a hit gets upgraded below. Run `bun run db:backfill-api-key-hashes`
+		// to retire this branch.
+		if (!apiKeyRecord && (await hasLegacyApiKeyRows())) {
+			apiKeyRecord = await findApiKeyByHash(legacyHashDeveloperApiKey(keyValue));
 		}
 
 		if (!apiKeyRecord) {

@@ -22,6 +22,7 @@ export const settings = createPersistedObj('settings', {
 	reasoningEffort: 'auto' as ReasoningEffort | 'auto',
 	theme: undefined as string | undefined,
 	temporaryMode: false as boolean,
+	wideChat: false as boolean,
 	ttsVoice: 'alloy' as string,
 	ttsSpeed: 1.0 as number,
 	ttsModel: 'tts-1' as string,

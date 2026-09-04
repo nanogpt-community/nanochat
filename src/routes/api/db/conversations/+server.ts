@@ -1,3 +1,4 @@
+import { compactConversationNow } from '$lib/backend/compaction';
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { db } from '$lib/db';
@@ -31,8 +32,11 @@ export const GET: RequestHandler = async ({ request, url }) => {
 	// Try to get session, but don't fail if not logged in
 	const userId = await tryGetAuthenticatedUserId(request);
 
-	if (searchTerm) {
+	// A present-but-empty term is still a search (with nothing to match), not a
+	// request for the full list.
+	if (searchTerm !== null) {
 		if (!userId) throw error(401, 'Unauthorized');
+		if (!searchTerm.trim()) return json([]);
 		const results = await searchConversations(userId, searchTerm, searchMode ?? 'fuzzy');
 		return json(results);
 	}
@@ -118,6 +122,11 @@ export const POST: RequestHandler = async ({ request }) => {
 					body.fromMessageId
 				);
 				return json({ conversationId: newConversationId });
+			}
+
+			case 'compact': {
+				const result = await compactConversationNow(body.conversationId, userId);
+				return json(result);
 			}
 
 			case 'updateTitle': {

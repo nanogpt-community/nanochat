@@ -1,12 +1,28 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { saveFile } from '$lib/backend/storage';
+import { saveFile, deleteFile } from '$lib/backend/storage';
 import { db } from '$lib/db';
-import { user } from '$lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { user, storage } from '$lib/db/schema';
+import { and, eq } from 'drizzle-orm';
 import { getAuthenticatedUserId } from '$lib/backend/auth-utils';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
+async function currentAvatar(userId: string): Promise<string | null> {
+    const row = await db.query.user.findFirst({ where: eq(user.id, userId), columns: { image: true } });
+    return row?.image ?? null;
+}
+
+/** The old avatar was left behind on every change; remove it if it was ours. */
+async function forgetPreviousAvatar(previousImage: string | null, userId: string): Promise<void> {
+    const id = previousImage?.match(/^\/api\/storage\/([0-9a-f-]{36})$/)?.[1];
+    if (!id) return;
+    const owned = await db.query.storage.findFirst({
+        where: and(eq(storage.id, id), eq(storage.userId, userId)),
+        columns: { id: true },
+    });
+    if (owned) await deleteFile(id).catch(() => false);
+}
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 
 // POST - Upload avatar image
@@ -40,6 +56,7 @@ export const POST: RequestHandler = async ({ request }) => {
         const filename = `avatar-${userId}-${Date.now()}.${ext}`;
 
         // Save file using existing storage infrastructure
+        const previousImage = await currentAvatar(userId);
         const savedFile = await saveFile(buffer, filename, file.type, userId);
 
         // Construct the public URL for the uploaded image
@@ -52,6 +69,7 @@ export const POST: RequestHandler = async ({ request }) => {
                 updatedAt: new Date()
             })
             .where(eq(user.id, userId));
+        await forgetPreviousAvatar(previousImage, userId);
 
         return json({
             success: true,
@@ -75,7 +93,8 @@ export const POST: RequestHandler = async ({ request }) => {
     const ext = mimeType.split('/')[1] || 'jpg';
     const filename = `avatar-${userId}-${Date.now()}.${ext}`;
 
-    const savedFile = await saveFile(Buffer.from(body), filename, mimeType, userId);
+    const previousImage = await currentAvatar(userId);
+        const savedFile = await saveFile(Buffer.from(body), filename, mimeType, userId);
     const imageUrl = `/api/storage/${savedFile.id}`;
 
     // Update user's image field
@@ -85,6 +104,7 @@ export const POST: RequestHandler = async ({ request }) => {
             updatedAt: new Date()
         })
         .where(eq(user.id, userId));
+        await forgetPreviousAvatar(previousImage, userId);
 
     return json({
         success: true,

@@ -205,6 +205,7 @@
 			<MessageComponent
 				{message}
 				{childMessageId}
+				isLast={i === visibleMessages.length - 1}
 				initialRating={ratingByMessageId.get(message.id)}
 			/>
 			{#if message.id === conversation.data?.compactedThroughMessageId}

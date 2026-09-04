@@ -24,10 +24,8 @@
 	import ShinyText from '$lib/components/animations/shiny-text.svelte';
 	import MessageRating from '$lib/components/ui/message-rating.svelte';
 	import ChevronRightIcon from '~icons/lucide/chevron-right';
-	import ChevronDownIcon from '~icons/lucide/chevron-down';
 	import RefreshCwIcon from '~icons/lucide/refresh-cw';
 	import PencilIcon from '~icons/lucide/pencil';
-	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
 	import { AnnotationSchema, type Annotation } from '$lib/types';
 	import ExternalLinkIcon from '~icons/lucide/external-link';
 	import GlobeIcon from '~icons/lucide/globe';
@@ -61,9 +59,17 @@
 		};
 		/** Shared/public view: hide interactive actions. */
 		readonly?: boolean;
+		/** Actions stay visible on the newest message; older ones show them on hover. */
+		isLast?: boolean;
 	};
 
-	let { message, childMessageId, initialRating, readonly = false }: Props = $props();
+	let {
+		message,
+		childMessageId,
+		initialRating,
+		readonly = false,
+		isLast = false,
+	}: Props = $props();
 
 	const safeContent = $derived.by(() =>
 		typeof message.content === 'string' ? message.content : ''
@@ -583,9 +589,10 @@
 		{/if}
 		<div
 			class={cn(
-				'flex flex-wrap place-items-center gap-1 transition-all duration-300 ease-out group-hover:opacity-100 md:gap-2 md:opacity-0',
+				'flex flex-wrap place-items-center gap-1 transition-all duration-300 ease-out group-hover:opacity-100 md:gap-1.5',
 				{
 					'justify-end': message.role === 'user',
+					'md:opacity-0': !isLast,
 				}
 			)}
 		>
@@ -684,32 +691,46 @@
 				</Tooltip>
 			{/if}
 			{#if !readonly}
-				<DropdownMenu.Root>
-					<DropdownMenu.Trigger
-						class={cn(
-							'hover:bg-accent order-3 flex size-9 items-center justify-center rounded-md transition-colors md:size-7',
-							{ 'order-3': message.role === 'user' }
-						)}
-						aria-label="More message actions"
-					>
-						<ChevronDownIcon class="size-4" />
-					</DropdownMenu.Trigger>
-					<DropdownMenu.Content align="start" class="w-40">
-						<DropdownMenu.Item onclick={startEditing} class="cursor-pointer gap-2">
-							<PencilIcon class="size-4" />
-							<span>Edit</span>
-						</DropdownMenu.Item>
-						<DropdownMenu.Item onclick={regenerateInPlace} class="cursor-pointer gap-2">
+				<Tooltip>
+					{#snippet trigger(tooltip)}
+						<Button
+							size="icon"
+							variant="ghost"
+							class="order-3 size-9 md:size-7"
+							onclick={regenerateInPlace}
+							aria-label="Regenerate response"
+							{...tooltip.trigger}
+						>
 							<RefreshCwIcon class="size-4" />
-							<span>Regenerate</span>
-						</DropdownMenu.Item>
-					</DropdownMenu.Content>
-				</DropdownMenu.Root>
+						</Button>
+					{/snippet}
+					{message.role === 'user' ? 'Regenerate response' : 'Regenerate'}
+				</Tooltip>
+				<Tooltip>
+					{#snippet trigger(tooltip)}
+						<Button
+							size="icon"
+							variant="ghost"
+							class="order-3 size-9 md:size-7"
+							onclick={startEditing}
+							aria-label="Edit message"
+							{...tooltip.trigger}
+						>
+							<PencilIcon class="size-4" />
+						</Button>
+					{/snippet}
+					Edit
+				</Tooltip>
+			{/if}
+			{#if message.role === 'assistant' && safeContent.length > 0 && !message.error && !readonly}
+				<div class="order-4 flex items-center md:ml-1">
+					<MessageRating messageId={message.id} {initialRating} onRate={handleRating} />
+				</div>
 			{/if}
 
 			{#if message.role === 'assistant'}
 				<!-- Desktop: Show all metadata inline -->
-				<div class="hidden items-center gap-2 md:flex">
+				<div class="order-5 hidden items-center gap-2 md:ml-1 md:flex">
 					{#if message.modelId}
 						{@const modelName = message.modelId.split('/').pop() || message.modelId}
 						<span class="text-muted-foreground text-xs">{modelName}</span>
@@ -765,7 +786,7 @@
 					{/if}
 				</div>
 				<!-- Mobile: Compact metadata in a single info chip -->
-				<div class="flex items-center gap-1.5 md:hidden">
+				<div class="order-5 flex items-center gap-1.5 md:hidden">
 					{#if message.modelId}
 						{@const modelName = message.modelId.split('/').pop() || message.modelId}
 						<span class="text-muted-foreground max-w-[100px] truncate text-xs">{modelName}</span>
@@ -776,11 +797,6 @@
 				</div>
 			{/if}
 		</div>
-		{#if message.role === 'assistant' && safeContent.length > 0 && !message.error && !readonly}
-			<div class="mt-2">
-				<MessageRating messageId={message.id} {initialRating} onRate={handleRating} />
-			</div>
-		{/if}
 	</div>
 
 	{#if safeImages.length > 0}

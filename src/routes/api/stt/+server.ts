@@ -1,3 +1,5 @@
+import { resolveNanoGptApiKey } from '$lib/backend/nanogpt-key.server';
+import { checkSharedKeyUse } from '$lib/backend/shared-key-policy';
 import { env } from '$env/dynamic/private';
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
@@ -18,6 +20,7 @@ const COST_PER_MINUTE: Record<string, number> = {
 type ResolvedNanoGPTKey = {
 	value: string;
 	source: 'authorization' | 'x-api-key' | 'derived';
+	usingServerKey?: boolean;
 };
 
 const getExplicitNanoGPTKey = (request: Request): ResolvedNanoGPTKey | null => {
@@ -46,9 +49,8 @@ const resolveNanoGPTKey = async (
 
 	if (!userId) return null;
 
-	const userKey = await getUserKey(userId, 'nanogpt');
-	const derivedKey = userKey || env.NANOGPT_API_KEY;
-	return derivedKey ? { value: derivedKey, source: 'derived' } : null;
+	const key = await resolveNanoGptApiKey(userId);
+	return key ? { value: key.apiKey, source: 'derived', usingServerKey: key.usingServerKey } : null;
 };
 
 export const POST: RequestHandler = async ({ request, fetch }) => {
@@ -75,6 +77,14 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 
 		if (!resolvedKey) {
 			return json({ error: 'Authentication required or NanoGPT API key missing' }, { status: 401 });
+		}
+		if (userId) {
+			const denial = await checkSharedKeyUse({
+				userId,
+				usingServerKey: resolvedKey.usingServerKey ?? false,
+				modelId: model,
+			});
+			if (denial) return json({ error: denial.message }, { status: denial.status });
 		}
 
 		const upstreamHeaders: Record<string, string> = {};

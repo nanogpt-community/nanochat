@@ -1,6 +1,7 @@
 import { building } from '$app/environment';
 import { auth } from '$lib/auth';
 import { migrateEmailDomains } from '$lib/migrations/email-domain';
+import { migrateApiKeyHashes } from '$lib/migrations/api-key-hashes';
 import { startScheduler } from '$lib/backend/scheduler';
 import { appendSensitiveVary, applyNoStoreHeaders } from '$lib/backend/http-security';
 import type { Handle } from '@sveltejs/kit';
@@ -55,5 +56,6 @@ if (!building) {
 	// }
 
 	migrateEmailDomains();
+	migrateApiKeyHashes();
 	startScheduler();
 }

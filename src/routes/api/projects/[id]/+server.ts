@@ -1,3 +1,4 @@
+import { deleteFile } from '$lib/backend/storage';
 import { json, type RequestEvent } from '@sveltejs/kit';
 import { db, generateId } from '$lib/db';
 import { projects, projectMembers, conversations, projectFiles } from '$lib/db/schema';
@@ -151,6 +152,13 @@ export async function DELETE({ params, request }: RequestEvent) {
         .update(conversations)
         .set({ projectId: null, updatedAt: new Date() })
         .where(eq(conversations.projectId, projectId));
+
+    // Stored objects don't cascade; drop them so deleted projects stop eating disk.
+    const files = await db.query.projectFiles.findMany({
+        where: eq(projectFiles.projectId, projectId),
+        columns: { storageId: true },
+    });
+    await Promise.all(files.map((f) => deleteFile(f.storageId).catch(() => false)));
 
     // Delete the project (cascade will delete files and members)
     await db.delete(projects).where(eq(projects.id, projectId));

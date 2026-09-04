@@ -1,6 +1,6 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
 import { db, generateId } from '$lib/db';
-import { projects, projectMembers, user } from '$lib/db/schema';
+import { projects, projectMembers, user, conversations } from '$lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { z } from 'zod';
 import { getAuthenticatedUserId } from '$lib/backend/auth-utils';
@@ -180,12 +180,24 @@ export async function DELETE({ params, url, request }: RequestEvent) {
         return json({ error: 'Permission denied' }, { status: 403 });
     }
 
-    // Remove member
-    await db
+    // Self-removal proves nothing about membership by itself; the DELETE has to
+    // actually match a row before this request may touch the project.
+    const removed = await db
         .delete(projectMembers)
-        .where(and(eq(projectMembers.projectId, projectId), eq(projectMembers.userId, targetUserId)));
+        .where(and(eq(projectMembers.projectId, projectId), eq(projectMembers.userId, targetUserId)))
+        .returning({ id: projectMembers.id });
 
-    // Update project's updatedAt
+    if (removed.length === 0) {
+        return json({ error: 'Not a member of this project' }, { status: 404 });
+    }
+
+    // Prompt assembly re-checks access anyway; detaching makes the revocation
+    // visible in the removed user's sidebar immediately too.
+    await db
+        .update(conversations)
+        .set({ projectId: null })
+        .where(and(eq(conversations.projectId, projectId), eq(conversations.userId, targetUserId)));
+
     await db.update(projects).set({ updatedAt: new Date() }).where(eq(projects.id, projectId));
 
     return json({ success: true });

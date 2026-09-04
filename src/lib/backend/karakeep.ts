@@ -1,3 +1,4 @@
+import { assertPublicHttpUrl } from '$lib/backend/egress';
 import type { Conversation, Message } from '$lib/db/schema';
 
 export interface KarakeepBookmark {
@@ -51,19 +52,29 @@ export function formatChatAsMarkdown(conversation: Conversation, messages: Messa
 /**
  * Tests connection to Karakeep instance
  */
+/**
+ * Origin plus path only. A query string or fragment in the configured URL used to
+ * be concatenated ahead of `/api/v1/...`, which let the stored value rewrite the
+ * request path.
+ */
+export async function karakeepBase(configured: string): Promise<string> {
+	const url = await assertPublicHttpUrl(configured, 'Karakeep');
+	return `${url.origin}${url.pathname.replace(/\/+$/, '')}`;
+}
+
 export async function testKarakeepConnection(
 	url: string,
 	apiKey: string
 ): Promise<{ success: boolean; error?: string }> {
 	try {
-		// Normalize URL
-		const baseUrl = url.endsWith('/') ? url.slice(0, -1) : url;
+		const baseUrl = await karakeepBase(url);
 
 		// Test connection by attempting to get user info
 		const response = await fetch(`${baseUrl}/api/v1/users/me`, {
 			headers: {
 				Authorization: `Bearer ${apiKey}`,
 			},
+			redirect: 'error',
 		});
 
 		if (!response.ok) {
@@ -93,8 +104,7 @@ export async function saveToKarakeep(
 	sourceUrl?: string
 ): Promise<{ success: boolean; bookmarkId?: string; error?: string }> {
 	try {
-		// Normalize URL
-		const baseUrl = karakeepUrl.endsWith('/') ? karakeepUrl.slice(0, -1) : karakeepUrl;
+		const baseUrl = await karakeepBase(karakeepUrl);
 
 		// Format the chat as markdown
 		const markdown = formatChatAsMarkdown(conversation, messages);
@@ -115,6 +125,7 @@ export async function saveToKarakeep(
 				Authorization: `Bearer ${apiKey}`,
 			},
 			body: JSON.stringify(payload),
+			redirect: 'error',
 		});
 
 		if (!response.ok) {

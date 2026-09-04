@@ -26,6 +26,11 @@ export async function resolveConversationRefs(
 	return { projectId, assistantId };
 }
 
+/** Owner or current member. Re-checked at prompt time so revoked membership stops mattering immediately. */
+export async function canAccessProject(userId: string, projectId: string): Promise<boolean> {
+	return (await assertUsableProject(userId, projectId)) !== null;
+}
+
 async function assertUsableProject(userId: string, projectId: string): Promise<string | null> {
 	const owned = await db.query.projects.findFirst({
 		where: and(eq(projects.id, projectId), eq(projects.userId, userId)),

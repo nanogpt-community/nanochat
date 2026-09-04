@@ -1,6 +1,35 @@
 // EPUB text extraction utility
 import EPub from 'epub2';
+import AdmZip from 'adm-zip';
 import * as htmlparser2 from 'htmlparser2';
+
+// Expansion budget. epub2 reads whole entries into memory, so a zip bomb or a
+// million-entry archive must be rejected from the central directory alone,
+// before anything is inflated.
+const MAX_ENTRIES = 2000;
+const MAX_TOTAL_UNCOMPRESSED = 256 * 1024 * 1024;
+const MAX_ENTRY_RATIO = 200;
+const RATIO_CHECK_MIN_BYTES = 1024 * 1024;
+const MAX_TEXT_CHARS = 5_000_000;
+const EPUB_TIMEOUT_MS = 60_000;
+
+function assertSaneArchive(filePath: string): void {
+    const entries = new AdmZip(filePath).getEntries();
+    if (entries.length > MAX_ENTRIES) {
+        throw new Error(`EPUB has too many entries (${entries.length})`);
+    }
+    let total = 0;
+    for (const entry of entries) {
+        const { size, compressedSize } = entry.header;
+        total += size;
+        if (total > MAX_TOTAL_UNCOMPRESSED) {
+            throw new Error('EPUB expands beyond the allowed size');
+        }
+        if (size > RATIO_CHECK_MIN_BYTES && compressedSize > 0 && size / compressedSize > MAX_ENTRY_RATIO) {
+            throw new Error(`EPUB entry ${entry.entryName} has an implausible compression ratio`);
+        }
+    }
+}
 
 /**
  * Extract plain text from HTML content by stripping all tags
@@ -40,7 +69,9 @@ export async function extractTextFromEPUB(input: string | Buffer): Promise<strin
             tempFileActive = true;
         }
 
-        return await new Promise((resolve, reject) => {
+        assertSaneArchive(filePath);
+
+        const parse = new Promise<string>((resolve, reject) => {
             const epub = new EPub(filePath);
 
             epub.on('error', (err: Error) => {
@@ -61,11 +92,16 @@ export async function extractTextFromEPUB(input: string | Buffer): Promise<strin
 
                     // Get table of contents / spine
                     const flow = epub.flow || [];
+                    let totalChars = 0;
 
                     // Extract text from each chapter
                     for (const item of flow) {
                         const itemId = item.id;
                         if (!itemId) continue;
+                        if (totalChars >= MAX_TEXT_CHARS) {
+                            chapters.push('[Remaining chapters omitted: extracted text limit reached]');
+                            break;
+                        }
 
                         try {
                             const chapterContent = await new Promise<string>((resolveChapter) => {
@@ -87,7 +123,9 @@ export async function extractTextFromEPUB(input: string | Buffer): Promise<strin
                                     if (item.title) {
                                         chapters.push(`## ${item.title}`);
                                     }
-                                    chapters.push(plainText);
+                                    const room = MAX_TEXT_CHARS - totalChars;
+                                    chapters.push(plainText.length > room ? plainText.slice(0, room) : plainText);
+                                    totalChars += Math.min(plainText.length, room);
                                     chapters.push('');
                                 }
                             }
@@ -111,6 +149,16 @@ export async function extractTextFromEPUB(input: string | Buffer): Promise<strin
 
             epub.parse();
         });
+
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        const timeout = new Promise<never>((_, reject) => {
+            timer = setTimeout(() => reject(new Error('EPUB parsing timed out')), EPUB_TIMEOUT_MS);
+        });
+        try {
+            return await Promise.race([parse, timeout]);
+        } finally {
+            clearTimeout(timer);
+        }
     } finally {
         // Clean up temp file if we created one
         if (tempFileActive && filePath) {

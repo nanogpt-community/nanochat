@@ -1,4 +1,4 @@
-import { json, error } from '@sveltejs/kit';
+import { json, error, isHttpError } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { existsSync, unlinkSync } from 'fs';
 import { MAX_UPLOAD_BYTES, saveFile } from '$lib/backend/storage';
@@ -34,6 +34,7 @@ export const POST: RequestHandler = async ({ request }) => {
             url: `/api/storage/${savedFile.id}`,
         });
     } catch (e) {
+        if (isHttpError(e)) throw e;
         console.error(e);
         return error(500, 'Failed to save file');
     }

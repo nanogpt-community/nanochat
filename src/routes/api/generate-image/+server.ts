@@ -130,6 +130,19 @@ export async function POST({ request }: RequestEvent) {
 
 	// Build request payload
 	const imageParams = args.image_params ?? {};
+	const PROTECTED_IMAGE_PARAMS = new Set([
+		'resolution',
+		'nImages',
+		'quality',
+		'aspect_ratio',
+		'seed',
+		'model',
+		'n',
+		'prompt',
+		'response_format',
+		'size',
+		'imageDataUrl',
+	]);
 	const rawImageCount = imageParams.nImages;
 	const parsedImageCount =
 		typeof rawImageCount === 'number' ? rawImageCount : Number(rawImageCount);
@@ -162,7 +175,8 @@ export async function POST({ request }: RequestEvent) {
 
 	// Pass through any additional model-specific params
 	for (const [key, value] of Object.entries(imageParams)) {
-		if (!['resolution', 'nImages', 'quality', 'aspect_ratio', 'seed'].includes(key)) {
+		// Validated fields above must not be overwritten by a caller-supplied duplicate.
+		if (!PROTECTED_IMAGE_PARAMS.has(key)) {
 			payload[key] = value;
 		}
 	}

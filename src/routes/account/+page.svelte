@@ -2,6 +2,7 @@
 	import { useCachedQuery, api, invalidateQueryPattern } from '$lib/cache/cached-query.svelte';
 	import { session } from '$lib/state/session.svelte';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
 	import { ResultAsync } from 'neverthrow';
 	import { mutate } from '$lib/client/mutation.svelte';
 	import type { UserSettings } from '$lib/api';
@@ -10,6 +11,7 @@
 	import { Input } from '$lib/components/ui/input';
 	import { Button } from '$lib/components/ui/button';
 	import PasskeySettings from '$lib/components/account/PasskeySettings.svelte';
+	import BackgroundModelPicker from '$lib/components/account/BackgroundModelPicker.svelte';
 	import { callModal } from '$lib/components/ui/modal/global-modal.svelte';
 	import Trash2 from '~icons/lucide/trash-2';
 	import FolderX from '~icons/lucide/folder-x';
@@ -32,10 +34,6 @@
 	let privacyMode = $derived(settings.data?.privacyMode ?? false);
 	let autoCompactEnabled = $derived(settings.data?.autoCompactEnabled ?? true);
 	let autoCompactThreshold = $state(80);
-	let memoryModelId = $state(settings.data?.memoryModelId ?? '');
-	let memoryProviderId = $state(settings.data?.memoryProviderId ?? '');
-	let memoryModelProviders = $state<ProviderInfo[]>([]);
-	let memorySupportsProviderSelection = $state(false);
 	const memories = useCachedQuery<UserMemory[]>(api.user_memories.list, {});
 	const memoryInvalidate = { invalidatePatterns: [api.user_memories.list.url] };
 	let newMemory = $state('');
@@ -47,10 +45,6 @@
 	let mcpEnabled = $derived(settings.data?.mcpEnabled ?? false);
 	let followUpQuestionsEnabled = $derived(settings.data?.followUpQuestionsEnabled ?? true);
 	let suggestedPromptsEnabled = $derived(settings.data?.suggestedPromptsEnabled ?? true);
-	let titleModelId = $state(settings.data?.titleModelId ?? '');
-	let titleProviderId = $state(settings.data?.titleProviderId ?? '');
-	let followUpModelId = $state(settings.data?.followUpModelId ?? '');
-	let followUpProviderId = $state(settings.data?.followUpProviderId ?? '');
 	let timezone = $state(settings.data?.timezone ?? '');
 	let timezoneSaving = $state(false);
 	const browserTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone ?? 'UTC';
@@ -64,37 +58,9 @@
 	);
 
 	$effect(() => {
-		if (settings.data?.titleModelId) titleModelId = settings.data.titleModelId;
-		if (settings.data?.titleProviderId) titleProviderId = settings.data.titleProviderId;
-		if (settings.data?.followUpModelId) followUpModelId = settings.data.followUpModelId;
-		if (settings.data?.followUpProviderId) followUpProviderId = settings.data.followUpProviderId;
-		if (settings.data?.memoryModelId) memoryModelId = settings.data.memoryModelId;
-		if (settings.data?.memoryProviderId) memoryProviderId = settings.data.memoryProviderId;
 		if (settings.data?.autoCompactThreshold) autoCompactThreshold = settings.data.autoCompactThreshold;
 		if (settings.data?.timezone) timezone = settings.data.timezone;
 	});
-
-	type ProviderInfo = {
-		provider: string;
-		pricing: {
-			inputPer1kTokens: number;
-			outputPer1kTokens: number;
-		};
-		available: boolean;
-	};
-
-	type ModelProvidersResponse = {
-		canonicalId: string;
-		displayName: string;
-		supportsProviderSelection: boolean;
-		providers: ProviderInfo[];
-		error?: string;
-	};
-
-	let titleModelProviders = $state<ProviderInfo[]>([]);
-	let followUpModelProviders = $state<ProviderInfo[]>([]);
-	let titleSupportsProviderSelection = $state(false);
-	let followUpSupportsProviderSelection = $state(false);
 
 	const enabledModels = $derived(
 		Object.values(Provider)
@@ -110,95 +76,6 @@
 				return models.enabled[key] !== undefined;
 			})
 	);
-
-	function formatProviderName(id: string): string {
-		return id
-			.split(/[-_]/)
-			.map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-			.join(' ');
-	}
-
-	function formatPrice(pricing: { inputPer1kTokens: number; outputPer1kTokens: number }): string {
-		return `$${pricing.inputPer1kTokens.toFixed(4)}/$${pricing.outputPer1kTokens.toFixed(4)}`;
-	}
-
-	async function fetchModelProviders(modelId: string): Promise<ModelProvidersResponse | null> {
-		if (!modelId) return null;
-		try {
-			const response = await fetch(`/api/model-providers?modelId=${encodeURIComponent(modelId)}`);
-			if (!response.ok) return null;
-			return await response.json();
-		} catch (e) {
-			console.error('Error fetching providers:', e);
-			return null;
-		}
-	}
-
-	$effect(() => {
-		if (titleModelId) {
-			fetchModelProviders(titleModelId).then((data) => {
-				if (data) {
-					titleSupportsProviderSelection = data.supportsProviderSelection;
-					titleModelProviders = data.providers?.filter((p) => p.available) || [];
-					// Reset provider if current selection is invalid for new model
-					if (titleProviderId && !titleModelProviders.some((p) => p.provider === titleProviderId)) {
-						updateTitleProvider('');
-					}
-				} else {
-					titleSupportsProviderSelection = false;
-					titleModelProviders = [];
-				}
-			});
-		} else {
-			titleSupportsProviderSelection = false;
-			titleModelProviders = [];
-		}
-	});
-
-	$effect(() => {
-		if (followUpModelId) {
-			fetchModelProviders(followUpModelId).then((data) => {
-				if (data) {
-					followUpSupportsProviderSelection = data.supportsProviderSelection;
-					followUpModelProviders = data.providers?.filter((p) => p.available) || [];
-					// Reset provider if current selection is invalid for new model
-					if (
-						followUpProviderId &&
-						!followUpModelProviders.some((p) => p.provider === followUpProviderId)
-					) {
-						updateFollowUpProvider('');
-					}
-				} else {
-					followUpSupportsProviderSelection = false;
-					followUpModelProviders = [];
-				}
-			});
-		} else {
-			followUpSupportsProviderSelection = false;
-			followUpModelProviders = [];
-		}
-	});
-
-	$effect(() => {
-		if (memoryModelId) {
-			fetchModelProviders(memoryModelId).then((data) => {
-				if (data) {
-					memorySupportsProviderSelection = data.supportsProviderSelection;
-					memoryModelProviders = data.providers?.filter((p) => p.available) || [];
-					if (memoryProviderId && !memoryModelProviders.some((p) => p.provider === memoryProviderId)) {
-						saveSetting({ memoryProviderId: '' });
-						memoryProviderId = '';
-					}
-				} else {
-					memorySupportsProviderSelection = false;
-					memoryModelProviders = [];
-				}
-			});
-		} else {
-			memorySupportsProviderSelection = false;
-			memoryModelProviders = [];
-		}
-	});
 
 	async function saveSetting(fields: Record<string, unknown>) {
 		if (!session.current?.user.id) return;
@@ -248,74 +125,6 @@
 		await mutate(`${api.user_memories.remove.url}?all=true`, { method: 'DELETE' }, memoryInvalidate);
 	}
 
-	async function updateTitleProvider(id: string) {
-		titleProviderId = id;
-		if (!session.current?.user.id) return;
-
-		await mutate(
-			api.user_settings.set.url,
-			{
-				action: 'update',
-				titleProviderId: id,
-				// Do NOT reset model ID
-			},
-			{
-				invalidatePatterns: [api.user_settings.get.url],
-			}
-		);
-	}
-
-	async function updateTitleModel(id: string) {
-		titleModelId = id;
-		// Provider will be reset in the effect if needed
-		if (!session.current?.user.id) return;
-
-		await mutate(
-			api.user_settings.set.url,
-			{
-				action: 'update',
-				titleModelId: id,
-			},
-			{
-				invalidatePatterns: [api.user_settings.get.url],
-			}
-		);
-	}
-
-	async function updateFollowUpProvider(id: string) {
-		followUpProviderId = id;
-		if (!session.current?.user.id) return;
-
-		await mutate(
-			api.user_settings.set.url,
-			{
-				action: 'update',
-				followUpProviderId: id,
-				// Do NOT reset model ID
-			},
-			{
-				invalidatePatterns: [api.user_settings.get.url],
-			}
-		);
-	}
-
-	async function updateFollowUpModel(id: string) {
-		followUpModelId = id;
-		// Provider will be reset in the effect if needed
-		if (!session.current?.user.id) return;
-
-		await mutate(
-			api.user_settings.set.url,
-			{
-				action: 'update',
-				followUpModelId: id,
-			},
-			{
-				invalidatePatterns: [api.user_settings.get.url],
-			}
-		);
-	}
-
 	let karakeepUrl = $state(settings.data?.karakeepUrl ?? '');
 	let karakeepApiKey = $state('');
 	let karakeepSaving = $state(false);
@@ -326,7 +135,12 @@
 	const hasSavedKarakeepApiKey = $derived(settings.data?.hasKarakeepApiKey ?? false);
 
 	type SectionId = 'general' | 'ai' | 'audio' | 'integrations' | 'data' | 'security';
-	let activeSection = $state<SectionId>('general');
+	const sectionIds: SectionId[] = ['general', 'ai', 'audio', 'integrations', 'data', 'security'];
+	// Sections are left-nav entries (/account?section=…), not a second tab bar.
+	const activeSection = $derived.by<SectionId>(() => {
+		const requested = page.url.searchParams.get('section');
+		return sectionIds.includes(requested as SectionId) ? (requested as SectionId) : 'general';
+	});
 	const sections: {
 		id: SectionId;
 		label: string;
@@ -874,36 +688,8 @@
 	<title>Account | nanochat</title>
 </svelte:head>
 
-<!-- Section navigation: segmented control style -->
-<div class="scrollbar-hide overflow-x-auto">
-	<div
-		class="bg-muted/50 border-border inline-flex min-w-full items-center gap-0.5 rounded-lg border p-1"
-		role="tablist"
-	>
-		{#each sections as section (section.id)}
-			{@const Icon = section.icon}
-			{@const isActive = activeSection === section.id}
-			<button
-				type="button"
-				role="tab"
-				aria-selected={isActive}
-				onclick={() => (activeSection = section.id)}
-				class={cn(
-					'flex shrink-0 items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium whitespace-nowrap transition-all',
-					isActive
-						? 'bg-background text-foreground shadow-sm'
-						: 'text-muted-foreground hover:text-foreground'
-				)}
-			>
-				<Icon class={cn('size-4', isActive ? 'text-primary' : '')} />
-				{section.label}
-			</button>
-		{/each}
-	</div>
-</div>
-
 <!-- Section header -->
-<div class="mt-6 flex items-center gap-3">
+<div class="flex items-center gap-3">
 	<div
 		class="bg-primary/10 text-primary flex size-10 shrink-0 items-center justify-center rounded-lg"
 	>
@@ -942,11 +728,10 @@
 								list="timezone-options"
 								placeholder={browserTimezone || 'UTC'}
 								bind:value={timezone}
+								onchange={saveTimezone}
+								disabled={timezoneSaving}
 								class="w-full max-w-[320px]"
 							/>
-							<Button onclick={saveTimezone} disabled={timezoneSaving} size="sm">
-								{timezoneSaving ? 'Saving…' : 'Save'}
-							</Button>
 							<Button
 								variant="ghost"
 								size="sm"
@@ -1154,106 +939,47 @@
 						Automatic Tasks
 					</h3>
 					<p class="text-muted-foreground text-xs">
-						Which model handles background tasks like titles and suggestions.
+						Which model handles background tasks like titles, suggestions, memory, and image analysis.
 					</p>
 				</div>
 				<div class="bg-card border-border rounded-lg border p-5">
 					<div class="grid gap-5 md:grid-cols-2">
-						<div class="flex flex-col gap-2">
-							<label for="title-model" class="text-sm font-medium">Chat Title Model</label>
-							<select
-								id="title-model"
-								class="border-input bg-background focus:ring-ring flex h-10 w-full items-center rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-offset-2 focus:outline-none"
-								value={titleModelId}
-								onchange={(e) => updateTitleModel(e.currentTarget.value)}
-							>
-								<option value="">Default (DeepSeek V4 Flash 0731)</option>
-								{#each enabledModels as model}
-									<option value={model.value}>{model.label}</option>
-								{/each}
-							</select>
-							{#if titleSupportsProviderSelection && titleModelProviders.length > 0}
-								<select
-									class="border-input bg-background focus:ring-ring mt-1 flex h-10 w-full items-center rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-offset-2 focus:outline-none"
-									value={titleProviderId}
-									onchange={(e) => updateTitleProvider(e.currentTarget.value)}
-								>
-									<option value="">Provider: Auto</option>
-									{#each titleModelProviders as provider}
-										<option value={provider.provider}>
-											{formatProviderName(provider.provider)} ({formatPrice(provider.pricing)})
-										</option>
-									{/each}
-								</select>
-							{/if}
-							<p class="text-muted-foreground text-xs">Generates chat titles.</p>
-						</div>
-
-						<div class="flex flex-col gap-2">
-							<label for="followup-model" class="text-sm font-medium">Follow-up Model</label>
-							<select
-								id="followup-model"
-								class="border-input bg-background focus:ring-ring flex h-10 w-full items-center rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-offset-2 focus:outline-none"
-								value={followUpModelId}
-								onchange={(e) => updateFollowUpModel(e.currentTarget.value)}
-							>
-								<option value="">Default (DeepSeek V4 Flash 0731)</option>
-								{#each enabledModels as model}
-									<option value={model.value}>{model.label}</option>
-								{/each}
-							</select>
-							{#if followUpSupportsProviderSelection && followUpModelProviders.length > 0}
-								<select
-									class="border-input bg-background focus:ring-ring mt-1 flex h-10 w-full items-center rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-offset-2 focus:outline-none"
-									value={followUpProviderId}
-									onchange={(e) => updateFollowUpProvider(e.currentTarget.value)}
-								>
-									<option value="">Provider: Auto</option>
-									{#each followUpModelProviders as provider}
-										<option value={provider.provider}>
-											{formatProviderName(provider.provider)} ({formatPrice(provider.pricing)})
-										</option>
-									{/each}
-								</select>
-							{/if}
-							<p class="text-muted-foreground text-xs">Generates follow-up questions.</p>
-						</div>
-
-						<div class="flex flex-col gap-2">
-							<label for="memory-model" class="text-sm font-medium">Memory Model</label>
-							<select
-								id="memory-model"
-								class="border-input bg-background focus:ring-ring flex h-10 w-full items-center rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-offset-2 focus:outline-none"
-								value={memoryModelId}
-								onchange={(e) => {
-									memoryModelId = e.currentTarget.value;
-									saveSetting({ memoryModelId: memoryModelId });
-								}}
-							>
-								<option value="">Default (DeepSeek V4 Flash 0731)</option>
-								{#each enabledModels as model}
-									<option value={model.value}>{model.label}</option>
-								{/each}
-							</select>
-							{#if memorySupportsProviderSelection && memoryModelProviders.length > 0}
-								<select
-									class="border-input bg-background focus:ring-ring mt-1 flex h-10 w-full items-center rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-offset-2 focus:outline-none"
-									value={memoryProviderId}
-									onchange={(e) => {
-										memoryProviderId = e.currentTarget.value;
-										saveSetting({ memoryProviderId: memoryProviderId });
-									}}
-								>
-									<option value="">Provider: Auto</option>
-									{#each memoryModelProviders as provider}
-										<option value={provider.provider}>
-											{formatProviderName(provider.provider)} ({formatPrice(provider.pricing)})
-										</option>
-									{/each}
-								</select>
-							{/if}
-							<p class="text-muted-foreground text-xs">Extracts persistent memories from your chats.</p>
-						</div>
+						<BackgroundModelPicker
+							id="title-model"
+							label="Chat Title Model"
+							hint="Generates chat titles."
+							defaultLabel="DeepSeek V4 Flash 0731"
+							modelKey="titleModelId"
+							providerKey="titleProviderId"
+							models={enabledModels}
+						/>
+						<BackgroundModelPicker
+							id="followup-model"
+							label="Follow-up Model"
+							hint="Generates follow-up questions."
+							defaultLabel="DeepSeek V4 Flash 0731"
+							modelKey="followUpModelId"
+							providerKey="followUpProviderId"
+							models={enabledModels}
+						/>
+						<BackgroundModelPicker
+							id="memory-model"
+							label="Memory Model"
+							hint="Extracts persistent memories from your chats."
+							defaultLabel="DeepSeek V4 Flash 0731"
+							modelKey="memoryModelId"
+							providerKey="memoryProviderId"
+							models={enabledModels}
+						/>
+						<BackgroundModelPicker
+							id="utility-model"
+							label="Utility Model"
+							hint="Enhances prompts and analyzes images for the MCP vision tool. Needs a vision-capable model."
+							defaultLabel="GLM 5.3 Flash"
+							modelKey="utilityModelId"
+							providerKey="utilityProviderId"
+							models={enabledModels}
+						/>
 					</div>
 				</div>
 			</div>

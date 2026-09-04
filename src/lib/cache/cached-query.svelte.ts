@@ -299,6 +299,7 @@ export const api = {
 		togglePin: { url: '/api/db/conversations', method: 'POST' } as QueryConfig,
 		remove: { url: '/api/db/conversations', method: 'POST' } as QueryConfig,
 		deleteAll: { url: '/api/db/conversations?all=true', method: 'DELETE' } as QueryConfig,
+		compact: { url: '/api/db/conversations', method: 'POST' } as QueryConfig,
 	},
 	messages: {
 		getAllFromConversation: { url: '/api/db/messages', method: 'GET' } as QueryConfig,

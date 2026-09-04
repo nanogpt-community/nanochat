@@ -36,6 +36,13 @@
       "when": 1788396148329,
       "tag": "0004_memory_compaction",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1788476089335,
+      "tag": "0005_prompt_tokens_utility_model",
+      "breakpoints": true
     }
   ]
 }

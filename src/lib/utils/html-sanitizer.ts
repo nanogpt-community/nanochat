@@ -127,8 +127,46 @@ const BOOLEAN_ATTRIBUTES = new Set([
 const URL_ATTRIBUTES = new Set(['href', 'poster', 'src']);
 const SAFE_PROTOCOLS = new Set(['blob:', 'http:', 'https:', 'mailto:', 'tel:']);
 const SAFE_RESOURCE_PROTOCOLS = new Set(['blob:', 'http:', 'https:']);
-const SAFE_STYLE_PATTERN =
-	/^(?!.*(?:expression\s*\(|javascript:|data:text\/html|data:application|vbscript:|@import|-moz-binding|behavior\s*:)).*$/i;
+/**
+ * Inline styles are reduced to text-level properties. The old denylist only
+ * caught script-like values, which left `position:fixed; inset:0; z-index:…`
+ * and `background:url(...)` intact: enough to paint a full-page overlay or a
+ * tracking beacon inside a publicly shared conversation. Syntax highlighting
+ * (shiki) only needs colours and font tweaks, so that is all that survives.
+ */
+const ALLOWED_STYLE_PROPERTIES = new Set([
+	'color',
+	'background-color',
+	'font-weight',
+	'font-style',
+	'font-family',
+	'text-decoration',
+	'text-decoration-line',
+	'text-decoration-style',
+	'text-decoration-color',
+	'text-align',
+	'white-space',
+]);
+const STYLE_VALUE_PATTERN = /^[\w\s#,.%()'"-]+$/;
+const STYLE_VALUE_DENY = /url\s*\(|expression|\\|\/\*|@|;/i;
+
+export function sanitizeStyle(value: string): string | null {
+	const kept: string[] = [];
+	for (const declaration of value.split(';')) {
+		const colon = declaration.indexOf(':');
+		if (colon === -1) continue;
+		const property = declaration.slice(0, colon).trim().toLowerCase();
+		const propertyValue = declaration.slice(colon + 1).trim();
+		const allowedProperty =
+			ALLOWED_STYLE_PROPERTIES.has(property) || /^--shiki-[\w-]+$/.test(property);
+		if (!allowedProperty || !propertyValue) continue;
+		if (!STYLE_VALUE_PATTERN.test(propertyValue) || STYLE_VALUE_DENY.test(propertyValue)) continue;
+		// var() may only reference shiki's own custom properties
+		if (/var\s*\(/i.test(propertyValue) && !/^var\(--shiki-[\w-]+\)$/i.test(propertyValue)) continue;
+		kept.push(`${property}:${propertyValue}`);
+	}
+	return kept.length > 0 ? kept.join(';') : null;
+}
 
 function escapeHtml(value: string): string {
 	return value
@@ -207,8 +245,8 @@ function sanitizeAttribute(tagName: string, name: string, value: string): string
 		return normalizedUrl;
 	}
 
-	if (normalizedName === 'style' && !SAFE_STYLE_PATTERN.test(trimmedValue)) {
-		return null;
+	if (normalizedName === 'style') {
+		return sanitizeStyle(trimmedValue);
 	}
 
 	if (normalizedName === 'target') {

@@ -226,42 +226,44 @@
 			.map((name) => name[0]?.toUpperCase() ?? '')
 			.join('');
 	});
+
+	const navRowClass =
+		'text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-foreground flex h-9 w-full items-center gap-2.5 rounded-lg px-2 text-sm transition-colors';
+	const navRowActiveClass = 'bg-sidebar-accent text-sidebar-foreground font-medium';
 </script>
 
 <Sidebar.Sidebar class="safe-area-pt safe-area-pl flex flex-col overflow-clip p-2">
-	<div class="flex place-items-center justify-between py-2">
+	<!-- Header: wordmark sits next to the toggle instead of floating between it and an empty spacer. -->
+	<div class="flex h-11 items-center gap-1 px-2">
 		{#if controls.isMobile}
-			<!-- Mobile: logo on left, close button on right. -->
-			<span class="pl-2 font-sans text-xl font-bold tracking-tight">nanochat</span>
+			<span class="pl-1 font-sans text-lg font-bold tracking-tight">nanochat</span>
 			<button
 				type="button"
-				class="hover:bg-sidebar-accent text-sidebar-foreground/70 hover:text-sidebar-foreground tap-target flex items-center justify-center rounded-lg transition-colors"
+				class="hover:bg-sidebar-accent text-sidebar-foreground/70 hover:text-sidebar-foreground tap-target ml-auto flex items-center justify-center rounded-lg transition-colors"
 				aria-label="Close sidebar"
 				onclick={controls.closeMobile}
 			>
 				<XIcon class="size-5" />
 			</button>
 		{:else}
-			<div>
-				<Tooltip>
-					{#snippet trigger(tooltip)}
-						<Sidebar.Trigger class="md:size-9" {...tooltip.trigger}>
-							<PanelLeftIcon />
-						</Sidebar.Trigger>
-					{/snippet}
-					Toggle Sidebar ({cmdOrCtrl} + B)
-				</Tooltip>
-			</div>
-			<span class="text-center font-sans text-xl font-bold tracking-tight">nanochat</span>
-			<div class="size-9"></div>
+			<Tooltip>
+				{#snippet trigger(tooltip)}
+					<Sidebar.Trigger class="md:size-8" {...tooltip.trigger}>
+						<PanelLeftIcon class="size-4" />
+					</Sidebar.Trigger>
+				{/snippet}
+				Toggle Sidebar ({cmdOrCtrl} + B)
+			</Tooltip>
+			<span class="font-sans text-lg font-bold tracking-tight">nanochat</span>
 		{/if}
 	</div>
-	<div class="mt-2 flex w-full flex-col gap-1.5 px-2">
+
+	<div class="mt-1 flex w-full flex-col gap-0.5 px-2">
 		<Tooltip>
 			{#snippet trigger(tooltip)}
 				<a
 					href="/chat"
-					class="bg-primary text-primary-foreground font-fake-proxima flex w-full items-center justify-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-semibold tracking-[-0.01em] transition-all duration-200 hover:opacity-90 active:scale-[0.98]"
+					class="bg-primary text-primary-foreground mb-1.5 flex h-9 w-full items-center justify-center gap-1.5 rounded-lg px-3 text-sm font-semibold transition-all hover:opacity-90 active:scale-[0.98]"
 					{...tooltip.trigger}
 					onclick={controls.closeMobile}
 				>
@@ -271,43 +273,30 @@
 			{/snippet}
 			New Chat ({cmdOrCtrl} + Shift + O)
 		</Tooltip>
-		<div class="grid grid-cols-2 gap-1.5">
-			<Tooltip>
-				{#snippet trigger(tooltip)}
-					<a
-						href="/studio"
-						class="text-muted-foreground hover:text-foreground hover:bg-secondary/60 font-fake-proxima flex w-full items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium tracking-[-0.01em] transition-all duration-200 active:scale-[0.98]"
-						{...tooltip.trigger}
-						onclick={controls.closeMobile}
-					>
-						<ImageIcon class="size-4 shrink-0" />
-						<span class="truncate">Studio</span>
-					</a>
-				{/snippet}
-				Image Studio
-			</Tooltip>
-			<Tooltip>
-				{#snippet trigger(tooltip)}
-					<a
-						href="/gallery"
-						class="text-muted-foreground hover:text-foreground hover:bg-secondary/60 font-fake-proxima flex w-full items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium tracking-[-0.01em] transition-all duration-200 active:scale-[0.98]"
-						{...tooltip.trigger}
-						onclick={controls.closeMobile}
-					>
-						<LibraryIcon class="size-4 shrink-0" />
-						<span class="truncate">My Stuff</span>
-					</a>
-				{/snippet}
-				My Stuff
-			</Tooltip>
-		</div>
-		<button
-			type="button"
-			class="text-muted-foreground/70 hover:text-foreground bg-secondary/20 hover:border-border mt-0.5 flex items-center gap-2 rounded-lg border border-transparent px-3 py-2 text-sm transition-all"
-			onclick={() => (searchModalOpen = true)}
+
+		<!-- Secondary destinations read like the thread rows below them, not like a toolbar. -->
+		<a
+			href="/studio"
+			class={cn(navRowClass, page.url.pathname.startsWith('/studio') && navRowActiveClass)}
+			onclick={controls.closeMobile}
 		>
-			<SearchIcon class="size-4" />
-			<span>Search threads...</span>
+			<ImageIcon class="size-4 shrink-0" />
+			<span class="truncate">Studio</span>
+		</a>
+		<a
+			href="/gallery"
+			class={cn(navRowClass, page.url.pathname.startsWith('/gallery') && navRowActiveClass)}
+			onclick={controls.closeMobile}
+		>
+			<LibraryIcon class="size-4 shrink-0" />
+			<span class="truncate">My Stuff</span>
+		</a>
+		<button type="button" class={navRowClass} onclick={() => (searchModalOpen = true)}>
+			<SearchIcon class="size-4 shrink-0" />
+			<span class="truncate">Search</span>
+			<span class="text-sidebar-foreground/40 ml-auto text-[11px] tracking-wide">
+				{cmdOrCtrl} K
+			</span>
 		</button>
 	</div>
 
@@ -326,9 +315,14 @@
 			{#if projectsQuery.isLoading}
 				<div class="text-muted-foreground px-2 py-1 text-xs">Loading...</div>
 			{:else if safeProjects.length === 0}
-				<div class="text-muted-foreground px-2 py-1 text-xs italic">
-					No projects. Create one above.
-				</div>
+				<button
+					type="button"
+					class="text-sidebar-foreground/50 hover:bg-sidebar-accent hover:text-sidebar-foreground flex h-8 w-full items-center gap-2 rounded-lg px-2 text-xs transition-colors"
+					onclick={() => (createProjectModalOpen = true)}
+				>
+					<PlusIcon class="size-3.5" />
+					Create a project
+				</button>
 			{:else}
 				{#each safeProjects as project (project.id)}
 					{@const isExpanded = expandedProjects[project.id]}

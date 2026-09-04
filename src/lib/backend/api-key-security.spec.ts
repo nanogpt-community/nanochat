@@ -17,14 +17,14 @@ describe('api-key-security', () => {
 		process.env.API_KEY_HASH_SECRET = ORIGINAL_API_KEY_HASH_SECRET;
 	});
 
-	it('derives a deterministic PBKDF2 lookup hash for API keys', () => {
+	it('derives a deterministic keyed lookup hash for API keys', () => {
 		process.env.API_KEY_HASH_SECRET = '0123456789abcdef0123456789abcdef';
 
 		const first = hashDeveloperApiKey('nc_test_api_key_value');
 		const second = hashDeveloperApiKey('nc_test_api_key_value');
 
 		expect(first).toBe(second);
-		expect(first).toMatch(/^v2:[0-9a-f]{64}$/);
+		expect(first).toMatch(/^v3:[0-9a-f]{64}$/);
 		expect(isCurrentDeveloperApiKeyHash(first)).toBe(true);
 	});
 

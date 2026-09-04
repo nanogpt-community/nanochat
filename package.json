@@ -1,7 +1,7 @@
 {
   "name": "nanochat",
   "private": true,
-  "version": "2.0.1",
+  "version": "2.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite dev",
@@ -23,7 +23,7 @@
     "test:e2e": "playwright test"
   },
   "devDependencies": {
-    "@eslint/compat": "^2.1.0",
+    "@eslint/compat": "^2.1.1",
     "@eslint/js": "^10.0.1",
     "@iconify/json": "^2.2.525",
     "@playwright/test": "^1.62.1",
@@ -43,10 +43,11 @@
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-svelte": "^3.23.0",
     "globals": "^17.12.0",
+    "jsdom": "^30.0.1",
     "melt": "^0.44.0",
     "mode-watcher": "^1.1.0",
     "neverthrow": "^8.2.0",
-    "openai": "^7.9.0",
+    "openai": "^7.10.0",
     "prettier": "^3.9.6",
     "prettier-plugin-svelte": "^4.1.1",
     "prettier-plugin-tailwindcss": "^0.8.1",
@@ -64,7 +65,7 @@
     "typescript-eslint": "^8.69.0",
     "unplugin-icons": "^23.0.1",
     "vite": "^8.2.2",
-    "vitest": "^4.1.11"
+    "vitest": "^5.0.0"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
@@ -74,7 +75,8 @@
   },
   "overrides": {
     "@modelcontextprotocol/sdk": "^1.25.2",
-    "cookie": "^0.7.0"
+    "cookie": "^0.7.0",
+    "adm-zip": "^0.6.0"
   },
   "dependencies": {
     "@better-auth/core": "1.7.2",
@@ -94,6 +96,7 @@
     "@shikijs/engine-javascript": "^4.4.3",
     "@types/node": "^26.4.1",
     "@typescript/native-preview": "^7.0.0-dev.20260707.2",
+    "adm-zip": "^0.6.0",
     "better-auth": "1.7.2",
     "cron-parser": "^5.10.0",
     "dotenv": "^17.4.2",

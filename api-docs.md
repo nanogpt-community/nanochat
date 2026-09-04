@@ -45,6 +45,24 @@ For security, responses tied to a session cookie, developer API key, or upstream
 
 ---
 
+### Shared server key policy
+
+When a user has no NanoGPT key of their own and the server's `NANOGPT_API_KEY` is used, every
+paid endpoint (chat, images, video, TTS, STT, titles, follow-ups, prompt enhancement, manual
+compaction) enforces the same rules: the `DAILY_MESSAGE_LIMIT` quota is consumed atomically per
+call, and with `SUBSCRIPTION_MODELS_ONLY=true` only subscription-included models may be used.
+Denials return `429` (quota) or `403` (model policy).
+
+### Uploads and attachments
+
+- A message may reference at most 10 images and 10 documents; duplicate storage ids are collapsed.
+- Uploads count against a per-user quota (`USER_STORAGE_QUOTA_MB`; defaults to 2048 with open
+  signups and to unlimited when `DISABLE_SIGNUPS=true`) and are refused with `413` when it
+  would be exceeded, or `507` when the server disk is nearly full.
+- With open signups, user-configured MCP server and Karakeep URLs must resolve to public
+  addresses and are otherwise rejected with `400`. Closed-signup installs allow LAN addresses.
+  `ALLOW_PRIVATE_INTEGRATIONS=true|false` overrides either default.
+
 ## Endpoints
 
 ### Generation
@@ -159,6 +177,7 @@ data: {"content":"Hello","reasoning":""}
 event: message_complete
 data: {
   "token_count": 123,
+  "prompt_tokens": 2048,
   "cost_usd": 0.001,
   "response_time_ms": 1500,
   "time_to_first_token_ms": 320
@@ -491,6 +510,7 @@ Proxies requests to NanoGPT Video Generation API.
 
 ```json
 {
+  "reference_image_id": "string (optional, id of an uploaded image in /api/storage; sent to the model as the start frame)",
 	"model": "string",
 	"prompt": "string"
 	// Additional parameters depending on the model (e.g., duration, aspect_ratio)
@@ -526,6 +546,7 @@ Check the status of a video generation task.
 
 - `runId`: (Required) The run ID returned by the generate endpoint.
 - `model`: (Optional) The model ID used for generation.
+- `save`: (Optional) Set to `1` to store the finished video in your files once the status is `COMPLETED`. The response then includes `data.saved` with `storageId` and a local `url`. Videos over 300 MB are not stored.
 
 **Response**:
 
@@ -1942,7 +1963,7 @@ List all conversations for the user, or get a specific conversation by ID.
 
 - `id`: (Optional) Conversation ID to fetch a specific conversation.
 - `projectId`: (Optional) Filter by project. Use `"null"` for non-project conversations.
-- `search`: (Optional) Search term for conversation search.
+- `search`: (Optional) Search term for conversation search. When present, the response is always search results; an empty term returns `[]`.
 - `mode`: (Optional) Search mode: `'exact'`, `'words'`, or `'fuzzy'`.
 
 **Response** (list):
@@ -2020,7 +2041,7 @@ Create or update conversations.
 
 ```json
 {
-  "action": "create" | "createWithMessage" | "branch" | "updateTitle" | "setProject" | "updateGenerating" | "updateCost" | "setPublic" | "togglePin",
+  "action": "create" | "compact" | "createWithMessage" | "branch" | "updateTitle" | "setProject" | "updateGenerating" | "updateCost" | "setPublic" | "togglePin",
   // Additional fields depend on action
 }
 ```
@@ -2048,6 +2069,12 @@ curl -X POST "http://localhost:3432/api/db/conversations" \
   -b "session_cookie=your_session" \
   -d '{"action": "create", "title": "New Chat"}'
 ```
+
+**`compact` action**: summarizes all but the last exchange into `compactionSummary` using the
+model the conversation last used, and bills the summary call to the conversation. Body:
+`{"action": "compact", "conversationId": "string"}`. Returns
+`{"compacted": boolean, "summary": "string | null", "compactedThroughMessageId": "string | null"}`.
+Fails with `409` while a reply is generating.
 
 #### DELETE `/api/db/conversations`
 
@@ -2450,6 +2477,8 @@ Get user settings.
   "autoCompactThreshold": "number (percent of the model context length, 30-95)",
   "memoryModelId": "string | null",
   "memoryProviderId": "string | null",
+  "utilityModelId": "string | null",
+  "utilityProviderId": "string | null",
   "suggestedPromptsEnabled": "boolean",
   "theme": "string | null",
   "themePrimaryColor": "string | null",
@@ -2488,6 +2517,8 @@ Update user settings.
   "autoCompactThreshold": "number (optional, clamped to 30-95)",
   "memoryModelId": "string (optional, model used to extract memories)",
   "memoryProviderId": "string (optional)",
+  "utilityModelId": "string (optional, prompt enhancer + image analysis; needs vision)",
+  "utilityProviderId": "string (optional)",
   "karakeepUrl": "string | null (optional)",
   "karakeepApiKey": "string | null (optional, write-only)",
   "theme": "string (optional, theme id or null)",

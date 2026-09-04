@@ -1,4 +1,4 @@
-FROM oven/bun:canary AS builder
+FROM oven/bun:latest AS builder
 
 WORKDIR /app
 
@@ -40,7 +40,7 @@ RUN BETTER_AUTH_SECRET=build-time-placeholder-never-used-at-runtime \
     bun run build
 
 # Production image
-FROM oven/bun:canary
+FROM oven/bun:latest
 
 # Install poppler-utils for PDF text extraction
 RUN apt-get update && apt-get install -y poppler-utils && rm -rf /var/lib/apt/lists/*

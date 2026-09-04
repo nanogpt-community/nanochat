@@ -102,6 +102,8 @@
 		bulkToggleState = null;
 	}
 
+	let showAll = $state(false);
+
 	const nanoGPTModels = $derived(
 		fuzzysearch({
 			haystack: nanoGPTModelCollection.filter((m) => {
@@ -129,6 +131,12 @@
 			return 0;
 		})
 	);
+
+	// Nearly a thousand models is a search problem, not a scrolling one: show the
+	// enabled set by default and the full catalog on demand or when filtering.
+	const browsing = $derived(search.length > 0 || activeFilterCount > 0 || showAll);
+	const visibleModels = $derived(browsing ? nanoGPTModels : nanoGPTModels.filter((m) => m.enabled));
+	const hiddenCount = $derived(nanoGPTModels.length - visibleModels.length);
 </script>
 
 <svelte:head>
@@ -304,9 +312,18 @@
 			</div>
 
 			<div class="bg-card border-border divide-border divide-y overflow-hidden rounded-lg border">
-				{#each nanoGPTModels as model (model.id)}
+				{#each visibleModels as model (model.id)}
 					<ModelCard provider={Provider.NanoGPT} {model} enabled={model.enabled} />
 				{/each}
+				{#if hiddenCount > 0 || (showAll && !search && activeFilterCount === 0)}
+					<button
+						type="button"
+						class="text-muted-foreground hover:bg-accent/50 hover:text-foreground w-full px-4 py-3 text-sm transition-colors"
+						onclick={() => (showAll = !showAll)}
+					>
+						{showAll ? 'Show enabled models only' : `Show all ${nanoGPTModels.length} models`}
+					</button>
+				{/if}
 			</div>
 		</div>
 	{/if}

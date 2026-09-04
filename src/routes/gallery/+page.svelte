@@ -4,6 +4,7 @@
 	import { goto } from '$app/navigation';
 	import { Button } from '$lib/components/ui/button';
 	import ImageIcon from '~icons/lucide/image';
+	import VideoIcon from '~icons/lucide/video';
 	import FileTextIcon from '~icons/lucide/file-text';
 	import FolderIcon from '~icons/lucide/folder';
 	import Trash2Icon from '~icons/lucide/trash-2';
@@ -25,7 +26,7 @@
 		projectName?: string | null;
 	};
 
-	type GalleryFilter = 'all' | 'images' | 'documents' | 'project_files' | 'other';
+	type GalleryFilter = 'all' | 'images' | 'videos' | 'documents' | 'project_files' | 'other';
 
 	const galleryQuery = useCachedQuery<GalleryFile[]>(api.storage.gallery, {
 		cache_scope: session.current?.user.id ?? 'anonymous',
@@ -37,6 +38,7 @@
 	const filters = [
 		{ id: 'all', label: 'All' },
 		{ id: 'images', label: 'Images' },
+		{ id: 'videos', label: 'Videos' },
 		{ id: 'documents', label: 'Documents' },
 		{ id: 'project_files', label: 'Project Files' },
 		{ id: 'other', label: 'Other' },
@@ -48,6 +50,8 @@
 		switch (activeFilter) {
 			case 'images':
 				return files.filter((file) => file.mimeType.startsWith('image/'));
+			case 'videos':
+				return files.filter((file) => isVideo(file));
 			case 'documents':
 				return files.filter((file) =>
 					['application/pdf', 'text/markdown', 'text/plain', 'application/epub+zip'].includes(
@@ -67,11 +71,42 @@
 		return file.mimeType.startsWith('image/');
 	}
 
+	function isVideo(file: GalleryFile) {
+		return file.mimeType.startsWith('video/');
+	}
+
 	function sourceLabel(file: GalleryFile) {
-		if (file.source === 'generated_image') return 'Generated image';
+		if (file.source === 'generated_image') return 'Generated';
 		if (file.source === 'message_document') return 'Chat document';
 		if (file.source === 'project_file') return 'Project file';
-		return 'Attachment';
+		if (isVideo(file)) return 'Video';
+		return isImage(file) ? 'Image' : 'File';
+	}
+
+	const TYPE_LABELS: Record<string, string> = {
+		'application/pdf': 'PDF',
+		'text/markdown': 'Markdown',
+		'text/plain': 'Text',
+		'application/epub+zip': 'EPUB',
+	};
+
+	function typeLabel(file: GalleryFile) {
+		if (TYPE_LABELS[file.mimeType]) return TYPE_LABELS[file.mimeType];
+		const subtype = file.mimeType.split('/')[1] ?? file.mimeType;
+		return subtype.replace(/^x-/, '').toUpperCase();
+	}
+
+	// Uploads and generated files are stored under a UUID; that's not a name anyone
+	// wants to read on a card.
+	function displayName(file: GalleryFile) {
+		if (/^[0-9a-f-]{36}(\.\w+)?$/i.test(file.filename)) {
+			return `${sourceLabel(file)} ${typeLabel(file)}`;
+		}
+		// Studio saves finished clips as video-<runId>.<ext>
+		if (/^video-[\w-]+\.\w+$/i.test(file.filename)) {
+			return `Generated video ${typeLabel(file)}`;
+		}
+		return file.filename;
 	}
 
 	function formatBytes(size: number) {
@@ -109,7 +144,7 @@
 
 	async function deleteFile(file: GalleryFile) {
 		const confirmed = confirm(
-			`Delete "${file.filename}"? This will permanently remove the file and cannot be undone.`
+			`Delete "${displayName(file)}"? This will permanently remove the file and cannot be undone.`
 		);
 		if (!confirmed) return;
 
@@ -183,6 +218,15 @@
 								class="aspect-video h-full w-full object-cover"
 								loading="lazy"
 							/>
+						{:else if isVideo(file)}
+							<!-- svelte-ignore a11y_media_has_caption -->
+							<video
+								src={file.url}
+								class="aspect-video h-full w-full bg-black object-cover"
+								preload="metadata"
+								controls
+								playsinline
+							></video>
 						{:else}
 							<div
 								class="bg-muted/50 text-muted-foreground flex aspect-video h-full w-full items-center justify-center"
@@ -203,13 +247,13 @@
 					<div class="space-y-2 px-3 py-2">
 						<div class="flex items-start justify-between gap-2">
 							<div class="min-w-0 flex-1">
-								<p class="truncate font-medium" title={file.filename}>{file.filename}</p>
-								<p class="text-muted-foreground mt-1 text-xs tracking-wide uppercase">
-									{file.mimeType}
-								</p>
+								<p class="truncate font-medium" title={file.filename}>{displayName(file)}</p>
+								<p class="text-muted-foreground mt-1 text-xs">{typeLabel(file)}</p>
 							</div>
 							{#if isImage(file)}
 								<ImageIcon class="text-muted-foreground size-5 shrink-0" />
+							{:else if isVideo(file)}
+								<VideoIcon class="text-muted-foreground size-5 shrink-0" />
 							{:else}
 								<FileTextIcon class="text-muted-foreground size-5 shrink-0" />
 							{/if}
@@ -251,12 +295,6 @@
 								<ChatBubbleIcon class="size-3.5" />
 								Conversation
 							</button>
-						{:else}
-							<span
-								class="bg-muted/50 text-muted-foreground inline-flex flex-1 min-w-24 items-center justify-center rounded-md px-3 py-2 text-xs"
-							>
-								No source
-							</span>
 						{/if}
 						<button
 							type="button"

@@ -101,7 +101,7 @@
 			const hasReasoning = supportsReasoning(nanoModel);
 			const isImageOnly = isImageOnlyModel(nanoModel);
 			const hasVideo = supportsVideo(nanoModel);
-			const formattedModelName = formatModelName(model.modelId);
+			const formattedModelName = displayModelName(nanoModel, model.modelId);
 
 			return [
 				{
@@ -269,6 +269,14 @@
 		};
 	}
 
+	/** The catalog name ("GLM 5.3 Flash") beats a name reconstructed from the id ("Glm 5.3 Flash"). */
+	function displayModelName(nanoModel: { name?: string } | undefined, modelId: string) {
+		const name = nanoModel?.name?.trim();
+		if (!name || name === modelId) return formatModelName(modelId);
+		const [primary = '', ...rest] = name.split(' ');
+		return { full: name, primary, secondary: rest.join(' ') };
+	}
+
 	function modelSelected(modelId: string) {
 		settings.modelId = modelId;
 		open = false;
@@ -309,7 +317,7 @@
 
 		return {
 			...model,
-			formatted: formatModelName(activeModel),
+			formatted: displayModelName(model.nanoModel, activeModel),
 		};
 	});
 

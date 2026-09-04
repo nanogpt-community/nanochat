@@ -94,6 +94,7 @@ export async function createUserSettings(
 			titleModelId: preparedData.titleModelId ?? null,
 			followUpModelId: preparedData.followUpModelId ?? null,
 			memoryModelId: preparedData.memoryModelId ?? null,
+			utilityModelId: preparedData.utilityModelId ?? null,
 			createdAt: now,
 			updatedAt: now,
 		})

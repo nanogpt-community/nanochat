@@ -102,7 +102,7 @@
 	}
 </script>
 
-<div class="flex items-center gap-2">
+<div class="flex items-center gap-1">
 	<!-- Thumbs up/down buttons -->
 	<Tooltip>
 		{#snippet trigger(tooltip)}
@@ -155,7 +155,7 @@
 
 <!-- Detailed feedback form -->
 {#if showDetailedFeedback}
-	<div class="border-border bg-muted/30 mt-2 rounded-lg border p-4">
+	<div class="border-border bg-muted/30 mt-2 basis-full rounded-lg border p-4">
 		<!-- Star rating -->
 		<div class="mb-4">
 			<span class="text-muted-foreground mb-2 block text-sm">Rating</span>

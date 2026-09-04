@@ -10,6 +10,30 @@ function isCacheFresh(now: number) {
 	return cachedModels !== null && now - cachedAt < MODEL_CACHE_TTL_MS;
 }
 
+const NANO_GPT_SITE = 'https://nano-gpt.com';
+
+function absoluteMediaUrl(src: unknown): string | undefined {
+	if (typeof src !== 'string' || !src) return undefined;
+	return src.startsWith('/') ? `${NANO_GPT_SITE}${src}` : src;
+}
+
+/** First still image usable as a thumbnail: an image example, or a video example's poster. */
+function exampleThumbnail(examples: unknown): string | undefined {
+	if (!Array.isArray(examples)) return undefined;
+	for (const e of examples as Array<Record<string, unknown>>) {
+		if (!e || typeof e !== 'object') continue;
+		if (e.type === 'image' && typeof e.src === 'string') return absoluteMediaUrl(e.src);
+		if (typeof e.thumbnail === 'string') return absoluteMediaUrl(e.thumbnail);
+	}
+	return undefined;
+}
+
+function examplePrompt(examples: unknown): string | undefined {
+	if (!Array.isArray(examples)) return undefined;
+	const e = (examples as Array<Record<string, unknown>>).find((x) => typeof x?.prompt === 'string');
+	return e ? (e.prompt as string) : undefined;
+}
+
 async function fetchNanoGPTModels(): Promise<NanoGPTModel[]> {
 	const [textModelsRes, imageModelsRes, videoModelsRes] = await Promise.all([
 		fetch(nanoGptUrl('/api/v1/models?detailed=true')),
@@ -94,6 +118,19 @@ async function fetchNanoGPTModels(): Promise<NanoGPTModel[]> {
 				defaultSettings: m.defaultSettings,
 				resolutions: m.resolutions,
 				maxImages: m.maxImages,
+				// Studio picker metadata
+				vendor: m.provider,
+				mode: m.iconLabel,
+				tags: Array.isArray(m.tags) ? m.tags : undefined,
+				label: m.label,
+				dateAdded: m.dateAdded,
+				supportsImageInput:
+					m.iconLabel === 'image-to-image' ||
+					m.iconLabel === 'both' ||
+					!!m.inputImageConstraints ||
+					!!m.supportsMultipleImg2Img,
+				exampleImage: exampleThumbnail(m.examples),
+				examplePrompt: examplePrompt(m.examples),
 			}));
 		}
 	}
@@ -127,6 +164,16 @@ async function fetchNanoGPTModels(): Promise<NanoGPTModel[]> {
 					: undefined,
 				additionalParams: m.additionalParams,
 				defaultSettings: m.defaultSettings,
+				// Studio picker metadata
+				vendor: m.provider,
+				mode: m.supportsImageToVideo || m.requiresImage ? 'both' : 'text-to-image',
+				tags: Array.isArray(m.tags) ? m.tags : undefined,
+				label: m.label,
+				dateAdded: m.dateAdded,
+				supportsImageInput: !!m.supportsImageToVideo || !!m.requiresImage,
+				requiresImage: !!m.requiresImage,
+				exampleImage: exampleThumbnail(m.examples),
+				examplePrompt: examplePrompt(m.examples),
 			}));
 		}
 	}
@@ -135,45 +182,59 @@ async function fetchNanoGPTModels(): Promise<NanoGPTModel[]> {
 }
 
 export interface NanoGPTModel {
-    id: string;
-    name: string;
-    created: number;
-    description: string;
-    icon_url?: string;
-    owned_by?: string;
-    max_output_tokens?: number;
-    cost_estimate?: number;
-    capabilities?: {
-        vision?: boolean;
-        reasoning?: boolean;
-    };
-    // Keeping these compatible with OpenRouter interface if needed, but making them optional
-    pricing?: {
-        prompt: string;
-        completion: string;
-        image: string;
-        request: string;
-    };
-    context_length?: number;
-    architecture?: {
-        input_modalities: string[];
-        output_modalities: string[];
-        tokenizer: string;
-    };
-    subscription?: {
-        included: boolean;
-        note: string;
-    };
-    additionalParams?: Record<string, {
-        label: string;
-        description: string;
-        type: 'select' | 'boolean' | 'switch' | 'text' | 'number';
-        default: any;
-        options?: { value: string; label: string }[];
-    }>;
-    defaultSettings?: Record<string, any>;
-    resolutions?: { value: string; comment: string }[];
-    maxImages?: number;
+	id: string;
+	name: string;
+	created: number;
+	description: string;
+	icon_url?: string;
+	owned_by?: string;
+	max_output_tokens?: number;
+	cost_estimate?: number;
+	capabilities?: {
+		vision?: boolean;
+		reasoning?: boolean;
+	};
+	// Keeping these compatible with OpenRouter interface if needed, but making them optional
+	pricing?: {
+		prompt: string;
+		completion: string;
+		image: string;
+		request: string;
+	};
+	context_length?: number;
+	architecture?: {
+		input_modalities: string[];
+		output_modalities: string[];
+		tokenizer: string;
+	};
+	subscription?: {
+		included: boolean;
+		note: string;
+	};
+	additionalParams?: Record<
+		string,
+		{
+			label: string;
+			description: string;
+			type: 'select' | 'boolean' | 'switch' | 'text' | 'number';
+			default: any;
+			options?: { value: string; label: string }[];
+		}
+	>;
+	defaultSettings?: Record<string, any>;
+	resolutions?: { value: string; comment: string }[];
+	maxImages?: number;
+	// Image models only
+	vendor?: string;
+	mode?: 'text-to-image' | 'image-to-image' | 'both';
+	tags?: string[];
+	label?: string;
+	dateAdded?: string;
+	supportsImageInput?: boolean;
+	/** Video models that only animate a supplied image. */
+	requiresImage?: boolean;
+	exampleImage?: string;
+	examplePrompt?: string;
 }
 
 export function getNanoGPTModels() {

@@ -3,7 +3,8 @@ import { nanoGptUrl } from '$lib/backend/nano-gpt-url.server';
 import { listUserMemories, applyMemoryOps, type MemoryOps } from '$lib/db/queries/user-memories';
 import type { UserMemory } from '$lib/db/schema';
 
-export const DEFAULT_MEMORY_MODEL = 'deepseek/deepseek-v4-flash-0731';
+import { DEFAULT_BACKGROUND_MODEL } from '$lib/backend/default-models';
+export const DEFAULT_MEMORY_MODEL = DEFAULT_BACKGROUND_MODEL;
 
 /** System-prompt block injected into every chat when persistent memory is on. */
 export function formatMemoriesForPrompt(memories: UserMemory[]): string {
