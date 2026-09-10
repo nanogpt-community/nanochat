@@ -35,6 +35,7 @@
 	import { cmdOrCtrl } from '$lib/hooks/is-mac.svelte.js';
 	import { TextareaAutosize } from '$lib/spells/textarea-autosize.svelte.js';
 	import { IsMobile } from '$lib/hooks/is-mobile.svelte';
+	import { MediaQuery } from 'svelte/reactivity';
 	import { models } from '$lib/state/models.svelte';
 	import { usePrompt } from '$lib/state/prompt.svelte.js';
 	import { session } from '$lib/state/session.svelte.js';
@@ -289,12 +290,16 @@
 		cache_scope: session.current?.user.id ?? 'anonymous',
 	});
 	const suggestedPromptsEnabled = $derived(userSettings.data?.suggestedPromptsEnabled ?? true);
+	// Centering the composer halves the room the model picker has to open into,
+	// so on short viewports keep it docked at the bottom like the suggestions layout.
+	const tallViewport = new MediaQuery('(min-height: 800px)');
 	const centerPromptInput = $derived(
 		page.url.pathname === '/chat' &&
 			!page.params.id &&
 			(nanoGPTKeyQuery.data?.hasKey ?? false) &&
 			!nanoGPTKeyQuery.isLoading &&
-			!suggestedPromptsEnabled
+			!suggestedPromptsEnabled &&
+			tallViewport.current
 	);
 	const promptDockClass = $derived(
 		centerPromptInput

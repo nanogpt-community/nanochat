@@ -366,7 +366,7 @@
 		<!-- Provider Bar - Horizontal on mobile, Vertical sidebar on desktop -->
 		<div
 			class={cn(
-				'border-border bg-muted/30 flex gap-1 p-2',
+				'border-border bg-muted/30 scrollbar-hide flex shrink-0 gap-1 p-2',
 				isMobile.current
 					? 'flex-row overflow-x-auto border-b'
 					: 'min-h-0 flex-col overflow-y-auto border-r'
@@ -403,7 +403,7 @@
 					<img
 						src={getIconUrl(provider.iconKey)}
 						alt="Provider"
-						class={cn(isMobile.current ? 'size-6' : 'size-5', 'object-contain')}
+						class={cn(isMobile.current ? 'size-6' : 'size-5', 'shrink-0 object-contain')}
 					/>
 				</button>
 			{/each}
