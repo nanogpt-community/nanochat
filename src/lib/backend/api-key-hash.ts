@@ -16,7 +16,7 @@ export const DEVELOPER_API_KEY_PATTERN = /^nc_[0-9a-f]{32}$/;
 
 function getApiKeyHashSecret(): string {
 	const secret =
-		process.env.API_KEY_HASH_SECRET ?? process.env.ENCRYPTION_KEY ?? process.env.BETTER_AUTH_SECRET;
+		process.env.API_KEY_HASH_SECRET || process.env.ENCRYPTION_KEY || process.env.BETTER_AUTH_SECRET;
 
 	if (!secret || secret.length < 32) {
 		throw new Error(
