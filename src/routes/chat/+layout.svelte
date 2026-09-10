@@ -271,6 +271,10 @@
 	);
 
 	let error = $state<string | null>(null);
+	$effect(() => {
+		page.params.id;
+		error = null;
+	});
 
 	// Load settings for YouTube transcripts
 	const userSettings = useCachedQuery<UserSettings>(api.user_settings.get, {});
@@ -1410,9 +1414,17 @@
 				{#if error}
 					<div
 						in:fade={{ duration: 150 }}
-						class="mb-1 rounded-lg bg-red-500/50 px-3 py-1.5 text-sm text-red-100"
+						class="mb-1 flex items-start gap-2 rounded-lg bg-red-500/50 px-3 py-1.5 text-sm text-red-100"
 					>
-						{error}
+						<span class="flex-1">{error}</span>
+						<button
+							type="button"
+							class="shrink-0 rounded p-0.5 hover:bg-red-500/50"
+							aria-label="Dismiss error"
+							onclick={() => (error = null)}
+						>
+							<XIcon class="size-4" />
+						</button>
 					</div>
 				{/if}
 				{#if youtubeUrlDetected && !transcriptsEnabled}
