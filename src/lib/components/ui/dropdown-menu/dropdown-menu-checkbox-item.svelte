@@ -2,7 +2,7 @@
 	import { DropdownMenu as DropdownMenuPrimitive } from 'bits-ui';
 	import CheckIcon from '~icons/lucide/check';
 	import MinusIcon from '~icons/lucide/minus';
-	import { cn, type WithoutChildrenOrChild } from '$lib/utils/utils.js';
+	import { cn, type WithoutChildrenOrChild } from '#lib/utils/utils.js';
 	import type { Snippet } from 'svelte';
 
 	let {

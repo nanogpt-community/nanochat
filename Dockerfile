@@ -35,6 +35,10 @@ ENV NODE_ENV=production
 # SecretsUsedInArgOrEnv warning, by removing the cause rather than the symptom.
 # BETTER_AUTH_BASE_URL, previously declared here, was referenced nowhere in the
 # codebase at all; the app reads BETTER_AUTH_URL, at runtime.
+# Public origin baked into the build (SvelteKit 3 adapter-node dropped the runtime
+# ORIGIN variable). Leave unset for the published image and use
+# PROTOCOL_HEADER/HOST_HEADER behind a reverse proxy instead.
+ARG ORIGIN
 RUN BETTER_AUTH_SECRET=build-time-placeholder-never-used-at-runtime \
     DATABASE_URL=postgres://build:build@localhost:5432/build \
     bun run build
@@ -70,5 +74,7 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOST=0.0.0.0
 ENV NODE_ENV=production
+# adapter-node defaults to 512K; MAX_UPLOAD_BYTES is 100MB (+ multipart overhead).
+ENV BODY_SIZE_LIMIT=105M
 
 CMD ["sh", "-c", "bun run db:migrate && bun build/index.js"]

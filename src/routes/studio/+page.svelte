@@ -1,13 +1,13 @@
 <script lang="ts">
-	import { models } from '$lib/state/models.svelte';
-	import { Provider } from '$lib/types';
-	import { isImageOnlyModel, supportsVideo } from '$lib/utils/model-capabilities';
+	import { models } from '#lib/state/models.svelte.js';
+	import { Provider } from '#lib/types.js';
+	import { isImageOnlyModel, supportsVideo } from '#lib/utils/model-capabilities.js';
 	import VideoIcon from '~icons/lucide/video';
-	import { IsMobile } from '$lib/hooks/is-mobile.svelte';
-	import { Button } from '$lib/components/ui/button';
-	import { Input } from '$lib/components/ui/input';
-	import { Modal } from '$lib/components/ui/modal';
-	import { cn } from '$lib/utils/utils';
+	import { IsMobile } from '#lib/hooks/is-mobile.svelte.js';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { Input } from '#lib/components/ui/input/index.js';
+	import { Modal } from '#lib/components/ui/modal/index.js';
+	import { cn } from '#lib/utils/utils.js';
 	import { untrack } from 'svelte';
 	import ImageIcon from '~icons/lucide/image';
 	import SparklesIcon from '~icons/lucide/sparkles';
@@ -22,8 +22,8 @@
 	import CopyIcon from '~icons/lucide/copy';
 	import CheckIcon from '~icons/lucide/check';
 	import SendIcon from '~icons/lucide/arrow-up';
-	import type { NanoGPTModel } from '$lib/backend/models/nano-gpt';
-	import StudioModelPicker from '$lib/components/model-picker/studio-model-picker.svelte';
+	import type { NanoGPTModel } from '#lib/backend/models/nano-gpt.js';
+	import StudioModelPicker from '#lib/components/model-picker/studio-model-picker.svelte';
 
 	const isMobile = new IsMobile();
 
@@ -114,7 +114,9 @@
 	// Persist selected model whenever it changes
 	$effect(() => {
 		if (selectedModelId) {
-			savePrefs(studioMode === 'video' ? { videoModelId: selectedModelId } : { modelId: selectedModelId });
+			savePrefs(
+				studioMode === 'video' ? { videoModelId: selectedModelId } : { modelId: selectedModelId }
+			);
 		}
 	});
 
@@ -220,9 +222,7 @@
 
 		if (model.maxImages) {
 			defaults.nImages =
-				typeof model.defaultSettings?.nImages === 'number'
-					? model.defaultSettings.nImages
-					: 1;
+				typeof model.defaultSettings?.nImages === 'number' ? model.defaultSettings.nImages : 1;
 		}
 
 		const saved = loadPrefs().modelSettings[model.id];
@@ -271,7 +271,12 @@
 	});
 
 	// --- Actions ---
-	async function pollForResult(generationId: string, capturedPrompt: string, capturedModelId: string, capturedModelName: string) {
+	async function pollForResult(
+		generationId: string,
+		capturedPrompt: string,
+		capturedModelId: string,
+		capturedModelName: string
+	) {
 		const POLL_INTERVAL = 1500;
 		const MAX_POLLS = 200;
 		let polls = 0;
@@ -511,10 +516,7 @@
 
 <!-- ==================== MOBILE LAYOUT ==================== -->
 {#if isMobile.current}
-	<div
-		class="flex h-full flex-col"
-		style="padding-top: calc(3rem + env(safe-area-inset-top));"
-	>
+	<div class="flex h-full flex-col" style="padding-top: calc(3rem + env(safe-area-inset-top));">
 		<!-- Scrollable image results area -->
 		<div class="flex-1 overflow-y-auto">
 			{#if generations.length === 0 && !isGenerating}
@@ -538,7 +540,9 @@
 				<div class="p-3">
 					{#if isGenerating}
 						<div class="mb-3">
-							<div class="border-primary/20 bg-primary/5 flex items-center gap-3 rounded-xl border p-3">
+							<div
+								class="border-primary/20 bg-primary/5 flex items-center gap-3 rounded-xl border p-3"
+							>
 								<LoaderCircleIcon class="text-primary size-5 animate-spin" />
 								<div class="min-w-0 flex-1">
 									<p class="text-sm font-medium">{generationStatus || 'Generating...'}</p>
@@ -559,7 +563,12 @@
 							<div class="border-border bg-card overflow-hidden rounded-xl border">
 								{#if image.kind === 'video'}
 									<!-- svelte-ignore a11y_media_has_caption -->
-									<video src={image.url} controls preload="metadata" class="aspect-video w-full bg-black"></video>
+									<video
+										src={image.url}
+										controls
+										preload="metadata"
+										class="aspect-video w-full bg-black"
+									></video>
 								{:else}
 									<button
 										type="button"
@@ -608,7 +617,11 @@
 		{#if referenceImageUrl}
 			<div class="border-t px-3 pt-2">
 				<div class="relative inline-block">
-					<img src={referenceImageUrl} alt="Reference" class="h-14 rounded-lg border object-cover" />
+					<img
+						src={referenceImageUrl}
+						alt="Reference"
+						class="h-14 rounded-lg border object-cover"
+					/>
 					<button
 						type="button"
 						class="bg-background/80 absolute -top-1.5 -right-1.5 rounded-full border p-0.5"
@@ -621,11 +634,16 @@
 		{/if}
 
 		<!-- Bottom input bar -->
-		<div class="border-t px-3 pb-[env(safe-area-inset-bottom)] pt-2">
+		<div class="border-t px-3 pt-2 pb-[env(safe-area-inset-bottom)]">
 			<!-- Model + Settings row -->
 			<div class="mb-2 flex items-center gap-2">
 				{@render modeSwitch(true)}
-				<StudioModelPicker bind:value={selectedModelId} models={activeModels} compact class="flex-1" />
+				<StudioModelPicker
+					bind:value={selectedModelId}
+					models={activeModels}
+					compact
+					class="flex-1"
+				/>
 
 				{#if hasSettings}
 					<button
@@ -640,7 +658,9 @@
 
 				{#if !isVideoMode || currentModel?.supportsImageInput}
 					<!-- svelte-ignore a11y_label_has_associated_control -->
-					<label class="border-input bg-background flex h-8 cursor-pointer items-center gap-1.5 rounded-lg border px-2.5 text-xs">
+					<label
+						class="border-input bg-background flex h-8 cursor-pointer items-center gap-1.5 rounded-lg border px-2.5 text-xs"
+					>
 						<UploadIcon class="text-muted-foreground size-3.5" />
 						<input type="file" accept="image/*" class="hidden" onchange={handleReferenceUpload} />
 					</label>
@@ -650,12 +670,11 @@
 			<!-- Prompt + send -->
 			<div class="flex items-end gap-2 pb-2">
 				<textarea
-					class="border-input bg-background placeholder:text-muted-foreground min-h-[40px] max-h-[100px] flex-1 resize-none rounded-xl border px-3 py-2.5 text-sm leading-snug outline-none"
+					class="border-input bg-background placeholder:text-muted-foreground max-h-[100px] min-h-[40px] flex-1 resize-none rounded-xl border px-3 py-2.5 text-sm leading-snug outline-none"
 					placeholder={isVideoMode ? 'Describe your video...' : 'Describe your image...'}
 					bind:value={prompt}
 					onkeydown={handleKeydown}
-					rows={1}
-				></textarea>
+					rows={1}></textarea>
 				<button
 					type="button"
 					class="bg-primary text-primary-foreground flex size-10 shrink-0 items-center justify-center rounded-full shadow-lg transition-all active:scale-95 disabled:opacity-50"
@@ -672,7 +691,7 @@
 		</div>
 	</div>
 
-<!-- ==================== DESKTOP LAYOUT ==================== -->
+	<!-- ==================== DESKTOP LAYOUT ==================== -->
 {:else}
 	<div class="flex h-full flex-row">
 		<!-- Left Panel: Controls -->
@@ -682,8 +701,12 @@
 					<WandIcon class="size-5" />
 				</div>
 				<div>
-					<h1 class="text-lg font-semibold tracking-tight">{isVideoMode ? 'Video Studio' : 'Image Studio'}</h1>
-					<p class="text-muted-foreground text-xs">Create {isVideoMode ? 'videos' : 'images'} with AI</p>
+					<h1 class="text-lg font-semibold tracking-tight">
+						{isVideoMode ? 'Video Studio' : 'Image Studio'}
+					</h1>
+					<p class="text-muted-foreground text-xs">
+						Create {isVideoMode ? 'videos' : 'images'} with AI
+					</p>
 				</div>
 				{@render modeSwitch()}
 			</div>
@@ -697,7 +720,13 @@
 				</div>
 
 				{#if quickParams.length > 0}
-					<div class="grid gap-2" style="grid-template-columns: repeat({Math.min(quickParams.length, 3)}, minmax(0, 1fr));">
+					<div
+						class="grid gap-2"
+						style="grid-template-columns: repeat({Math.min(
+							quickParams.length,
+							3
+						)}, minmax(0, 1fr));"
+					>
 						{#each quickParams as param (param.key)}
 							<label class="flex min-w-0 flex-col gap-1">
 								<span class="text-muted-foreground truncate text-xs">{param.label}</span>
@@ -725,40 +754,53 @@
 							<SettingsIcon class="text-muted-foreground size-4" />
 							<span>Settings</span>
 						</div>
-						<span class="text-muted-foreground max-w-[180px] truncate text-xs">{settingsSummary}</span>
+						<span class="text-muted-foreground max-w-[180px] truncate text-xs"
+							>{settingsSummary}</span
+						>
 					</button>
 				{/if}
 
 				<!-- Reference Image -->
 				{#if !isVideoMode || currentModel?.supportsImageInput}
-				<div class="flex flex-col gap-2">
-					<!-- svelte-ignore a11y_label_has_associated_control -->
-					<label class="text-sm font-medium">
-						{isVideoMode ? 'Start Image' : 'Reference Image'}
-						<span class="text-muted-foreground font-normal">
-							({currentModel?.requiresImage ? 'required' : 'optional'})
-						</span>
-					</label>
-					{#if referenceImageUrl}
-						<div class="relative">
-							<img src={referenceImageUrl} alt="Reference" class="h-32 w-full rounded-lg border object-cover" />
-							<button
-								type="button"
-								class="bg-background/80 hover:bg-background absolute top-2 right-2 rounded-full border p-1 backdrop-blur-sm transition-colors"
-								onclick={removeReference}
-							>
-								<XIcon class="size-3.5" />
-							</button>
-						</div>
-					{:else}
+					<div class="flex flex-col gap-2">
 						<!-- svelte-ignore a11y_label_has_associated_control -->
-						<label class="border-input hover:bg-accent/30 flex h-20 cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed transition-colors">
-							<UploadIcon class="text-muted-foreground size-4" />
-							<span class="text-muted-foreground text-sm">Drop or click to upload</span>
-							<input type="file" accept="image/*" class="hidden" onchange={handleReferenceUpload} />
+						<label class="text-sm font-medium">
+							{isVideoMode ? 'Start Image' : 'Reference Image'}
+							<span class="text-muted-foreground font-normal">
+								({currentModel?.requiresImage ? 'required' : 'optional'})
+							</span>
 						</label>
-					{/if}
-				</div>
+						{#if referenceImageUrl}
+							<div class="relative">
+								<img
+									src={referenceImageUrl}
+									alt="Reference"
+									class="h-32 w-full rounded-lg border object-cover"
+								/>
+								<button
+									type="button"
+									class="bg-background/80 hover:bg-background absolute top-2 right-2 rounded-full border p-1 backdrop-blur-sm transition-colors"
+									onclick={removeReference}
+								>
+									<XIcon class="size-3.5" />
+								</button>
+							</div>
+						{:else}
+							<!-- svelte-ignore a11y_label_has_associated_control -->
+							<label
+								class="border-input hover:bg-accent/30 flex h-20 cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed transition-colors"
+							>
+								<UploadIcon class="text-muted-foreground size-4" />
+								<span class="text-muted-foreground text-sm">Drop or click to upload</span>
+								<input
+									type="file"
+									accept="image/*"
+									class="hidden"
+									onchange={handleReferenceUpload}
+								/>
+							</label>
+						{/if}
+					</div>
 				{/if}
 
 				<!-- Prompt -->
@@ -767,10 +809,11 @@
 					<textarea
 						id="studio-prompt"
 						class="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring field-sizing-content max-h-72 min-h-[120px] resize-none rounded-lg border px-3 py-2.5 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
-						placeholder={isVideoMode ? 'Describe the video you want to create...' : 'Describe the image you want to create...'}
+						placeholder={isVideoMode
+							? 'Describe the video you want to create...'
+							: 'Describe the image you want to create...'}
 						bind:value={prompt}
-						onkeydown={handleKeydown}
-					></textarea>
+						onkeydown={handleKeydown}></textarea>
 				</div>
 
 				<!-- Error -->
@@ -799,8 +842,10 @@
 					{#if isGenerating}
 						This may take a few seconds...
 					{:else}
-						<kbd class="bg-muted rounded px-1.5 py-0.5 font-mono text-[10px]">Enter</kbd> to generate,
-						<kbd class="bg-muted rounded px-1.5 py-0.5 font-mono text-[10px]">Shift+Enter</kbd> for a new line
+						<kbd class="bg-muted rounded px-1.5 py-0.5 font-mono text-[10px]">Enter</kbd> to
+						generate,
+						<kbd class="bg-muted rounded px-1.5 py-0.5 font-mono text-[10px]">Shift+Enter</kbd> for a
+						new line
 					{/if}
 				</p>
 			</div>
@@ -820,7 +865,9 @@
 					<div>
 						<h2 class="text-lg font-semibold">No {isVideoMode ? 'videos' : 'images'} yet</h2>
 						<p class="text-muted-foreground mt-1 max-w-sm text-sm">
-							Choose a model, write a prompt, and press Enter to start creating {isVideoMode ? 'videos' : 'images'}.
+							Choose a model, write a prompt, and press Enter to start creating {isVideoMode
+								? 'videos'
+								: 'images'}.
 						</p>
 					</div>
 					{#if currentModel?.examplePrompt}
@@ -829,7 +876,9 @@
 							class="border-border hover:bg-accent/50 max-w-md rounded-xl border px-4 py-3 text-left transition-colors"
 							onclick={useExamplePrompt}
 						>
-							<span class="text-muted-foreground block text-xs">Try an example for {currentModel.name}</span>
+							<span class="text-muted-foreground block text-xs"
+								>Try an example for {currentModel.name}</span
+							>
 							<span class="mt-1 line-clamp-3 text-sm">{currentModel.examplePrompt}</span>
 						</button>
 					{/if}
@@ -838,11 +887,20 @@
 				<div class="flex-1 overflow-y-auto p-6">
 					{#if isGenerating}
 						<div class="mb-6">
-							<div class="border-primary/20 bg-primary/5 flex items-center gap-3 rounded-xl border p-4">
+							<div
+								class="border-primary/20 bg-primary/5 flex items-center gap-3 rounded-xl border p-4"
+							>
 								<LoaderCircleIcon class="text-primary size-5 animate-spin" />
 								<div>
-									<p class="text-sm font-medium">{generationStatus || (isVideoMode ? 'Generating your video...' : 'Generating your image...')}</p>
-									<p class="text-muted-foreground text-xs">{currentModel?.name} &middot; "{prompt.length > 60 ? prompt.slice(0, 57) + '...' : prompt}"</p>
+									<p class="text-sm font-medium">
+										{generationStatus ||
+											(isVideoMode ? 'Generating your video...' : 'Generating your image...')}
+									</p>
+									<p class="text-muted-foreground text-xs">
+										{currentModel?.name} &middot; "{prompt.length > 60
+											? prompt.slice(0, 57) + '...'
+											: prompt}"
+									</p>
 								</div>
 							</div>
 						</div>
@@ -856,10 +914,17 @@
 
 					<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
 						{#each generations as image, index (image.url)}
-							<div class="group border-border bg-card overflow-hidden rounded-xl border transition-shadow hover:shadow-lg">
+							<div
+								class="group border-border bg-card overflow-hidden rounded-xl border transition-shadow hover:shadow-lg"
+							>
 								{#if image.kind === 'video'}
 									<!-- svelte-ignore a11y_media_has_caption -->
-									<video src={image.url} controls preload="metadata" class="aspect-video w-full bg-black"></video>
+									<video
+										src={image.url}
+										controls
+										preload="metadata"
+										class="aspect-video w-full bg-black"
+									></video>
 								{:else}
 									<button
 										type="button"
@@ -872,9 +937,15 @@
 											class="aspect-square w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
 											loading="lazy"
 										/>
-										<div class="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 transition-opacity group-hover:opacity-100"></div>
-										<div class="absolute right-2 bottom-2 left-2 flex translate-y-2 items-center justify-between opacity-0 transition-all group-hover:translate-y-0 group-hover:opacity-100">
-											<span class="rounded-md bg-black/60 px-2 py-1 text-xs font-medium text-white backdrop-blur-sm">
+										<div
+											class="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 transition-opacity group-hover:opacity-100"
+										></div>
+										<div
+											class="absolute right-2 bottom-2 left-2 flex translate-y-2 items-center justify-between opacity-0 transition-all group-hover:translate-y-0 group-hover:opacity-100"
+										>
+											<span
+												class="rounded-md bg-black/60 px-2 py-1 text-xs font-medium text-white backdrop-blur-sm"
+											>
 												{image.modelName}
 											</span>
 											<div class="flex gap-1">
@@ -902,7 +973,9 @@
 
 								<div class="px-3 py-2.5">
 									<p class="line-clamp-2 text-sm leading-snug">{image.prompt}</p>
-									<div class="text-muted-foreground mt-1.5 flex items-center justify-between text-xs">
+									<div
+										class="text-muted-foreground mt-1.5 flex items-center justify-between text-xs"
+									>
 										<span>{new Date(image.timestamp).toLocaleTimeString()}</span>
 										<div class="flex items-center gap-2">
 											{#if image.cost > 0}
@@ -968,7 +1041,9 @@
 					<!-- svelte-ignore a11y_label_has_associated_control -->
 					<label class="text-sm font-medium">
 						Number of Images
-						<span class="text-muted-foreground ml-1 text-xs font-normal">(1-{currentModel.maxImages})</span>
+						<span class="text-muted-foreground ml-1 text-xs font-normal"
+							>(1-{currentModel.maxImages})</span
+						>
 					</label>
 					<select
 						class="border-input bg-background flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-sm transition-colors focus:ring-1 focus:outline-none"
@@ -987,7 +1062,9 @@
 					<label class="text-sm font-medium">
 						{param.label}
 						{#if param.description}
-							<span class="text-muted-foreground ml-1 text-xs font-normal">({param.description})</span>
+							<span class="text-muted-foreground ml-1 text-xs font-normal"
+								>({param.description})</span
+							>
 						{/if}
 					</label>
 
@@ -1065,7 +1142,12 @@
 			</div>
 			{#if lightboxImage.kind === 'video'}
 				<!-- svelte-ignore a11y_media_has_caption -->
-				<video src={lightboxImage.url} controls autoplay class="max-h-[70vh] w-full rounded-lg bg-black"></video>
+				<video
+					src={lightboxImage.url}
+					controls
+					autoplay
+					class="max-h-[70vh] w-full rounded-lg bg-black"
+				></video>
 			{:else}
 				<img
 					src={lightboxImage.url}
@@ -1101,7 +1183,9 @@
 			aria-selected={!isVideoMode}
 			class={cn(
 				'flex h-full items-center gap-1.5 rounded-md px-2.5 transition-colors',
-				!isVideoMode ? 'bg-accent text-foreground font-medium' : 'text-muted-foreground hover:text-foreground'
+				!isVideoMode
+					? 'bg-accent text-foreground font-medium'
+					: 'text-muted-foreground hover:text-foreground'
 			)}
 			onclick={() => switchMode('image')}
 			disabled={isGenerating}
@@ -1116,7 +1200,9 @@
 			aria-selected={isVideoMode}
 			class={cn(
 				'flex h-full items-center gap-1.5 rounded-md px-2.5 transition-colors',
-				isVideoMode ? 'bg-accent text-foreground font-medium' : 'text-muted-foreground hover:text-foreground'
+				isVideoMode
+					? 'bg-accent text-foreground font-medium'
+					: 'text-muted-foreground hover:text-foreground'
 			)}
 			onclick={() => switchMode('video')}
 			disabled={isGenerating}

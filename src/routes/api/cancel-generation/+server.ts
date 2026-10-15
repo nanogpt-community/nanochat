@@ -1,10 +1,10 @@
 import { error, json, type RequestHandler } from '@sveltejs/kit';
 import { ResultAsync } from 'neverthrow';
 import { z } from 'zod/v4';
-import { db } from '$lib/db';
-import { conversations } from '$lib/db/schema';
+import { db } from '#lib/db/index.js';
+import { conversations } from '#lib/db/schema.js';
 import { eq, and } from 'drizzle-orm';
-import { getAuthenticatedUserId } from '$lib/backend/auth-utils';
+import { getAuthenticatedUserId } from '#lib/backend/auth-utils.js';
 
 // Import the global cache from generate-message
 import { generationAbortControllers } from '../generate-message/cache.js';
@@ -45,10 +45,7 @@ export const POST: RequestHandler = async ({ request }) => {
 
 	// Verify the user owns this conversation
 	const conversation = await db.query.conversations.findFirst({
-		where: and(
-			eq(conversations.id, args.conversation_id),
-			eq(conversations.userId, userId)
-		),
+		where: and(eq(conversations.id, args.conversation_id), eq(conversations.userId, userId)),
 	});
 
 	if (!conversation) {
@@ -65,7 +62,8 @@ export const POST: RequestHandler = async ({ request }) => {
 		cancelled = true;
 
 		// Update conversation generating status to false
-		await db.update(conversations)
+		await db
+			.update(conversations)
 			.set({ generating: false })
 			.where(eq(conversations.id, args.conversation_id));
 	}

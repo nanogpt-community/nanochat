@@ -1,13 +1,13 @@
 <script lang="ts">
-	import { settings } from '$lib/state/settings.svelte';
-	import { cn } from '$lib/utils/utils';
-	import * as Popover from '$lib/components/ui/popover';
+	import { settings } from '#lib/state/settings.svelte.js';
+	import { cn } from '#lib/utils/utils.js';
+	import * as Popover from '#lib/components/ui/popover/index.js';
 	import { Command } from 'bits-ui';
 	import ChevronDownIcon from '~icons/lucide/chevron-down';
 	import ServerIcon from '~icons/lucide/server';
 	import CheckIcon from '~icons/lucide/check';
-	import Tooltip from '$lib/components/ui/tooltip.svelte';
-	import { IsMobile } from '$lib/hooks/is-mobile.svelte';
+	import Tooltip from '#lib/components/ui/tooltip.svelte';
+	import { IsMobile } from '#lib/hooks/is-mobile.svelte.js';
 
 	type Props = {
 		class?: string;
@@ -150,7 +150,7 @@
 					<div class="flex items-center gap-1.5" {...tooltip.trigger}>
 						<ServerIcon class="text-muted-foreground size-3.5" />
 						<!-- Collapses with the other composer chips — see chipLabelClass in chat/+layout. -->
-					<span class="hidden max-w-[80px] truncate @[48rem]:inline">{currentProviderName}</span>
+						<span class="hidden max-w-[80px] truncate @[48rem]:inline">{currentProviderName}</span>
 						<ChevronDownIcon class="text-muted-foreground size-3" />
 					</div>
 				{/snippet}

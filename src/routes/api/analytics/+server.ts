@@ -1,7 +1,7 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { getAuthenticatedUserId } from '$lib/backend/auth-utils';
-import { getModelAnalytics } from '$lib/analytics/model-analytics';
+import { getAuthenticatedUserId } from '#lib/backend/auth-utils.js';
+import { getModelAnalytics } from '#lib/analytics/model-analytics.js';
 
 export const GET: RequestHandler = async ({ request, url }) => {
 	try {

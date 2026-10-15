@@ -1,10 +1,10 @@
-import { resolveConversationRefs } from '$lib/backend/conversation-refs';
+import { resolveConversationRefs } from '#lib/backend/conversation-refs.js';
 import { db, generateId } from '../index';
 import { conversations, messages, type Conversation, type Message } from '../schema';
 import { eq, desc, and, or, isNull, asc, sql, inArray } from 'drizzle-orm';
-import enhancedSearch from '$lib/utils/fuzzy-search';
-import { getFirstSentence } from '$lib/utils/strings';
-import { sanitizeHtml } from '$lib/utils/html-sanitizer';
+import enhancedSearch from '#lib/utils/fuzzy-search.js';
+import { getFirstSentence } from '#lib/utils/strings.js';
+import { sanitizeHtml } from '#lib/utils/html-sanitizer.js';
 
 const messageRoleOrder = sql<number>`
 	case

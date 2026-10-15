@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { cn } from '$lib/utils/utils.js';
+	import { cn } from '#lib/utils/utils.js';
 	import type { HTMLLabelAttributes } from 'svelte/elements';
 
 	let { class: className, children, ...rest }: HTMLLabelAttributes = $props();

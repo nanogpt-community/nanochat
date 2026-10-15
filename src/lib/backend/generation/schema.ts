@@ -1,5 +1,5 @@
 import { z } from 'zod/v4';
-import { REASONING_EFFORTS } from '$lib/utils/model-capabilities';
+import { REASONING_EFFORTS } from '#lib/utils/model-capabilities.js';
 
 /** Per message. Each document is parsed on every turn it stays in context. */
 export const MAX_ATTACHMENTS = 10;

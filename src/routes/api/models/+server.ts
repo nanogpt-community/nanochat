@@ -1,8 +1,8 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { getNanoGPTModels, type NanoGPTModel } from '$lib/backend/models/nano-gpt';
-import { getEnabledModels } from '$lib/db/queries/user-enabled-models';
-import { getAuthenticatedUserId } from '$lib/backend/auth-utils';
+import { getNanoGPTModels, type NanoGPTModel } from '#lib/backend/models/nano-gpt.js';
+import { getEnabledModels } from '#lib/db/queries/user-enabled-models.js';
+import { getAuthenticatedUserId } from '#lib/backend/auth-utils.js';
 
 // GET - get all models with capabilities and enabled status
 export const GET: RequestHandler = async ({ request }) => {

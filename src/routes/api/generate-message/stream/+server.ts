@@ -1,20 +1,20 @@
 import { error, type RequestHandler } from '@sveltejs/kit';
 import { ResultAsync } from 'neverthrow';
-import { supportsVideo } from '$lib/utils/model-capabilities';
+import { supportsVideo } from '#lib/utils/model-capabilities.js';
 import { generationAbortControllers } from '../cache.js';
-import { SSEEncoder, sseHeaders, type SSEEvent } from '$lib/sse';
-import { generateMessageRequestSchema } from '$lib/backend/generation/schema';
+import { SSEEncoder, sseHeaders, type SSEEvent } from '#lib/sse.js';
+import { generateMessageRequestSchema } from '#lib/backend/generation/schema.js';
 import {
 	authenticateGenerationRequest,
 	resolveGenerationContext,
 	persistUserTurn,
-} from '$lib/backend/generation/request';
-import { runChatGeneration } from '$lib/backend/generation/run';
+} from '#lib/backend/generation/request.js';
+import { runChatGeneration } from '#lib/backend/generation/run.js';
 import {
 	handleGenerationAbort,
 	handleGenerationError,
 	isAbortError,
-} from '$lib/backend/generation/finalize';
+} from '#lib/backend/generation/finalize.js';
 
 // Set to true to enable debug logging
 const ENABLE_LOGGING = true;

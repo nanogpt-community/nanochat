@@ -1,5 +1,5 @@
-import { assertPublicHttpUrl } from '$lib/backend/egress';
-import type { Conversation, Message } from '$lib/db/schema';
+import { assertPublicHttpUrl } from '#lib/backend/egress.js';
+import type { Conversation, Message } from '#lib/db/schema.js';
 
 export interface KarakeepBookmark {
 	type: 'text';

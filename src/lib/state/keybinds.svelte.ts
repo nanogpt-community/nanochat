@@ -1,5 +1,5 @@
-import { createPersistedObj } from '$lib/spells/persisted-obj.svelte';
-import type { Key } from '$lib/actions/shortcut.svelte';
+import { createPersistedObj } from '#lib/spells/persisted-obj.svelte.js';
+import type { Key } from '#lib/actions/shortcut.svelte.js';
 
 /**
  * Available keyboard shortcut actions that can be customized.

@@ -1,90 +1,90 @@
 import { json, error, isHttpError } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { existsSync, unlinkSync } from 'fs';
-import { MAX_UPLOAD_BYTES, saveFile } from '$lib/backend/storage';
-import { getStorageAccess } from '$lib/backend/storage-access';
-import { getAuthenticatedUserId } from '$lib/backend/auth-utils';
-import { db } from '$lib/db';
-import { storage } from '$lib/db/schema';
+import { MAX_UPLOAD_BYTES, saveFile } from '#lib/backend/storage.js';
+import { getStorageAccess } from '#lib/backend/storage-access.js';
+import { getAuthenticatedUserId } from '#lib/backend/auth-utils.js';
+import { db } from '#lib/db/index.js';
+import { storage } from '#lib/db/schema.js';
 import { eq } from 'drizzle-orm';
 
 // POST - Upload file
 export const POST: RequestHandler = async ({ request }) => {
-    const userId = await getAuthenticatedUserId(request);
+	const userId = await getAuthenticatedUserId(request);
 
-    const contentType = request.headers.get('content-type') || 'application/octet-stream';
-    const contentLength = request.headers.get('content-length');
-    if (contentLength && Number(contentLength) > MAX_UPLOAD_BYTES) {
-        return error(413, 'File too large. Maximum size is 100MB.');
-    }
-    const body = await request.arrayBuffer();
-    if (body.byteLength > MAX_UPLOAD_BYTES) {
-        return error(413, 'File too large. Maximum size is 100MB.');
-    }
+	const contentType = request.headers.get('content-type') || 'application/octet-stream';
+	const contentLength = request.headers.get('content-length');
+	if (contentLength && Number(contentLength) > MAX_UPLOAD_BYTES) {
+		return error(413, 'File too large. Maximum size is 100MB.');
+	}
+	const body = await request.arrayBuffer();
+	if (body.byteLength > MAX_UPLOAD_BYTES) {
+		return error(413, 'File too large. Maximum size is 100MB.');
+	}
 
-    // We typically don't have original filename in raw POST body upload unless in header
-    // Helper function defaults if not provided, or we can assume a name
-    const filename = request.headers.get('x-filename') || `upload-${Date.now()}`;
+	// We typically don't have original filename in raw POST body upload unless in header
+	// Helper function defaults if not provided, or we can assume a name
+	const filename = request.headers.get('x-filename') || `upload-${Date.now()}`;
 
-    try {
-        const savedFile = await saveFile(Buffer.from(body), filename, contentType, userId);
+	try {
+		const savedFile = await saveFile(Buffer.from(body), filename, contentType, userId);
 
-        return json({
-            storageId: savedFile.id,
-            url: `/api/storage/${savedFile.id}`,
-        });
-    } catch (e) {
-        if (isHttpError(e)) throw e;
-        console.error(e);
-        return error(500, 'Failed to save file');
-    }
+		return json({
+			storageId: savedFile.id,
+			url: `/api/storage/${savedFile.id}`,
+		});
+	} catch (e) {
+		if (isHttpError(e)) throw e;
+		console.error(e);
+		return error(500, 'Failed to save file');
+	}
 };
 
 // GET - Get file URL or download file
 export const GET: RequestHandler = async ({ request, url }) => {
-    const storageId = url.searchParams.get('id');
+	const storageId = url.searchParams.get('id');
 
-    if (!storageId) {
-        return error(400, 'Missing storage id');
-    }
+	if (!storageId) {
+		return error(400, 'Missing storage id');
+	}
 
-    const access = await getStorageAccess(storageId, request);
-    if (!access) {
-        return error(404, 'File not found');
-    }
+	const access = await getStorageAccess(storageId, request);
+	if (!access) {
+		return error(404, 'File not found');
+	}
 
-    // Return the URL for the file
-    return json({ url: `/api/storage/${storageId}` });
+	// Return the URL for the file
+	return json({ url: `/api/storage/${storageId}` });
 };
 
 // DELETE - Delete file
 export const DELETE: RequestHandler = async ({ request, url }) => {
-    const userId = await getAuthenticatedUserId(request);
-    const storageId = url.searchParams.get('id');
+	const userId = await getAuthenticatedUserId(request);
+	const storageId = url.searchParams.get('id');
 
-    if (!storageId) {
-        return error(400, 'Missing storage id');
-    }
+	if (!storageId) {
+		return error(400, 'Missing storage id');
+	}
 
-    const file = await db.query.storage.findFirst({
-        where: eq(storage.id, storageId),
-    });
+	const file = await db.query.storage.findFirst({
+		where: eq(storage.id, storageId),
+	});
 
-    if (!file) {
-        return error(404, 'File not found');
-    }
+	if (!file) {
+		return error(404, 'File not found');
+	}
 
-    if (file.userId !== userId) {
-        return error(403, 'Unauthorized');
-    }
+	if (file.userId !== userId) {
+		return error(403, 'Unauthorized');
+	}
 
-    // Delete file from disk
-    if (existsSync(file.path)) {
-        unlinkSync(file.path);
-    }
+	// Delete file from disk
+	if (existsSync(file.path)) {
+		unlinkSync(file.path);
+	}
 
-    // Delete from database
-    await db.delete(storage).where(eq(storage.id, storageId));
+	// Delete from database
+	await db.delete(storage).where(eq(storage.id, storageId));
 
-    return json({ ok: true });
+	return json({ ok: true });
 };

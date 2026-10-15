@@ -2,16 +2,16 @@ import { error, json, type RequestHandler } from '@sveltejs/kit';
 import { ResultAsync } from 'neverthrow';
 import { z } from 'zod/v4';
 import { OpenAI } from 'openai';
-import { parseMessageForRules } from '$lib/utils/rules';
-import { db } from '$lib/db';
-import { userRules } from '$lib/db/schema';
+import { parseMessageForRules } from '#lib/utils/rules.js';
+import { db } from '#lib/db/index.js';
+import { userRules } from '#lib/db/schema.js';
 import { eq } from 'drizzle-orm';
-import { getAuthenticatedUserId } from '$lib/backend/auth-utils';
-import { nanoGptUrl } from '$lib/backend/nano-gpt-url.server';
-import { resolveNanoGptApiKey } from '$lib/backend/nanogpt-key.server';
-import { getUserSettings } from '$lib/db/queries/user-settings';
-import { DEFAULT_UTILITY_MODEL } from '$lib/backend/default-models';
-import { assertSharedKeyUse } from '$lib/backend/shared-key-policy';
+import { getAuthenticatedUserId } from '#lib/backend/auth-utils.js';
+import { nanoGptUrl } from '#lib/backend/nano-gpt-url.server.js';
+import { resolveNanoGptApiKey } from '#lib/backend/nanogpt-key.server.js';
+import { getUserSettings } from '#lib/db/queries/user-settings.js';
+import { DEFAULT_UTILITY_MODEL } from '#lib/backend/default-models.js';
+import { assertSharedKeyUse } from '#lib/backend/shared-key-policy.js';
 
 const reqBodySchema = z.object({
 	prompt: z.string(),

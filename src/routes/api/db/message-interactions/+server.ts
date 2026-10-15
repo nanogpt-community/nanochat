@@ -1,8 +1,8 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { logMessageInteraction } from '$lib/db/queries/message-interactions';
-import { getOwnedMessage } from '$lib/db/queries/messages';
-import { getAuthenticatedUserId } from '$lib/backend/auth-utils';
+import { logMessageInteraction } from '#lib/db/queries/message-interactions.js';
+import { getOwnedMessage } from '#lib/db/queries/messages.js';
+import { getAuthenticatedUserId } from '#lib/backend/auth-utils.js';
 
 export const POST: RequestHandler = async ({ request }) => {
 	try {

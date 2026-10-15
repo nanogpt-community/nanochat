@@ -1,7 +1,7 @@
-import { redirectToLogin } from '$lib/backend/auth/redirect.js';
-import { toPublicAuthSession } from '$lib/auth-session';
-import { db } from '$lib/db';
-import * as schema from '$lib/db/schema';
+import { redirectToLogin } from '#lib/backend/auth/redirect.js';
+import { toPublicAuthSession } from '#lib/auth-session.js';
+import { db } from '#lib/db/index.js';
+import * as schema from '#lib/db/schema.js';
 import { eq } from 'drizzle-orm';
 
 import type { LayoutServerLoad } from './$types';
@@ -19,4 +19,4 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 		session: toPublicAuthSession(session),
 		passkeys,
 	};
-}
+};

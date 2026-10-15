@@ -1,16 +1,16 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { shortcut, getKeybindOptions } from '$lib/actions/shortcut.svelte';
-	import GlobalModal from '$lib/components/ui/modal/global-modal.svelte';
-	import { models } from '$lib/state/models.svelte';
+	import { shortcut, getKeybindOptions } from '#lib/actions/shortcut.svelte.js';
+	import GlobalModal from '#lib/components/ui/modal/global-modal.svelte';
+	import { models } from '#lib/state/models.svelte.js';
 	import { ModeWatcher } from 'mode-watcher';
 	import '../app.css';
-	import { browser } from '$app/environment';
+	import { browser } from '$app/env';
 	import { MetaTags } from 'svelte-meta-tags';
 	import { page } from '$app/state';
-	import { setupLastChat } from '$lib/state/last-chat.svelte';
-	import { getTheme, applyTheme } from '$lib/themes/themes';
-	import { session } from '$lib/state/session.svelte';
+	import { setupLastChat } from '#lib/state/last-chat.svelte.js';
+	import { getTheme, applyTheme } from '#lib/themes/themes.js';
+	import { session } from '#lib/state/session.svelte.js';
 	import { onMount } from 'svelte';
 
 	let { children } = $props();
@@ -28,7 +28,7 @@
 				});
 				if (response.ok) {
 					const settings = await response.json();
-					const theme = settings.theme ? getTheme(settings.theme) ?? null : null;
+					const theme = settings.theme ? (getTheme(settings.theme) ?? null) : null;
 					applyTheme(theme, {
 						primaryColor: settings.themePrimaryColor ?? null,
 						accentColor: settings.themeAccentColor ?? null,

@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { sanitizeHtml } from '$lib/utils/html-sanitizer';
-	import { Markdown } from '$lib/utils/markdown.svelte';
+	import { sanitizeHtml } from '#lib/utils/html-sanitizer.js';
+	import { Markdown } from '#lib/utils/markdown.svelte.js';
 
 	// Copy-button clicks are handled once, by the delegated listener on the message
 	// wrapper in message.svelte. This component used to attach its own as well, which

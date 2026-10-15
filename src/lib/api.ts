@@ -4,7 +4,7 @@
  * using Postgres + Drizzle backend via SvelteKit API routes
  */
 
-import type { Provider } from '$lib/types';
+import type { Provider } from '#lib/types.js';
 
 // Re-export types from database schema
 export type {
@@ -22,15 +22,18 @@ export type {
 	Project,
 	ProjectFile,
 	ProjectMember,
-} from '$lib/db/schema';
+} from '#lib/db/schema.js';
 
-type DbUserSettings = import('$lib/db/schema').UserSettings;
+type DbUserSettings = import('#lib/db/schema.js').UserSettings;
 
 export type UserSettings = Omit<DbUserSettings, 'karakeepApiKey'> & {
 	hasKarakeepApiKey: boolean;
 };
 
-export type McpServerConfig = Omit<import('$lib/db/schema').McpServer, 'authToken' | 'headers'> & {
+export type McpServerConfig = Omit<
+	import('#lib/db/schema.js').McpServer,
+	'authToken' | 'headers'
+> & {
 	hasAuthToken: boolean;
 	headerNames: string[];
 };
@@ -49,17 +52,17 @@ export type Id<T extends keyof DocTypes> = string;
 interface DocTypes {
 	user_settings: UserSettings;
 	user_keys: UserKeyStatus;
-	user_enabled_models: import('$lib/db/schema').UserEnabledModel;
-	user_rules: import('$lib/db/schema').UserRule;
-	conversations: import('$lib/db/schema').Conversation;
-	messages: import('$lib/db/schema').Message;
-	storage: import('$lib/db/schema').Storage;
-	assistants: import('$lib/db/schema').Assistant;
-	prompts: import('$lib/db/schema').Prompt;
-	scheduled_tasks: import('$lib/db/schema').ScheduledTask;
-	projects: import('$lib/db/schema').Project;
-	project_files: import('$lib/db/schema').ProjectFile;
-	project_members: import('$lib/db/schema').ProjectMember;
+	user_enabled_models: import('#lib/db/schema.js').UserEnabledModel;
+	user_rules: import('#lib/db/schema.js').UserRule;
+	conversations: import('#lib/db/schema.js').Conversation;
+	messages: import('#lib/db/schema.js').Message;
+	storage: import('#lib/db/schema.js').Storage;
+	assistants: import('#lib/db/schema.js').Assistant;
+	prompts: import('#lib/db/schema.js').Prompt;
+	scheduled_tasks: import('#lib/db/schema.js').ScheduledTask;
+	projects: import('#lib/db/schema.js').Project;
+	project_files: import('#lib/db/schema.js').ProjectFile;
+	project_members: import('#lib/db/schema.js').ProjectMember;
 }
 
 // API endpoints mapping - these replace the Convex API object

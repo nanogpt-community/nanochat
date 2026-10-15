@@ -5,11 +5,11 @@ import {
 	getUserKeyStatus,
 	setUserKey,
 	deleteUserKey,
-} from '$lib/db/queries';
-import { enableDefaultModelsOnKeyAdd } from '$lib/db/queries/user-enabled-models';
-import { getAuthenticatedUserId } from '$lib/backend/auth-utils';
-import { assertEncryptionEnabled } from '$lib/encryption';
-import { jsonNoStore } from '$lib/backend/http-security';
+} from '#lib/db/queries/index.js';
+import { enableDefaultModelsOnKeyAdd } from '#lib/db/queries/user-enabled-models.js';
+import { getAuthenticatedUserId } from '#lib/backend/auth-utils.js';
+import { assertEncryptionEnabled } from '#lib/encryption.js';
+import { jsonNoStore } from '#lib/backend/http-security.js';
 
 // GET - get user keys
 export const GET: RequestHandler = async ({ request, url }) => {

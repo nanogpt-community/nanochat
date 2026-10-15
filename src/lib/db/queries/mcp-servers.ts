@@ -6,8 +6,8 @@ import {
 	decryptApiKey,
 	encryptApiKey,
 	isEncrypted,
-} from '$lib/encryption';
-import { sanitizeHeaders, type HttpHeaders } from '$lib/utils/http-headers';
+} from '#lib/encryption.js';
+import { sanitizeHeaders, type HttpHeaders } from '#lib/utils/http-headers.js';
 
 export type PublicMcpServer = Omit<McpServer, 'authToken' | 'headers'> & {
 	hasAuthToken: boolean;

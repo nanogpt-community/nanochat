@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
-	import { Button } from '$lib/components/ui/button';
-	import { toSafeResourceUrl } from '$lib/utils/html-sanitizer';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { toSafeResourceUrl } from '#lib/utils/html-sanitizer.js';
 	import XIcon from '~icons/lucide/x';
 	import DownloadIcon from '~icons/lucide/download';
 	import ExternalLinkIcon from '~icons/lucide/external-link';

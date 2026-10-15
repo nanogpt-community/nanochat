@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { cn } from '$lib/utils/utils';
+	import { cn } from '#lib/utils/utils.js';
 	import type { HTMLAttributes } from 'svelte/elements';
 	import { useSidebar } from './sidebar.svelte.js';
-	import { shortcut, getKeybindOptions } from '$lib/actions/shortcut.svelte.js';
+	import { shortcut, getKeybindOptions } from '#lib/actions/shortcut.svelte.js';
 
 	let {
 		open = $bindable(false),
@@ -117,10 +117,7 @@
 
 <div
 	{...rest}
-	class={cn(
-		'[--sidebar-width:0px] md:grid md:grid-cols-[var(--sidebar-width)_1fr]',
-		rest.class
-	)}
+	class={cn('[--sidebar-width:0px] md:grid md:grid-cols-[var(--sidebar-width)_1fr]', rest.class)}
 	style={`--sidebar-width: ${sidebar.showSidebar ? `${sidebar.effectiveWidth}px` : '0px'};`}
 >
 	{@render children?.()}

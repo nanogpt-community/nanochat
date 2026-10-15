@@ -3,9 +3,9 @@
 -->
 
 <script lang="ts">
-	import { Button } from '$lib/components/ui/button';
-	import { UseClipboard } from '$lib/hooks/use-clipboard.svelte';
-	import { cn } from '$lib/utils/utils';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { UseClipboard } from '#lib/hooks/use-clipboard.svelte.js';
+	import { cn } from '#lib/utils/utils.js';
 	import CheckIcon from '~icons/lucide/check';
 	import CopyIcon from '~icons/lucide/copy';
 	import XIcon from '~icons/lucide/x';

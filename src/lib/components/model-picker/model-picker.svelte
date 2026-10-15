@@ -1,19 +1,19 @@
 <script lang="ts">
-	import { useCachedQuery, api } from '$lib/cache/cached-query.svelte';
-	import Tooltip from '$lib/components/ui/tooltip.svelte';
-	import { IsMobile } from '$lib/hooks/is-mobile.svelte';
-	import { models as modelsState } from '$lib/state/models.svelte';
-	import { settings } from '$lib/state/settings.svelte';
-	import { Provider } from '$lib/types';
-	import { fuzzysearch } from '$lib/utils/fuzzy-search';
+	import { useCachedQuery, api } from '#lib/cache/cached-query.svelte.js';
+	import Tooltip from '#lib/components/ui/tooltip.svelte';
+	import { IsMobile } from '#lib/hooks/is-mobile.svelte.js';
+	import { models as modelsState } from '#lib/state/models.svelte.js';
+	import { settings } from '#lib/state/settings.svelte.js';
+	import { Provider } from '#lib/types.js';
+	import { fuzzysearch } from '#lib/utils/fuzzy-search.js';
 	import {
 		supportsReasoning,
 		supportsVideo,
 		isImageOnlyModel,
 		supportsVision,
-	} from '$lib/utils/model-capabilities';
-	import { capitalize } from '$lib/utils/strings';
-	import { cn } from '$lib/utils/utils';
+	} from '#lib/utils/model-capabilities.js';
+	import { capitalize } from '#lib/utils/strings.js';
+	import { cn } from '#lib/utils/utils.js';
 	import BrainIcon from '~icons/lucide/brain';
 	import SearchIcon from '~icons/lucide/search';
 	import EyeIcon from '~icons/lucide/eye';
@@ -24,17 +24,17 @@
 	import ImageIcon from '~icons/lucide/image';
 	import { Command } from 'bits-ui';
 	import ChevronDownIcon from '~icons/lucide/chevron-down';
-	import * as Popover from '$lib/components/ui/popover';
-	import { shortcut, getKeybindOptions } from '$lib/actions/shortcut.svelte';
+	import * as Popover from '#lib/components/ui/popover/index.js';
+	import { shortcut, getKeybindOptions } from '#lib/actions/shortcut.svelte.js';
 	import { Button } from '../ui/button';
 	import { Kbd } from '../ui/kbd';
-	import { formatKeybind } from '$lib/hooks/is-mac.svelte';
-	import { keybinds, DEFAULT_KEYBINDS } from '$lib/state/keybinds.svelte';
-	import { mutate } from '$lib/client/mutation.svelte';
+	import { formatKeybind } from '#lib/hooks/is-mac.svelte.js';
+	import { keybinds, DEFAULT_KEYBINDS } from '#lib/state/keybinds.svelte.js';
+	import { mutate } from '#lib/client/mutation.svelte.js';
 	import { ResultAsync } from 'neverthrow';
-	import { isFirefox } from '$lib/hooks/is-firefox.svelte';
+	import { isFirefox } from '#lib/hooks/is-firefox.svelte.js';
 	import ModelInfoPanel from './model-info-panel.svelte';
-	import type { NanoGPTModel } from '$lib/backend/models/nano-gpt';
+	import type { NanoGPTModel } from '#lib/backend/models/nano-gpt.js';
 	import { fade, fly } from 'svelte/transition';
 	import grokIcon from '../../../../icons/grok.png';
 

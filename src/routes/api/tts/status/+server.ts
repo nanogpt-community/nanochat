@@ -1,9 +1,9 @@
-import { env } from '$env/dynamic/private';
+import { NANOGPT_API_KEY } from '$app/env/private';
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { tryGetAuthenticatedUserId } from '$lib/backend/auth-utils';
-import { getUserKey } from '$lib/db/queries';
-import { nanoGptUrl } from '$lib/backend/nano-gpt-url.server';
+import { tryGetAuthenticatedUserId } from '#lib/backend/auth-utils.js';
+import { getUserKey } from '#lib/db/queries/index.js';
+import { nanoGptUrl } from '#lib/backend/nano-gpt-url.server.js';
 
 const getExplicitNanoGPTKey = (request: Request): string | null => {
 	const headerKey = request.headers.get('x-api-key');
@@ -29,7 +29,7 @@ const resolveNanoGPTKey = async (request: Request, userId?: string): Promise<str
 	if (!userId) return null;
 
 	const userKey = await getUserKey(userId, 'nanogpt');
-	return userKey || env.NANOGPT_API_KEY || null;
+	return userKey || NANOGPT_API_KEY || null;
 };
 
 export const GET: RequestHandler = async ({ request, fetch, url }) => {

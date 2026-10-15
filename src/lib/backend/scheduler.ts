@@ -1,7 +1,7 @@
 import CronExpressionParser from 'cron-parser';
 import { and, eq, isNull, lt, lte, or } from 'drizzle-orm';
-import { db } from '$lib/db';
-import { scheduledTasks, userSettings, type ScheduledTask } from '$lib/db/schema';
+import { db } from '#lib/db/index.js';
+import { scheduledTasks, userSettings, type ScheduledTask } from '#lib/db/schema.js';
 import {
 	_generateMessageForUser,
 	type GenerateMessageRequestBody,
@@ -36,14 +36,7 @@ export function computeNextRunAt(args: {
 	referenceDate: Date;
 	timezone: string;
 }): Date | null {
-	const {
-		scheduleType,
-		cronExpression,
-		intervalSeconds,
-		runAt,
-		referenceDate,
-		timezone,
-	} = args;
+	const { scheduleType, cronExpression, intervalSeconds, runAt, referenceDate, timezone } = args;
 
 	if (scheduleType === 'once') {
 		return runAt ?? null;
@@ -60,8 +53,14 @@ export function computeNextRunAt(args: {
 
 	try {
 		const parser = CronExpressionParser as unknown as {
-			parse?: (expression: string, options: Record<string, unknown>) => { next: () => { toDate: () => Date } };
-			parseExpression?: (expression: string, options: Record<string, unknown>) => {
+			parse?: (
+				expression: string,
+				options: Record<string, unknown>
+			) => { next: () => { toDate: () => Date } };
+			parseExpression?: (
+				expression: string,
+				options: Record<string, unknown>
+			) => {
 				next: () => { toDate: () => Date };
 			};
 		};

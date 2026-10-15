@@ -1,14 +1,17 @@
 import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { db, generateId } from '$lib/db';
-import { apiKeys } from '$lib/db/schema';
+import { db, generateId } from '#lib/db/index.js';
+import { apiKeys } from '#lib/db/schema.js';
 import { eq, and } from 'drizzle-orm';
 import { z } from 'zod/v4';
 import { randomUUID } from 'crypto';
-import { getAuthenticatedUserId } from '$lib/backend/auth-utils';
-import { encryptApiKey } from '$lib/encryption';
-import { assertSecureSecretStorageReady, hashDeveloperApiKey } from '$lib/backend/api-key-security';
-import { jsonNoStore } from '$lib/backend/http-security';
+import { getAuthenticatedUserId } from '#lib/backend/auth-utils.js';
+import { encryptApiKey } from '#lib/encryption.js';
+import {
+	assertSecureSecretStorageReady,
+	hashDeveloperApiKey,
+} from '#lib/backend/api-key-security.js';
+import { jsonNoStore } from '#lib/backend/http-security.js';
 
 // GET - List API keys (excluding the actual key value for security)
 export const GET: RequestHandler = async ({ request }) => {

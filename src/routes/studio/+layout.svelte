@@ -1,15 +1,15 @@
 <script lang="ts">
-	import * as Sidebar from '$lib/components/ui/sidebar';
-	import AppSidebar from '$lib/components/app-sidebar.svelte';
-	import { cmdOrCtrl } from '$lib/hooks/is-mac.svelte.js';
+	import * as Sidebar from '#lib/components/ui/sidebar/index.js';
+	import AppSidebar from '#lib/components/app-sidebar.svelte';
+	import { cmdOrCtrl } from '#lib/hooks/is-mac.svelte.js';
 	import PanelLeftIcon from '~icons/lucide/panel-left';
 	import Settings2Icon from '~icons/lucide/settings-2';
 	import EllipsisVerticalIcon from '~icons/lucide/ellipsis-vertical';
-	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
-	import Tooltip from '$lib/components/ui/tooltip.svelte';
-	import { Button } from '$lib/components/ui/button';
-	import { ThemeToggle } from '$lib/components/ui/light-switch/index.js';
-	import { cn } from '$lib/utils/utils.js';
+	import * as DropdownMenu from '#lib/components/ui/dropdown-menu/index.js';
+	import Tooltip from '#lib/components/ui/tooltip.svelte';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { ThemeToggle } from '#lib/components/ui/light-switch/index.js';
+	import { cn } from '#lib/utils/utils.js';
 
 	let { children } = $props();
 	let searchModalOpen = $state(false);
@@ -19,7 +19,7 @@
 <Sidebar.Root bind:open={sidebarOpen} class="bg-sidebar fill-device-height overflow-clip">
 	<AppSidebar bind:searchModalOpen />
 
-	<Sidebar.Inset class="relative fill-device-height overflow-clip">
+	<Sidebar.Inset class="fill-device-height relative overflow-clip">
 		<!-- Mobile header: fixed bar respecting iOS safe-area. The studio page's
 		     own wrapper reserves matching top padding so the composer-pinned-to-
 		     bottom layout continues to fill the viewport correctly. -->
@@ -84,13 +84,7 @@
 			<div class="flex items-center gap-1">
 				<Tooltip>
 					{#snippet trigger(tooltip)}
-						<Button
-							variant="ghost"
-							size="icon"
-							class="size-8"
-							href="/account"
-							{...tooltip.trigger}
-						>
+						<Button variant="ghost" size="icon" class="size-8" href="/account" {...tooltip.trigger}>
 							<Settings2Icon />
 						</Button>
 					{/snippet}

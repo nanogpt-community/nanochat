@@ -1,12 +1,12 @@
-import { REASONING_EFFORTS } from '$lib/utils/model-capabilities';
+import { REASONING_EFFORTS } from '#lib/utils/model-capabilities.js';
 import { json, type RequestEvent } from '@sveltejs/kit';
 import { z } from 'zod';
 import { desc, eq } from 'drizzle-orm';
-import { db, generateId } from '$lib/db';
-import { scheduledTasks } from '$lib/db/schema';
-import { getAuthenticatedUserId } from '$lib/backend/auth-utils';
-import { computeNextRunAt, type ScheduleType } from '$lib/backend/scheduler';
-import { getOrCreateUserSettings } from '$lib/db/queries/user-settings';
+import { db, generateId } from '#lib/db/index.js';
+import { scheduledTasks } from '#lib/db/schema.js';
+import { getAuthenticatedUserId } from '#lib/backend/auth-utils.js';
+import { computeNextRunAt, type ScheduleType } from '#lib/backend/scheduler.js';
+import { getOrCreateUserSettings } from '#lib/db/queries/user-settings.js';
 
 const payloadSchema = z
 	.object({

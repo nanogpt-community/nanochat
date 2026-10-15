@@ -1,13 +1,13 @@
 import { ResultAsync } from 'neverthrow';
 import type { GenerateMessageRequestBody, GenerateMessageResponse } from './+server';
-import type { Conversation, Message } from '$lib/api';
+import type { Conversation, Message } from '#lib/api.js';
 import {
 	api,
 	invalidateQueryPattern,
 	setCachedQueryData,
 	setCachedQueryDataMatching,
-} from '$lib/cache/cached-query.svelte';
-import { activeGeneration } from '$lib/state/active-generation.svelte';
+} from '#lib/cache/cached-query.svelte.js';
+import { activeGeneration } from '#lib/state/active-generation.svelte.js';
 
 export async function callGenerateMessage(args: GenerateMessageRequestBody) {
 	const res = ResultAsync.fromPromise(

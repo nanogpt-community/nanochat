@@ -1,17 +1,16 @@
-import { resolveNanoGptApiKey } from '$lib/backend/nanogpt-key.server';
-import { checkSharedKeyUse } from '$lib/backend/shared-key-policy';
-import { getNanoGPTModels } from '$lib/backend/models/nano-gpt';
-import { supportsVideo } from '$lib/utils/model-capabilities';
-import { env } from '$env/dynamic/private';
+import { resolveNanoGptApiKey } from '#lib/backend/nanogpt-key.server.js';
+import { checkSharedKeyUse } from '#lib/backend/shared-key-policy.js';
+import { getNanoGPTModels } from '#lib/backend/models/nano-gpt.js';
+import { supportsVideo } from '#lib/utils/model-capabilities.js';
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { tryGetAuthenticatedUserId } from '$lib/backend/auth-utils';
-import { getUserKey } from '$lib/db/queries';
-import { nanoGptUrl } from '$lib/backend/nano-gpt-url.server';
-import { readRedactedResponseText, redactSecrets } from '$lib/backend/secret-redaction';
+import { tryGetAuthenticatedUserId } from '#lib/backend/auth-utils.js';
+import { getUserKey } from '#lib/db/queries/index.js';
+import { nanoGptUrl } from '#lib/backend/nano-gpt-url.server.js';
+import { readRedactedResponseText, redactSecrets } from '#lib/backend/secret-redaction.js';
 import { readFile } from 'fs/promises';
-import { db } from '$lib/db';
-import { storage } from '$lib/db/schema';
+import { db } from '#lib/db/index.js';
+import { storage } from '#lib/db/schema.js';
 import { and, eq } from 'drizzle-orm';
 
 const getExplicitNanoGPTKey = (request: Request): string | null => {

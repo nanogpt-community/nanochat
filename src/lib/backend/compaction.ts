@@ -1,15 +1,15 @@
 import OpenAI from 'openai';
 import { error } from '@sveltejs/kit';
-import { db } from '$lib/db';
-import { conversations, messages } from '$lib/db/schema';
+import { db } from '#lib/db/index.js';
+import { conversations, messages } from '#lib/db/schema.js';
 import { and, asc, eq, sql } from 'drizzle-orm';
-import { getNanoGPTModels } from '$lib/backend/models/nano-gpt';
-import { nanoGptUrl } from '$lib/backend/nano-gpt-url.server';
-import { resolveNanoGptApiKey } from '$lib/backend/nanogpt-key.server';
-import { computeTokenCost } from '$lib/backend/pricing';
-import { getUserSettings } from '$lib/db/queries/user-settings';
-import { DEFAULT_BACKGROUND_MODEL } from '$lib/backend/default-models';
-import { assertSharedKeyUse } from '$lib/backend/shared-key-policy';
+import { getNanoGPTModels } from '#lib/backend/models/nano-gpt.js';
+import { nanoGptUrl } from '#lib/backend/nano-gpt-url.server.js';
+import { resolveNanoGptApiKey } from '#lib/backend/nanogpt-key.server.js';
+import { computeTokenCost } from '#lib/backend/pricing.js';
+import { getUserSettings } from '#lib/db/queries/user-settings.js';
+import { DEFAULT_BACKGROUND_MODEL } from '#lib/backend/default-models.js';
+import { assertSharedKeyUse } from '#lib/backend/shared-key-policy.js';
 
 /** Messages kept verbatim after an auto-compaction: the new user message plus two prior exchanges. */
 export const KEEP_TAIL = 5;

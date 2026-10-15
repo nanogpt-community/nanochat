@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { Button } from '$lib/components/ui/button';
-	import { cn } from '$lib/utils/utils';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { cn } from '#lib/utils/utils.js';
 	import type { PageData } from './$types';
 	import StarIcon from '~icons/lucide/star';
 	import TrendingUpIcon from '~icons/lucide/trending-up';
@@ -230,7 +230,7 @@
 				<div class="bg-card border-border divide-border divide-y rounded-lg border">
 					{#if data.insights.bestRatedModel}
 						<div class="flex items-start gap-3 p-5">
-							<div class="bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 rounded-md p-2">
+							<div class="rounded-md bg-yellow-500/10 p-2 text-yellow-600 dark:text-yellow-400">
 								<StarIcon class="size-4" />
 							</div>
 							<div class="flex min-w-0 flex-col gap-1">
@@ -249,15 +249,13 @@
 
 					{#if data.insights.mostCostEffective && !isNaN(data.insights.mostCostEffective.totalCost)}
 						<div class="flex items-start gap-3 p-5">
-							<div class="bg-green-500/10 text-green-600 dark:text-green-400 rounded-md p-2">
+							<div class="rounded-md bg-green-500/10 p-2 text-green-600 dark:text-green-400">
 								<DollarSignIcon class="size-4" />
 							</div>
 							<div class="flex min-w-0 flex-col gap-1">
 								<span class="font-medium">Most Cost-Effective</span>
 								<span class="text-muted-foreground text-sm">
-									<strong class="text-foreground"
-										>{data.insights.mostCostEffective.modelId}</strong
-									>
+									<strong class="text-foreground">{data.insights.mostCostEffective.modelId}</strong>
 									at
 									<strong class="text-foreground"
 										>{formatCost(
@@ -273,7 +271,7 @@
 
 					{#if data.insights.fastestModel}
 						<div class="flex items-start gap-3 p-5">
-							<div class="bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-md p-2">
+							<div class="rounded-md bg-blue-500/10 p-2 text-blue-600 dark:text-blue-400">
 								<ZapIcon class="size-4" />
 							</div>
 							<div class="flex min-w-0 flex-col gap-1">
@@ -404,14 +402,12 @@
 								</button>
 							</th>
 							<th class="px-3 pt-4 pb-3 text-center">
-								<span
-									class="text-muted-foreground text-xs font-semibold tracking-wide uppercase"
+								<span class="text-muted-foreground text-xs font-semibold tracking-wide uppercase"
 									>Top Categories</span
 								>
 							</th>
 							<th class="px-5 pt-4 pb-3 text-center">
-								<span
-									class="text-muted-foreground text-xs font-semibold tracking-wide uppercase"
+								<span class="text-muted-foreground text-xs font-semibold tracking-wide uppercase"
 									>Errors</span
 								>
 							</th>

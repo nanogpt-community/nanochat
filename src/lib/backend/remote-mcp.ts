@@ -1,4 +1,4 @@
-import { assertPublicHttpUrl } from '$lib/backend/egress';
+import { assertPublicHttpUrl } from '#lib/backend/egress.js';
 /**
  * Remote MCP servers configured by the user.
  *
@@ -11,8 +11,8 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
 import type { ChatCompletionTool } from 'openai/resources/chat/completions';
-import { getEnabledMcpServers, parseHeaders } from '$lib/db/queries/mcp-servers';
-import type { McpServer } from '$lib/db/schema';
+import { getEnabledMcpServers, parseHeaders } from '#lib/db/queries/mcp-servers.js';
+import type { McpServer } from '#lib/db/schema.js';
 
 export const MCP_TOOL_PREFIX = 'mcp_';
 

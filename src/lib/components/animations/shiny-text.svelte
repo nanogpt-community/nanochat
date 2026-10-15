@@ -1,7 +1,7 @@
 <!-- Incredible work https://animation-svelte.vercel.app/magic/animated-shiny-text thank you! -->
 
 <script lang="ts">
-	import { cn } from '$lib/utils/utils';
+	import { cn } from '#lib/utils/utils.js';
 	import type { Snippet } from 'svelte';
 
 	type Props = {

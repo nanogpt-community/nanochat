@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { cn } from '$lib/utils/utils';
+	import { cn } from '#lib/utils/utils.js';
 	import { Toggle, type ToggleProps } from 'melt/builders';
 	import { type ComponentProps } from 'melt';
 

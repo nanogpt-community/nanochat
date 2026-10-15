@@ -1,8 +1,8 @@
-import { db } from '$lib/db';
-import { userKeys } from '$lib/db/schema';
+import { db } from '#lib/db/index.js';
+import { userKeys } from '#lib/db/schema.js';
 import { and, eq } from 'drizzle-orm';
-import { Provider } from '$lib/types';
-import { decryptApiKey, isEncrypted } from '$lib/encryption';
+import { Provider } from '#lib/types.js';
+import { decryptApiKey, isEncrypted } from '#lib/encryption.js';
 
 export type ResolvedKey = { apiKey: string; usingServerKey: boolean };
 

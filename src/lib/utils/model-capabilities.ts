@@ -1,4 +1,4 @@
-import type { NanoGPTModel } from '$lib/backend/models/nano-gpt';
+import type { NanoGPTModel } from '#lib/backend/models/nano-gpt.js';
 
 export function supportsImages(model: NanoGPTModel): boolean {
 	if (

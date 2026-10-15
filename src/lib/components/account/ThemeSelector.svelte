@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { themes, getTheme, applyTheme } from '$lib/themes/themes';
-	import { mutate } from '$lib/client/mutation.svelte';
-	import { api } from '$lib/cache/cached-query.svelte';
-	import { session } from '$lib/state/session.svelte';
+	import { themes, getTheme, applyTheme } from '#lib/themes/themes.js';
+	import { mutate } from '#lib/client/mutation.svelte.js';
+	import { api } from '#lib/cache/cached-query.svelte.js';
+	import { session } from '#lib/state/session.svelte.js';
 	import { ResultAsync } from 'neverthrow';
-	import Button from '$lib/components/ui/button/button.svelte';
+	import Button from '#lib/components/ui/button/button.svelte';
 	import CheckIcon from '~icons/lucide/check';
 
 	let {
@@ -202,7 +202,10 @@
 							class="h-2 w-12 rounded-full opacity-80"
 							style="background-color: {theme.colors.accent};"
 						></div>
-						<div class="h-1.5 w-10 rounded-full opacity-40" style="background-color: {theme.colors.border};"></div>
+						<div
+							class="h-1.5 w-10 rounded-full opacity-40"
+							style="background-color: {theme.colors.border};"
+						></div>
 					</div>
 				</div>
 				<div class="flex items-center justify-between gap-2 border-t border-inherit p-3">
@@ -226,7 +229,9 @@
 		<div class="border-border bg-muted/30 flex flex-col gap-3 rounded-lg border p-4">
 			<div class="flex flex-col gap-0.5">
 				<p class="text-sm font-medium">Custom Accents</p>
-				<p class="text-muted-foreground text-xs">Override this theme's primary and accent colors.</p>
+				<p class="text-muted-foreground text-xs">
+					Override this theme's primary and accent colors.
+				</p>
 			</div>
 
 			<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">

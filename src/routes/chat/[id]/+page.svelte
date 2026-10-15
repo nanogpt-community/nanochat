@@ -1,21 +1,21 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { useCachedQuery, api, invalidateQueryPattern } from '$lib/cache/cached-query.svelte';
-	import type { Id } from '$lib/db/types';
-	import type { Conversation, Message } from '$lib/api';
-	import { session } from '$lib/state/session.svelte';
+	import { useCachedQuery, api, invalidateQueryPattern } from '#lib/cache/cached-query.svelte.js';
+	import type { Id } from '#lib/db/types.js';
+	import type { Conversation, Message } from '#lib/api.js';
+	import { session } from '#lib/state/session.svelte.js';
 	import { watch } from 'runed';
 	import LoadingDots from './loading-dots.svelte';
 	import MessageComponent from './message.svelte';
-	import { last } from '$lib/utils/array';
-	import { settings } from '$lib/state/settings.svelte';
-	import Button from '$lib/components/ui/button/button.svelte';
-	import ShinyText from '$lib/components/animations/shiny-text.svelte';
+	import { last } from '#lib/utils/array.js';
+	import { settings } from '#lib/state/settings.svelte.js';
+	import Button from '#lib/components/ui/button/button.svelte';
+	import ShinyText from '#lib/components/animations/shiny-text.svelte';
 	import GlobeIcon from '~icons/lucide/globe';
 	import LoaderCircleIcon from '~icons/lucide/loader-circle';
-	import FollowUpQuestions from '$lib/components/ui/follow-up-questions.svelte';
+	import FollowUpQuestions from '#lib/components/ui/follow-up-questions.svelte';
 	import { fly, fade } from 'svelte/transition';
-	import { activeGeneration } from '$lib/state/active-generation.svelte';
+	import { activeGeneration } from '#lib/state/active-generation.svelte.js';
 
 	const INITIAL_VISIBLE_MESSAGES = 120;
 	const LOAD_MORE_MESSAGES = 120;

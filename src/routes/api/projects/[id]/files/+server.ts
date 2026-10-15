@@ -1,14 +1,14 @@
-import { withParserSlot } from '$lib/backend/document-text';
+import { withParserSlot } from '#lib/backend/document-text.js';
 import { isHttpError, json, type RequestEvent } from '@sveltejs/kit';
-import { db, generateId } from '$lib/db';
-import { projects, projectMembers, projectFiles, storage } from '$lib/db/schema';
+import { db, generateId } from '#lib/db/index.js';
+import { projects, projectMembers, projectFiles, storage } from '#lib/db/schema.js';
 import { eq, and } from 'drizzle-orm';
 import { z } from 'zod';
-import { extractTextFromPDF } from '$lib/utils/pdf-extraction';
-import { extractTextFromEPUB } from '$lib/utils/epub-extraction';
-import { MAX_UPLOAD_BYTES, saveFile, deleteFile } from '$lib/backend/storage';
+import { extractTextFromPDF } from '#lib/utils/pdf-extraction.js';
+import { extractTextFromEPUB } from '#lib/utils/epub-extraction.js';
+import { MAX_UPLOAD_BYTES, saveFile, deleteFile } from '#lib/backend/storage.js';
 import path from 'path';
-import { getAuthenticatedUserId } from '$lib/backend/auth-utils';
+import { getAuthenticatedUserId } from '#lib/backend/auth-utils.js';
 
 // Helper to check if user has access to project
 async function getUserProjectAccess(

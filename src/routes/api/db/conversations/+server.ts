@@ -1,7 +1,7 @@
-import { compactConversationNow } from '$lib/backend/compaction';
+import { compactConversationNow } from '#lib/backend/compaction.js';
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { db } from '$lib/db';
+import { db } from '#lib/db/index.js';
 import {
 	getUserConversations,
 	getConversationById,
@@ -18,10 +18,10 @@ import {
 	deleteConversation,
 	deleteAllConversations,
 	searchConversations,
-} from '$lib/db/queries';
-import { projects, projectMembers } from '$lib/db/schema';
+} from '#lib/db/queries/index.js';
+import { projects, projectMembers } from '#lib/db/schema.js';
 import { and, eq } from 'drizzle-orm';
-import { getAuthenticatedUserId, tryGetAuthenticatedUserId } from '$lib/backend/auth-utils';
+import { getAuthenticatedUserId, tryGetAuthenticatedUserId } from '#lib/backend/auth-utils.js';
 
 // GET - list all conversations or get by id
 export const GET: RequestHandler = async ({ request, url }) => {

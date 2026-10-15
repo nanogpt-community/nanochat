@@ -9,9 +9,9 @@ import {
 	toggleModelPinned,
 	enableInitialModels,
 	resetDefaultNanoGptModels,
-} from '$lib/db/queries';
-import { isSubscriptionOnlyMode } from '$lib/backend/message-limits';
-import { getAuthenticatedUserId } from '$lib/backend/auth-utils';
+} from '#lib/db/queries/index.js';
+import { isSubscriptionOnlyMode } from '#lib/backend/message-limits.js';
+import { getAuthenticatedUserId } from '#lib/backend/auth-utils.js';
 
 // GET - get enabled models
 export const GET: RequestHandler = async ({ request, url }) => {

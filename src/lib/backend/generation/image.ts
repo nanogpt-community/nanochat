@@ -1,10 +1,10 @@
-import { db, generateId } from '$lib/db';
-import { conversations, messages, storage } from '$lib/db/schema';
+import { db, generateId } from '#lib/db/index.js';
+import { conversations, messages, storage } from '#lib/db/schema.js';
 import { and, eq, sql } from 'drizzle-orm';
 import { mkdir, readFile, writeFile } from 'fs/promises';
 import { join, resolve } from 'path';
-import { nanoGptUrl } from '$lib/backend/nano-gpt-url.server';
-import type { NanoGPTModel } from '$lib/backend/models/nano-gpt';
+import { nanoGptUrl } from '#lib/backend/nano-gpt-url.server.js';
+import type { NanoGPTModel } from '#lib/backend/models/nano-gpt.js';
 import type { GenerateMessageRequestBody, Log } from './schema';
 
 async function readStorageBuffer(path: string): Promise<Buffer> {

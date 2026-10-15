@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { useCachedQuery, api } from '$lib/cache/cached-query.svelte';
-	import type { Id } from '$lib/db/types';
-	import { Button } from '$lib/components/ui/button';
-	import { Switch } from '$lib/components/ui/switch';
-	import Tooltip from '$lib/components/ui/tooltip.svelte';
-	import { UseClipboard } from '$lib/hooks/use-clipboard.svelte.js';
-	import { session } from '$lib/state/session.svelte.js';
-	import { mutate } from '$lib/client/mutation.svelte';
+	import { useCachedQuery, api } from '#lib/cache/cached-query.svelte.js';
+	import type { Id } from '#lib/db/types.js';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { Switch } from '#lib/components/ui/switch/index.js';
+	import Tooltip from '#lib/components/ui/tooltip.svelte';
+	import { UseClipboard } from '#lib/hooks/use-clipboard.svelte.js';
+	import { session } from '#lib/state/session.svelte.js';
+	import { mutate } from '#lib/client/mutation.svelte.js';
 	import { Popover } from 'melt/builders';
 	import { ResultAsync } from 'neverthrow';
 	import { scale } from 'svelte/transition';
@@ -19,7 +19,7 @@
 
 	const clipboard = new UseClipboard();
 
-	import type { Conversation, UserSettings } from '$lib/api';
+	import type { Conversation, UserSettings } from '#lib/api.js';
 
 	let { conversationId } = $props<{
 		conversationId: string;

@@ -1,7 +1,7 @@
 import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { getAuthenticatedUserId } from '$lib/backend/auth-utils';
-import { jsonNoStore } from '$lib/backend/http-security';
+import { getAuthenticatedUserId } from '#lib/backend/auth-utils.js';
+import { jsonNoStore } from '#lib/backend/http-security.js';
 import {
 	listUserMemories,
 	createUserMemory,
@@ -9,7 +9,7 @@ import {
 	deleteUserMemory,
 	deleteAllUserMemories,
 	MAX_MEMORIES,
-} from '$lib/db/queries/user-memories';
+} from '#lib/db/queries/user-memories.js';
 
 export const GET: RequestHandler = async ({ request }) => {
 	const userId = await getAuthenticatedUserId(request);

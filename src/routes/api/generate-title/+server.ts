@@ -1,17 +1,16 @@
-import { resolveNanoGptApiKey } from '$lib/backend/nanogpt-key.server';
-import { assertSharedKeyUse } from '$lib/backend/shared-key-policy';
-import { DEFAULT_BACKGROUND_MODEL } from '$lib/backend/default-models';
-import { db } from '$lib/db';
-import { conversations, messages, userSettings, userKeys } from '$lib/db/schema';
+import { resolveNanoGptApiKey } from '#lib/backend/nanogpt-key.server.js';
+import { assertSharedKeyUse } from '#lib/backend/shared-key-policy.js';
+import { DEFAULT_BACKGROUND_MODEL } from '#lib/backend/default-models.js';
+import { db } from '#lib/db/index.js';
+import { conversations, messages, userSettings, userKeys } from '#lib/db/schema.js';
 import { eq, and, asc } from 'drizzle-orm';
-import { auth } from '$lib/auth';
+import { auth } from '#lib/auth.js';
 import { error, json, type RequestHandler } from '@sveltejs/kit';
 import { ResultAsync } from 'neverthrow';
 import OpenAI from 'openai';
 import { z } from 'zod/v4';
-import { decryptApiKey, isEncrypted } from '$lib/encryption';
-import { env } from '$env/dynamic/private';
-import { nanoGptUrl } from '$lib/backend/nano-gpt-url.server';
+import { decryptApiKey, isEncrypted } from '#lib/encryption.js';
+import { nanoGptUrl } from '#lib/backend/nano-gpt-url.server.js';
 
 const reqBodySchema = z.object({
 	conversation_id: z.string(),

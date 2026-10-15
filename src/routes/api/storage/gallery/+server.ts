@@ -1,8 +1,8 @@
 import { eq } from 'drizzle-orm';
 import { json, type RequestEvent } from '@sveltejs/kit';
-import { getAuthenticatedUserId } from '$lib/backend/auth-utils';
-import { db } from '$lib/db';
-import { conversations, messages, projectFiles, projects, storage, user } from '$lib/db/schema';
+import { getAuthenticatedUserId } from '#lib/backend/auth-utils.js';
+import { db } from '#lib/db/index.js';
+import { conversations, messages, projectFiles, projects, storage, user } from '#lib/db/schema.js';
 
 type GallerySource = 'generated_image' | 'message_document' | 'project_file' | 'unlinked';
 

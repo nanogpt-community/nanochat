@@ -3,13 +3,15 @@ services:
     # build: .
     image: ghcr.io/nanogpt-community/nanochat:latest
     ports:
-      - "3432:3000"
+      - '3432:3000'
     volumes:
       - ./data:/app/data
     env_file:
       - .env
     environment:
-      - ORIGIN=${BETTER_AUTH_URL}
+      # Prebuilt image: origin comes from the proxy's forwarded headers.
+      - PROTOCOL_HEADER=x-forwarded-proto
+      - HOST_HEADER=x-forwarded-host
       - BETTER_AUTH_URL=${BETTER_AUTH_URL}
       - DATABASE_URL=postgres://nanochat:${POSTGRES_PASSWORD}@db:5432/nanochat
     depends_on:
@@ -26,7 +28,7 @@ services:
     volumes:
       - ./data/postgres:/var/lib/postgresql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U nanochat -d nanochat"]
+      test: ['CMD-SHELL', 'pg_isready -U nanochat -d nanochat']
       interval: 5s
       timeout: 5s
       retries: 10

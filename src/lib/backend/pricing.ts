@@ -1,5 +1,5 @@
-import { nanoGptUrl } from '$lib/backend/nano-gpt-url.server';
-import { getNanoGPTModels } from '$lib/backend/models/nano-gpt';
+import { nanoGptUrl } from '#lib/backend/nano-gpt-url.server.js';
+import { getNanoGPTModels } from '#lib/backend/models/nano-gpt.js';
 
 const TTL_MS = 5 * 60 * 1000;
 

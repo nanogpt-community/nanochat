@@ -1,16 +1,16 @@
 <script lang="ts">
-	import { useCachedQuery, api } from '$lib/cache/cached-query.svelte';
-	import { mutate } from '$lib/client/mutation.svelte';
-	import { Button } from '$lib/components/ui/button';
-	import { Input } from '$lib/components/ui/input';
-	import { Switch } from '$lib/components/ui/switch';
-	import { Textarea } from '$lib/components/ui/textarea';
+	import { useCachedQuery, api } from '#lib/cache/cached-query.svelte.js';
+	import { mutate } from '#lib/client/mutation.svelte.js';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { Input } from '#lib/components/ui/input/index.js';
+	import { Switch } from '#lib/components/ui/switch/index.js';
+	import { Textarea } from '#lib/components/ui/textarea/index.js';
 	import PlugIcon from '~icons/lucide/plug';
 	import TrashIcon from '~icons/lucide/trash-2';
 	import { ResultAsync } from 'neverthrow';
-	import { session } from '$lib/state/session.svelte.js';
-	import { parseHeaderLines } from '$lib/utils/http-headers';
-	import type { McpServerConfig } from '$lib/api';
+	import { session } from '#lib/state/session.svelte.js';
+	import { parseHeaderLines } from '#lib/utils/http-headers.js';
+	import type { McpServerConfig } from '#lib/api.js';
 
 	const servers = useCachedQuery<McpServerConfig[]>(api.mcp_servers.list, {
 		cache_scope: session.current?.user.id ?? 'anonymous',

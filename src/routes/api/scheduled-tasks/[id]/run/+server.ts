@@ -1,6 +1,6 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
-import { getAuthenticatedUserId } from '$lib/backend/auth-utils';
-import { runScheduledTaskNow } from '$lib/backend/scheduler';
+import { getAuthenticatedUserId } from '#lib/backend/auth-utils.js';
+import { runScheduledTaskNow } from '#lib/backend/scheduler.js';
 
 export async function POST({ request, params }: RequestEvent) {
 	const userId = await getAuthenticatedUserId(request);

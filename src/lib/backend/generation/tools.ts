@@ -3,9 +3,9 @@ import {
 	executeMcpTool,
 	isMcpAvailable,
 	type McpToolOptions,
-} from '$lib/backend/mcp-tools';
-import { getRemoteMcpTools, executeRemoteMcpTool } from '$lib/backend/remote-mcp';
-import { isSubscriptionOnlyMode } from '$lib/backend/message-limits';
+} from '#lib/backend/mcp-tools.js';
+import { getRemoteMcpTools, executeRemoteMcpTool } from '#lib/backend/remote-mcp.js';
+import { isSubscriptionOnlyMode } from '#lib/backend/message-limits.js';
 import type { FormattedMessage } from './prompt';
 import type { Log } from './schema';
 

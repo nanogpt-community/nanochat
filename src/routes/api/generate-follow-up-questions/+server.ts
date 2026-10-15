@@ -1,19 +1,19 @@
-import { resolveNanoGptApiKey } from '$lib/backend/nanogpt-key.server';
-import { assertSharedKeyUse } from '$lib/backend/shared-key-policy';
-import { DEFAULT_BACKGROUND_MODEL } from '$lib/backend/default-models';
+import { resolveNanoGptApiKey } from '#lib/backend/nanogpt-key.server.js';
+import { assertSharedKeyUse } from '#lib/backend/shared-key-policy.js';
+import { DEFAULT_BACKGROUND_MODEL } from '#lib/backend/default-models.js';
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from '@sveltejs/kit';
 import { ResultAsync } from 'neverthrow';
 import { z } from 'zod/v4';
 import { OpenAI } from 'openai';
-import { db } from '$lib/db';
-import { messages, conversations, userKeys, userSettings } from '$lib/db/schema';
+import { db } from '#lib/db/index.js';
+import { messages, conversations, userKeys, userSettings } from '#lib/db/schema.js';
 import { eq, and, desc } from 'drizzle-orm';
-import { Provider } from '$lib/types';
-import { FOLLOW_UP_QUESTIONS_PROMPT } from '$lib/prompts/follow-up-questions';
-import { decryptApiKey, isEncrypted } from '$lib/encryption';
-import { getAuthenticatedUserId } from '$lib/backend/auth-utils';
-import { nanoGptUrl } from '$lib/backend/nano-gpt-url.server';
+import { Provider } from '#lib/types.js';
+import { FOLLOW_UP_QUESTIONS_PROMPT } from '#lib/prompts/follow-up-questions.js';
+import { decryptApiKey, isEncrypted } from '#lib/encryption.js';
+import { getAuthenticatedUserId } from '#lib/backend/auth-utils.js';
+import { nanoGptUrl } from '#lib/backend/nano-gpt-url.server.js';
 
 const MODEL = DEFAULT_BACKGROUND_MODEL;
 

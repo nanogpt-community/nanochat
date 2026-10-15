@@ -6,8 +6,8 @@
  */
 
 import type { ChatCompletionTool } from 'openai/resources/chat/completions';
-import { nanoGptUrl } from '$lib/backend/nano-gpt-url.server';
-import { DEFAULT_UTILITY_MODEL } from '$lib/backend/default-models';
+import { nanoGptUrl } from '#lib/backend/nano-gpt-url.server.js';
+import { DEFAULT_UTILITY_MODEL } from '#lib/backend/default-models.js';
 
 /**
  * MCP tool definitions in OpenAI-compatible format

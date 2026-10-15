@@ -3,18 +3,18 @@
 		REASONING_EFFORTS,
 		REASONING_EFFORT_LABELS,
 		type ReasoningEffort,
-	} from '$lib/utils/model-capabilities';
+	} from '#lib/utils/model-capabilities.js';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import { api, useCachedQuery, invalidateQueryPattern } from '$lib/cache/cached-query.svelte';
-	import { session } from '$lib/state/session.svelte';
-	import { models } from '$lib/state/models.svelte';
-	import type { Assistant, Project, ScheduledTask, UserSettings } from '$lib/api';
-	import { Provider } from '$lib/types';
-	import Button from '$lib/components/ui/button/button.svelte';
-	import Input from '$lib/components/ui/input/input.svelte';
-	import Textarea from '$lib/components/ui/textarea/textarea.svelte';
-	import Label from '$lib/components/ui/label/label.svelte';
+	import { api, useCachedQuery, invalidateQueryPattern } from '#lib/cache/cached-query.svelte.js';
+	import { session } from '#lib/state/session.svelte.js';
+	import { models } from '#lib/state/models.svelte.js';
+	import type { Assistant, Project, ScheduledTask, UserSettings } from '#lib/api.js';
+	import { Provider } from '#lib/types.js';
+	import Button from '#lib/components/ui/button/button.svelte';
+	import Input from '#lib/components/ui/input/input.svelte';
+	import Textarea from '#lib/components/ui/textarea/textarea.svelte';
+	import Label from '#lib/components/ui/label/label.svelte';
 	import LoaderCircle from '~icons/lucide/loader-circle';
 	import Trash from '~icons/lucide/trash-2';
 	import Pencil from '~icons/lucide/pencil';
@@ -256,7 +256,7 @@
 		formRunAt = '';
 
 		if (page.url.searchParams.has('create')) {
-			goto('/account/schedules', { replaceState: true });
+			goto('/account/schedules', { replace: true });
 		}
 	}
 

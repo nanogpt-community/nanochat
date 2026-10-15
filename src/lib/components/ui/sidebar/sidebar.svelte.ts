@@ -1,7 +1,7 @@
-import { IsMobile } from '$lib/hooks/is-mobile.svelte';
+import { IsMobile } from '#lib/hooks/is-mobile.svelte.js';
 import { Context } from 'runed';
 import { page } from '$app/state';
-import { browser } from '$app/environment';
+import { browser } from '$app/env';
 import { untrack } from 'svelte';
 
 const SIDEBAR_WIDTH_STORAGE_KEY = 'nanochat-sidebar-width';
@@ -127,7 +127,6 @@ export class SidebarRootState {
 	}
 }
 
-
 export class SidebarTriggerState {
 	constructor(readonly root: SidebarRootState) {
 		this.toggle = this.toggle.bind(this);
@@ -139,7 +138,7 @@ export class SidebarTriggerState {
 }
 
 export class SidebarSidebarState {
-	constructor(readonly root: SidebarRootState) { }
+	constructor(readonly root: SidebarRootState) {}
 }
 
 export class SidebarControlState {

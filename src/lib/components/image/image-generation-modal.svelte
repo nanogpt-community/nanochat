@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { Modal } from '$lib/components/ui/modal';
-	import { Button } from '$lib/components/ui/button';
-	import { Input } from '$lib/components/ui/input';
-	import { models } from '$lib/state/models.svelte';
-	import { Provider } from '$lib/types';
-	import { isImageOnlyModel } from '$lib/utils/model-capabilities';
+	import { Modal } from '#lib/components/ui/modal/index.js';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { Input } from '#lib/components/ui/input/index.js';
+	import { models } from '#lib/state/models.svelte.js';
+	import { Provider } from '#lib/types.js';
+	import { isImageOnlyModel } from '#lib/utils/model-capabilities.js';
 	import ImageIcon from '~icons/lucide/image';
 	import { untrack } from 'svelte';
 
@@ -213,102 +213,104 @@
 			{#if !paramsReady}
 				<div class="text-muted-foreground p-4 text-center text-sm">Loading settings...</div>
 			{:else}
-			<!-- Resolution selector -->
-			{#if currentModel.resolutions && currentModel.resolutions.length > 0}
-				<div class="flex flex-col gap-2">
-					<!-- svelte-ignore a11y_label_has_associated_control -->
-					<label
-						class="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-					>
-						Resolution
-						<span class="text-muted-foreground ml-2 text-xs font-normal">(Output size)</span>
-					</label>
-					<select
-						class="border-input ring-offset-background placeholder:text-muted-foreground focus:ring-ring flex h-9 w-full rounded-md border bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium focus:ring-1 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-						bind:value={imageParams.resolution}
-					>
-						{#each currentModel.resolutions as res}
-							<option value={res.value}>{res.value} - {res.comment}</option>
-						{/each}
-					</select>
-				</div>
-			{/if}
-
-			<!-- Number of images selector -->
-			{#if currentModel.maxImages && currentModel.maxImages > 1}
-				<div class="flex flex-col gap-2">
-					<!-- svelte-ignore a11y_label_has_associated_control -->
-					<label
-						class="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-					>
-						Number of Images
-						<span class="text-muted-foreground ml-2 text-xs font-normal">(1-{currentModel.maxImages})</span>
-					</label>
-					<select
-						class="border-input ring-offset-background placeholder:text-muted-foreground focus:ring-ring flex h-9 w-full rounded-md border bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium focus:ring-1 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-						bind:value={imageParams.nImages}
-					>
-						{#each Array.from({ length: currentModel.maxImages }, (_, i) => i + 1) as n}
-							<option value={n}>{n}</option>
-						{/each}
-					</select>
-				</div>
-			{/if}
-
-			<!-- Dynamic additional params -->
-			{#if normalizedParams.length > 0}
-				{#each normalizedParams as param}
+				<!-- Resolution selector -->
+				{#if currentModel.resolutions && currentModel.resolutions.length > 0}
 					<div class="flex flex-col gap-2">
 						<!-- svelte-ignore a11y_label_has_associated_control -->
 						<label
 							class="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
 						>
-							{param.label}
-							{#if param.description}
-								<span class="text-muted-foreground ml-2 text-xs font-normal"
-									>({param.description})</span
-								>
-							{/if}
+							Resolution
+							<span class="text-muted-foreground ml-2 text-xs font-normal">(Output size)</span>
 						</label>
-
-						{#if param.type === 'select' && param.options}
-							<select
-								class="border-input ring-offset-background placeholder:text-muted-foreground focus:ring-ring flex h-9 w-full rounded-md border bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium focus:ring-1 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-								bind:value={imageParams[param.key]}
-							>
-								{#each param.options as option}
-									<option value={option.value}>{option.label}</option>
-								{/each}
-							</select>
-						{:else if param.type === 'boolean' || param.type === 'switch'}
-							<div class="flex items-center space-x-2">
-								<input
-									type="checkbox"
-									class="text-primary focus:ring-primary h-4 w-4 rounded border-gray-300"
-									bind:checked={imageParams[param.key]}
-								/>
-								<span class="text-muted-foreground text-sm">Enabled</span>
-							</div>
-						{:else if param.type === 'number'}
-							<Input
-								type="number"
-								bind:value={imageParams[param.key]}
-								min={(param as any).min}
-								max={(param as any).max}
-								step={(param as any).step}
-							/>
-						{:else}
-							<Input type="text" bind:value={imageParams[param.key]} />
-						{/if}
+						<select
+							class="border-input ring-offset-background placeholder:text-muted-foreground focus:ring-ring flex h-9 w-full rounded-md border bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium focus:ring-1 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+							bind:value={imageParams.resolution}
+						>
+							{#each currentModel.resolutions as res}
+								<option value={res.value}>{res.value} - {res.comment}</option>
+							{/each}
+						</select>
 					</div>
-				{/each}
-			{/if}
+				{/if}
 
-			{#if normalizedParams.length === 0 && (!currentModel.resolutions || currentModel.resolutions.length === 0)}
-				<div class="text-muted-foreground p-4 text-center text-sm">
-					No configurable settings for this model.
-				</div>
-			{/if}
+				<!-- Number of images selector -->
+				{#if currentModel.maxImages && currentModel.maxImages > 1}
+					<div class="flex flex-col gap-2">
+						<!-- svelte-ignore a11y_label_has_associated_control -->
+						<label
+							class="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+						>
+							Number of Images
+							<span class="text-muted-foreground ml-2 text-xs font-normal"
+								>(1-{currentModel.maxImages})</span
+							>
+						</label>
+						<select
+							class="border-input ring-offset-background placeholder:text-muted-foreground focus:ring-ring flex h-9 w-full rounded-md border bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium focus:ring-1 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+							bind:value={imageParams.nImages}
+						>
+							{#each Array.from({ length: currentModel.maxImages }, (_, i) => i + 1) as n}
+								<option value={n}>{n}</option>
+							{/each}
+						</select>
+					</div>
+				{/if}
+
+				<!-- Dynamic additional params -->
+				{#if normalizedParams.length > 0}
+					{#each normalizedParams as param}
+						<div class="flex flex-col gap-2">
+							<!-- svelte-ignore a11y_label_has_associated_control -->
+							<label
+								class="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+							>
+								{param.label}
+								{#if param.description}
+									<span class="text-muted-foreground ml-2 text-xs font-normal"
+										>({param.description})</span
+									>
+								{/if}
+							</label>
+
+							{#if param.type === 'select' && param.options}
+								<select
+									class="border-input ring-offset-background placeholder:text-muted-foreground focus:ring-ring flex h-9 w-full rounded-md border bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium focus:ring-1 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+									bind:value={imageParams[param.key]}
+								>
+									{#each param.options as option}
+										<option value={option.value}>{option.label}</option>
+									{/each}
+								</select>
+							{:else if param.type === 'boolean' || param.type === 'switch'}
+								<div class="flex items-center space-x-2">
+									<input
+										type="checkbox"
+										class="text-primary focus:ring-primary h-4 w-4 rounded border-gray-300"
+										bind:checked={imageParams[param.key]}
+									/>
+									<span class="text-muted-foreground text-sm">Enabled</span>
+								</div>
+							{:else if param.type === 'number'}
+								<Input
+									type="number"
+									bind:value={imageParams[param.key]}
+									min={(param as any).min}
+									max={(param as any).max}
+									step={(param as any).step}
+								/>
+							{:else}
+								<Input type="text" bind:value={imageParams[param.key]} />
+							{/if}
+						</div>
+					{/each}
+				{/if}
+
+				{#if normalizedParams.length === 0 && (!currentModel.resolutions || currentModel.resolutions.length === 0)}
+					<div class="text-muted-foreground p-4 text-center text-sm">
+						No configurable settings for this model.
+					</div>
+				{/if}
 			{/if}
 		{/if}
 

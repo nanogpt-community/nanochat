@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { useCachedQuery, api } from '$lib/cache/cached-query.svelte.js';
-	import type { Conversation, Message } from '$lib/api';
-	import { Button } from '$lib/components/ui/button';
-	import { ThemeToggle } from '$lib/components/ui/light-switch/index.js';
+	import { useCachedQuery, api } from '#lib/cache/cached-query.svelte.js';
+	import type { Conversation, Message } from '#lib/api.js';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { ThemeToggle } from '#lib/components/ui/light-switch/index.js';
 	import ArrowRightIcon from '~icons/lucide/arrow-right';
 	import GlobeIcon from '~icons/lucide/globe';
 	import MessageComponent from '../../chat/[id]/message.svelte';

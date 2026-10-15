@@ -1,13 +1,13 @@
 <script lang="ts">
-	import { useCachedQuery, api } from '$lib/cache/cached-query.svelte';
-	import type { Conversation, Message } from '$lib/api';
-	import { Button } from '$lib/components/ui/button/index.js';
-	import Modal from '$lib/components/ui/modal/modal.svelte';
-	import { session } from '$lib/state/session.svelte';
+	import { useCachedQuery, api } from '#lib/cache/cached-query.svelte.js';
+	import type { Conversation, Message } from '#lib/api.js';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import Modal from '#lib/components/ui/modal/modal.svelte';
+	import { session } from '#lib/state/session.svelte.js';
 	import { Debounced } from 'runed';
 	import { tick } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { shortcut, getKeybindOptions } from '$lib/actions/shortcut.svelte';
+	import { shortcut, getKeybindOptions } from '#lib/actions/shortcut.svelte.js';
 
 	let { open = $bindable(false) }: { open: boolean } = $props();
 

@@ -1,8 +1,8 @@
 import { db, generateId } from '../index';
 import { userEnabledModels, type UserEnabledModel } from '../schema';
 import { eq, and, inArray, not, or } from 'drizzle-orm';
-import { Provider } from '$lib/types';
-import { getNanoGPTModels } from '$lib/backend/models/nano-gpt';
+import { Provider } from '#lib/types.js';
+import { getNanoGPTModels } from '#lib/backend/models/nano-gpt.js';
 
 const defaultNanoGptModels = [
 	'z-ai/glm-5.3',

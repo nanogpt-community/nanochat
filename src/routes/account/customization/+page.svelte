@@ -1,24 +1,24 @@
 <script lang="ts">
-	import Button from '$lib/components/ui/button/button.svelte';
+	import Button from '#lib/components/ui/button/button.svelte';
 	import { page } from '$app/state';
 	import PlusIcon from '~icons/lucide/plus';
 	import CopyIcon from '~icons/lucide/copy';
 	import { Collapsible } from 'melt/builders';
 	import { slide } from 'svelte/transition';
-	import { Textarea } from '$lib/components/ui/textarea';
-	import { Label } from '$lib/components/ui/label';
+	import { Textarea } from '#lib/components/ui/textarea/index.js';
+	import { Label } from '#lib/components/ui/label/index.js';
 	import XIcon from '~icons/lucide/x';
-	import { mutate } from '$lib/client/mutation.svelte';
-	import { useCachedQuery, api, type QueryResult } from '$lib/cache/cached-query.svelte';
-	import type { Doc } from '$lib/db/types';
-	import { Input } from '$lib/components/ui/input';
+	import { mutate } from '#lib/client/mutation.svelte.js';
+	import { useCachedQuery, api, type QueryResult } from '#lib/cache/cached-query.svelte.js';
+	import type { Doc } from '#lib/db/types.js';
+	import { Input } from '#lib/components/ui/input/index.js';
 	import Rule from './rule.svelte';
-	import ThemeSelector from '$lib/components/account/ThemeSelector.svelte';
-	import type { UserSettings } from '$lib/api';
-	import { Provider } from '$lib/types';
-	import { models } from '$lib/state/models.svelte';
-	import { settings as clientSettings } from '$lib/state/settings.svelte';
-	import { Switch } from '$lib/components/ui/switch';
+	import ThemeSelector from '#lib/components/account/ThemeSelector.svelte';
+	import type { UserSettings } from '#lib/api.js';
+	import { Provider } from '#lib/types.js';
+	import { models } from '#lib/state/models.svelte.js';
+	import { settings as clientSettings } from '#lib/state/settings.svelte.js';
+	import { Switch } from '#lib/components/ui/switch/index.js';
 	import { toast } from 'svelte-sonner';
 
 	const newRuleCollapsible = new Collapsible({
@@ -213,9 +213,7 @@
 
 	function handleSearchForwardModeChange(event: Event) {
 		searchForwardSearchMode = (event.currentTarget as HTMLSelectElement).value as
-			| 'off'
-			| 'standard'
-			| 'deep';
+			'off' | 'standard' | 'deep';
 		if (clientSettings.webSearchMode !== searchForwardSearchMode) {
 			clientSettings.webSearchMode = searchForwardSearchMode;
 		}
@@ -297,7 +295,9 @@
 			<h2 class="text-muted-foreground text-sm font-semibold tracking-wide uppercase">Layout</h2>
 			<p class="text-muted-foreground text-xs">How the chat uses your screen.</p>
 		</div>
-		<div class="bg-card border-border flex items-center justify-between gap-4 rounded-lg border p-5">
+		<div
+			class="bg-card border-border flex items-center justify-between gap-4 rounded-lg border p-5"
+		>
 			<div class="flex flex-col gap-1">
 				<span class="font-medium">Wide chat</span>
 				<span class="text-muted-foreground text-sm">

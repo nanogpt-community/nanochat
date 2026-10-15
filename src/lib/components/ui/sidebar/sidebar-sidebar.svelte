@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { cn } from '$lib/utils/utils';
+	import { cn } from '#lib/utils/utils.js';
 	import type { HTMLAttributes } from 'svelte/elements';
 	import { useSidebarSidebar } from './sidebar.svelte.js';
 	import { fade } from 'svelte/transition';
@@ -161,7 +161,7 @@
 	>
 		{#if !sidebar.root.isMobile.current}
 			<div
-				class="bg-sidebar/0 hover:bg-sidebar/20 absolute top-0 right-0 z-20 h-full w-2.5 cursor-col-resize touch-none select-none transition-colors"
+				class="bg-sidebar/0 hover:bg-sidebar/20 absolute top-0 right-0 z-20 h-full w-2.5 cursor-col-resize touch-none transition-colors select-none"
 				onpointerdown={handleResizeStart}
 				role="separator"
 			>

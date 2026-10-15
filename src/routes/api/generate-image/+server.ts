@@ -3,24 +3,24 @@
  * POST: kicks off generation in the background, returns a generation_id immediately.
  * GET:  polls for the result by generation_id.
  */
-import { db, generateId } from '$lib/db';
-import { userKeys, userEnabledModels, storage } from '$lib/db/schema';
+import { db, generateId } from '#lib/db/index.js';
+import { userKeys, userEnabledModels, storage } from '#lib/db/schema.js';
 import { eq, and } from 'drizzle-orm';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { join, resolve } from 'path';
 import { error, json } from '@sveltejs/kit';
 import type { RequestEvent } from '@sveltejs/kit';
 import { z } from 'zod/v4';
-import { Provider } from '$lib/types';
-import { getNanoGPTModels } from '$lib/backend/models/nano-gpt';
-import { nanoGptUrl } from '$lib/backend/nano-gpt-url.server';
-import { decryptApiKey, isEncrypted } from '$lib/encryption';
-import { getAuthenticatedUserId } from '$lib/backend/auth-utils';
+import { Provider } from '#lib/types.js';
+import { getNanoGPTModels } from '#lib/backend/models/nano-gpt.js';
+import { nanoGptUrl } from '#lib/backend/nano-gpt-url.server.js';
+import { decryptApiKey, isEncrypted } from '#lib/encryption.js';
+import { getAuthenticatedUserId } from '#lib/backend/auth-utils.js';
 import {
 	checkAndUpdateDailyLimit,
 	isWebDisabledForServerKey,
 	isSubscriptionOnlyMode,
-} from '$lib/backend/message-limits';
+} from '#lib/backend/message-limits.js';
 
 // --- In-memory generation tracking ---
 type GenerationStatus =

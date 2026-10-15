@@ -1,8 +1,8 @@
 import { page } from '$app/state';
-import { useCachedQuery, api } from '$lib/cache/cached-query.svelte';
-import type { ProviderModelMap } from '$lib/backend/models/all';
-import { createInit } from '$lib/spells/create-init.svelte';
-import { Provider } from '$lib/types';
+import { useCachedQuery, api } from '#lib/cache/cached-query.svelte.js';
+import type { ProviderModelMap } from '#lib/backend/models/all.js';
+import { createInit } from '#lib/spells/create-init.svelte.js';
+import { Provider } from '#lib/types.js';
 import { watch } from 'runed';
 import { session } from './session.svelte';
 

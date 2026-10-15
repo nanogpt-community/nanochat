@@ -3,7 +3,7 @@
 */
 
 import { createAttachmentKey } from 'svelte/attachments';
-import { keybinds, type KeybindAction } from '$lib/state/keybinds.svelte';
+import { keybinds, type KeybindAction } from '#lib/state/keybinds.svelte.js';
 
 /**
  * Get shortcut options for a keybind action from the persisted keybinds store.

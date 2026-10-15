@@ -1,4 +1,4 @@
-import type { Doc } from '$lib/db/types';
+import type { Doc } from '#lib/db/types.js';
 
 export function parseMessageForRules(
 	message: string,

@@ -1,5 +1,5 @@
-import { getNextMatrixItem, type Direction } from '$lib/utils/array';
-import { dataAttr } from '$lib/utils/attribute';
+import { getNextMatrixItem, type Direction } from '#lib/utils/array.js';
+import { dataAttr } from '#lib/utils/attribute.js';
 import type { MaybeGetter } from 'melt';
 import { extract } from 'runed';
 import { tick } from 'svelte';

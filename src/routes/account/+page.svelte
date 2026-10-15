@@ -1,18 +1,18 @@
 <script lang="ts">
-	import { useCachedQuery, api, invalidateQueryPattern } from '$lib/cache/cached-query.svelte';
-	import { session } from '$lib/state/session.svelte';
+	import { useCachedQuery, api, invalidateQueryPattern } from '#lib/cache/cached-query.svelte.js';
+	import { session } from '#lib/state/session.svelte.js';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { ResultAsync } from 'neverthrow';
-	import { mutate } from '$lib/client/mutation.svelte';
-	import type { UserSettings } from '$lib/api';
-	import type { UserMemory } from '$lib/db/schema';
-	import { Switch } from '$lib/components/ui/switch';
-	import { Input } from '$lib/components/ui/input';
-	import { Button } from '$lib/components/ui/button';
-	import PasskeySettings from '$lib/components/account/PasskeySettings.svelte';
-	import BackgroundModelPicker from '$lib/components/account/BackgroundModelPicker.svelte';
-	import { callModal } from '$lib/components/ui/modal/global-modal.svelte';
+	import { mutate } from '#lib/client/mutation.svelte.js';
+	import type { UserSettings } from '#lib/api.js';
+	import type { UserMemory } from '#lib/db/schema.js';
+	import { Switch } from '#lib/components/ui/switch/index.js';
+	import { Input } from '#lib/components/ui/input/index.js';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import PasskeySettings from '#lib/components/account/PasskeySettings.svelte';
+	import BackgroundModelPicker from '#lib/components/account/BackgroundModelPicker.svelte';
+	import { callModal } from '#lib/components/ui/modal/global-modal.svelte';
 	import Trash2 from '~icons/lucide/trash-2';
 	import FolderX from '~icons/lucide/folder-x';
 	import EyeOffIcon from '~icons/lucide/eye-off';
@@ -23,10 +23,10 @@
 	import DatabaseIcon from '~icons/lucide/database';
 	import CheckIcon from '~icons/lucide/check';
 	import AlertTriangleIcon from '~icons/lucide/alert-triangle';
-	import { models } from '$lib/state/models.svelte';
-	import { settings as localSettings } from '$lib/state/settings.svelte';
-	import { Provider } from '$lib/types.js';
-	import { cn } from '$lib/utils/utils';
+	import { models } from '#lib/state/models.svelte.js';
+	import { settings as localSettings } from '#lib/state/settings.svelte.js';
+	import { Provider } from '#lib/types.js';
+	import { cn } from '#lib/utils/utils.js';
 
 	let { data } = $props();
 	const settings = useCachedQuery<UserSettings>(api.user_settings.get, {});
@@ -58,7 +58,8 @@
 	);
 
 	$effect(() => {
-		if (settings.data?.autoCompactThreshold) autoCompactThreshold = settings.data.autoCompactThreshold;
+		if (settings.data?.autoCompactThreshold)
+			autoCompactThreshold = settings.data.autoCompactThreshold;
 		if (settings.data?.timezone) timezone = settings.data.timezone;
 	});
 
@@ -122,7 +123,11 @@
 			actions: { cancel: 'outline', delete: 'destructive' },
 		});
 		if (res !== 'delete') return;
-		await mutate(`${api.user_memories.remove.url}?all=true`, { method: 'DELETE' }, memoryInvalidate);
+		await mutate(
+			`${api.user_memories.remove.url}?all=true`,
+			{ method: 'DELETE' },
+			memoryInvalidate
+		);
 	}
 
 	let karakeepUrl = $state(settings.data?.karakeepUrl ?? '');
@@ -385,13 +390,9 @@
 		}
 
 		const res = await ResultAsync.fromPromise(
-			mutate(
-				api.user_settings.set.url,
-				payload,
-				{
-					invalidatePatterns: [api.user_settings.get.url],
-				}
-			),
+			mutate(api.user_settings.set.url, payload, {
+				invalidatePatterns: [api.user_settings.get.url],
+			}),
 			(e) => e
 		);
 
@@ -758,7 +759,9 @@
 			<!-- Memory -->
 			<div class="flex flex-col gap-3">
 				<div class="flex flex-col gap-0.5">
-					<h3 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Memory</h3>
+					<h3 class="text-muted-foreground text-sm font-semibold tracking-wide uppercase">
+						Memory
+					</h3>
 					<p class="text-muted-foreground text-xs">
 						What the AI remembers across chats, and how long chats stay within the model's context.
 					</p>
@@ -828,7 +831,9 @@
 								maxlength={500}
 								bind:value={newMemory}
 							/>
-							<Button type="submit" size="sm" variant="outline" disabled={!newMemory.trim()}>Add</Button>
+							<Button type="submit" size="sm" variant="outline" disabled={!newMemory.trim()}
+								>Add</Button
+							>
 						</form>
 					</div>
 					<div class="flex items-center justify-between gap-4 p-5">
@@ -857,7 +862,8 @@
 									max={95}
 									class="w-20"
 									bind:value={autoCompactThreshold}
-									onchange={() => saveSetting({ autoCompactThreshold: Number(autoCompactThreshold) })}
+									onchange={() =>
+										saveSetting({ autoCompactThreshold: Number(autoCompactThreshold) })}
 								/>
 								<span class="text-muted-foreground text-sm">%</span>
 							</div>
@@ -869,7 +875,7 @@
 			<!-- Features -->
 			<div class="flex flex-col gap-3">
 				<div class="flex flex-col gap-0.5">
-					<h3 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+					<h3 class="text-muted-foreground text-sm font-semibold tracking-wide uppercase">
 						Features
 					</h3>
 					<p class="text-muted-foreground text-xs">Automatic AI capabilities and enhancements.</p>
@@ -935,11 +941,12 @@
 			<!-- Model preferences -->
 			<div class="flex flex-col gap-3">
 				<div class="flex flex-col gap-0.5">
-					<h3 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+					<h3 class="text-muted-foreground text-sm font-semibold tracking-wide uppercase">
 						Automatic Tasks
 					</h3>
 					<p class="text-muted-foreground text-xs">
-						Which model handles background tasks like titles, suggestions, memory, and image analysis.
+						Which model handles background tasks like titles, suggestions, memory, and image
+						analysis.
 					</p>
 				</div>
 				<div class="bg-card border-border rounded-lg border p-5">
@@ -989,7 +996,7 @@
 			<!-- Text to Speech -->
 			<div class="flex flex-col gap-3">
 				<div class="flex flex-col gap-0.5">
-					<h3 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+					<h3 class="text-muted-foreground text-sm font-semibold tracking-wide uppercase">
 						Text to Speech
 					</h3>
 					<p class="text-muted-foreground text-xs">Read messages aloud with your chosen voice.</p>
@@ -1031,7 +1038,9 @@
 					<div class="mt-5 flex flex-col gap-2">
 						<div class="flex items-center justify-between">
 							<label for="tts-speed" class="text-sm font-medium">Speed</label>
-							<span class="text-muted-foreground text-xs tabular-nums">{localSettings.ttsSpeed}x</span>
+							<span class="text-muted-foreground text-xs tabular-nums"
+								>{localSettings.ttsSpeed}x</span
+							>
 						</div>
 						<input
 							id="tts-speed"
@@ -1049,7 +1058,7 @@
 			<!-- Speech to Text -->
 			<div class="flex flex-col gap-3">
 				<div class="flex flex-col gap-0.5">
-					<h3 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+					<h3 class="text-muted-foreground text-sm font-semibold tracking-wide uppercase">
 						Speech to Text
 					</h3>
 					<p class="text-muted-foreground text-xs">Transcribe your voice into messages.</p>
@@ -1100,9 +1109,7 @@
 							<Input
 								id="karakeep-api-key"
 								type="password"
-								placeholder={
-									hasSavedKarakeepApiKey ? 'Enter a new key to replace' : 'Your API key'
-								}
+								placeholder={hasSavedKarakeepApiKey ? 'Enter a new key to replace' : 'Your API key'}
 								bind:value={karakeepApiKey}
 							/>
 						</div>
@@ -1155,7 +1162,7 @@
 			<div class="bg-card border-border rounded-lg border">
 				<div class="flex flex-wrap items-center justify-between gap-4 p-5">
 					<div class="flex min-w-0 items-start gap-3">
-						<div class="bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-md p-2">
+						<div class="rounded-md bg-amber-500/10 p-2 text-amber-600 dark:text-amber-400">
 							<FolderX class="size-5" />
 						</div>
 						<div class="flex flex-col gap-1">

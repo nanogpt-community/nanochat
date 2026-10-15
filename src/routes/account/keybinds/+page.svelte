@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { Button } from '$lib/components/ui/button';
-	import { Kbd } from '$lib/components/ui/kbd';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { Kbd } from '#lib/components/ui/kbd/index.js';
 	import {
 		keybinds,
 		KEYBIND_ACTIONS,
@@ -11,10 +11,10 @@
 		updateKeybind,
 		type KeybindAction,
 		type KeybindConfig,
-	} from '$lib/state/keybinds.svelte';
-	import { formatKeybind, isMac } from '$lib/hooks/is-mac.svelte';
-	import type { Key } from '$lib/actions/shortcut.svelte';
-	import { cn } from '$lib/utils/utils';
+	} from '#lib/state/keybinds.svelte.js';
+	import { formatKeybind, isMac } from '#lib/hooks/is-mac.svelte.js';
+	import type { Key } from '#lib/actions/shortcut.svelte.js';
+	import { cn } from '#lib/utils/utils.js';
 	import RotateCcwIcon from '~icons/lucide/rotate-ccw';
 
 	let recording = $state<KeybindAction | null>(null);

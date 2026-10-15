@@ -6,9 +6,9 @@
 		api,
 		invalidateQueryPattern,
 		setCachedQueryData,
-	} from '$lib/cache/cached-query.svelte.js';
-	import { extractUrlsByType } from '$lib/backend/url-scraper';
-	import type { Doc, Id } from '$lib/db/types';
+	} from '#lib/cache/cached-query.svelte.js';
+	import { extractUrlsByType } from '#lib/backend/url-scraper.js';
+	import type { Doc, Id } from '#lib/db/types.js';
 	import type {
 		Assistant,
 		Conversation,
@@ -16,32 +16,32 @@
 		UserSettings,
 		Message,
 		UserRule,
-	} from '$lib/api';
-	import { apiCall } from '$lib/api';
-	import AppSidebar from '$lib/components/app-sidebar.svelte';
-	import { Button } from '$lib/components/ui/button';
-	import { ImageModal } from '$lib/components/ui/image-modal';
-	import { DocumentModal } from '$lib/components/ui/document-modal';
-	import { ThemeToggle } from '$lib/components/ui/light-switch/index.js';
-	import { ShareButton } from '$lib/components/ui/share-button';
-	import { CompactButton } from '$lib/components/ui/compact-button';
-	import { ExportButton } from '$lib/components/ui/export-button';
-	import * as Sidebar from '$lib/components/ui/sidebar';
-	// import SettingsModal from '$lib/components/ui/settings-modal/settings-modal.svelte';
-	import VideoGenerationModal from '$lib/components/video/video-generation-modal.svelte';
-	import ImageGenerationModal from '$lib/components/image/image-generation-modal.svelte';
-	import { videoGenerator } from '$lib/state/video-generator.svelte';
-	import Tooltip from '$lib/components/ui/tooltip.svelte';
-	import { cmdOrCtrl } from '$lib/hooks/is-mac.svelte.js';
-	import { TextareaAutosize } from '$lib/spells/textarea-autosize.svelte.js';
-	import { IsMobile } from '$lib/hooks/is-mobile.svelte';
+	} from '#lib/api.js';
+	import { apiCall } from '#lib/api.js';
+	import AppSidebar from '#lib/components/app-sidebar.svelte';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { ImageModal } from '#lib/components/ui/image-modal/index.js';
+	import { DocumentModal } from '#lib/components/ui/document-modal/index.js';
+	import { ThemeToggle } from '#lib/components/ui/light-switch/index.js';
+	import { ShareButton } from '#lib/components/ui/share-button/index.js';
+	import { CompactButton } from '#lib/components/ui/compact-button/index.js';
+	import { ExportButton } from '#lib/components/ui/export-button/index.js';
+	import * as Sidebar from '#lib/components/ui/sidebar/index.js';
+	// import SettingsModal from '#lib/components/ui/settings-modal/settings-modal.svelte';
+	import VideoGenerationModal from '#lib/components/video/video-generation-modal.svelte';
+	import ImageGenerationModal from '#lib/components/image/image-generation-modal.svelte';
+	import { videoGenerator } from '#lib/state/video-generator.svelte.js';
+	import Tooltip from '#lib/components/ui/tooltip.svelte';
+	import { cmdOrCtrl } from '#lib/hooks/is-mac.svelte.js';
+	import { TextareaAutosize } from '#lib/spells/textarea-autosize.svelte.js';
+	import { IsMobile } from '#lib/hooks/is-mobile.svelte.js';
 	import { MediaQuery } from 'svelte/reactivity';
-	import { models } from '$lib/state/models.svelte';
-	import { usePrompt } from '$lib/state/prompt.svelte.js';
-	import { session } from '$lib/state/session.svelte.js';
-	import { settings } from '$lib/state/settings.svelte.js';
-	import { Provider } from '$lib/types';
-	import { compressImage } from '$lib/utils/image-compression';
+	import { models } from '#lib/state/models.svelte.js';
+	import { usePrompt } from '#lib/state/prompt.svelte.js';
+	import { session } from '#lib/state/session.svelte.js';
+	import { settings } from '#lib/state/settings.svelte.js';
+	import { Provider } from '#lib/types.js';
+	import { compressImage } from '#lib/utils/image-compression.js';
 	import {
 		supportsImages,
 		supportsReasoning,
@@ -50,15 +50,15 @@
 		supportsDocuments,
 		supportsVideo,
 		isImageOnlyModel,
-	} from '$lib/utils/model-capabilities';
-	import { validateFiles, getFileType } from '$lib/utils/file-validation';
-	import { toSafeResourceUrl } from '$lib/utils/html-sanitizer';
-	import { omit, pick } from '$lib/utils/object.js';
-	import { cn } from '$lib/utils/utils.js';
-	import { mutate } from '$lib/client/mutation.svelte';
+	} from '#lib/utils/model-capabilities.js';
+	import { validateFiles, getFileType } from '#lib/utils/file-validation.js';
+	import { toSafeResourceUrl } from '#lib/utils/html-sanitizer.js';
+	import { omit, pick } from '#lib/utils/object.js';
+	import { cn } from '#lib/utils/utils.js';
+	import { mutate } from '#lib/client/mutation.svelte.js';
 	import { FileUpload, Popover } from 'melt/builders';
 	import { Debounced, ElementSize, IsMounted, PersistedState } from 'runed';
-	import { ScrollAnchor } from '$lib/utils/scroll-anchor.svelte';
+	import { ScrollAnchor } from '#lib/utils/scroll-anchor.svelte.js';
 	import { fade, scale } from 'svelte/transition';
 	import SendIcon from '~icons/lucide/arrow-up';
 	import ChevronDownIcon from '~icons/lucide/chevron-down';
@@ -71,30 +71,30 @@
 
 	import PaperclipIcon from '~icons/lucide/paperclip';
 	import MicIcon from '~icons/lucide/mic';
-	import { audioRecorder } from '$lib/state/audio-recorder.svelte';
+	import { audioRecorder } from '#lib/state/audio-recorder.svelte.js';
 	import { callCancelGeneration } from '../api/cancel-generation/call.js';
 	import { callGenerateMessage, callGenerateMessageStream } from '../api/generate-message/call.js';
-	import { ModelPicker } from '$lib/components/model-picker';
-	import { ProviderPicker } from '$lib/components/provider-picker';
+	import { ModelPicker } from '#lib/components/model-picker/index.js';
+	import { ProviderPicker } from '#lib/components/provider-picker/index.js';
 	import SearchModal from './search-modal.svelte';
-	import { PromptPicker } from '$lib/components/ui/prompt-picker';
-	import type { Prompt } from '$lib/api';
-	import { shortcut, getKeybindOptions } from '$lib/actions/shortcut.svelte.js';
+	import { PromptPicker } from '#lib/components/ui/prompt-picker/index.js';
+	import type { Prompt } from '#lib/api.js';
+	import { shortcut, getKeybindOptions } from '#lib/actions/shortcut.svelte.js';
 	import { mergeAttrs } from 'melt';
 	import { callEnhancePrompt } from '../api/enhance-prompt/call.js';
-	import ShinyText from '$lib/components/animations/shiny-text.svelte';
+	import ShinyText from '#lib/components/animations/shiny-text.svelte';
 	import SparkleIcon from '~icons/lucide/sparkle';
-	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
+	import * as DropdownMenu from '#lib/components/ui/dropdown-menu/index.js';
 	import BrainIcon from '~icons/lucide/brain';
-	import * as casing from '$lib/utils/casing.js';
+	import * as casing from '#lib/utils/casing.js';
 	import BotIcon from '~icons/lucide/bot';
 	import PlusIcon from '~icons/lucide/plus';
 	import GhostIcon from '~icons/lucide/ghost';
 	import EllipsisVerticalIcon from '~icons/lucide/ellipsis-vertical';
-	import { isTemporaryConversation } from '$lib/state/temporary-chat.svelte';
+	import { isTemporaryConversation } from '#lib/state/temporary-chat.svelte.js';
 	import VideoIcon from '~icons/lucide/video';
 	import ImageIcon from '~icons/lucide/image';
-	import { activeGeneration } from '$lib/state/active-generation.svelte';
+	import { activeGeneration } from '#lib/state/active-generation.svelte.js';
 
 	let { children } = $props();
 
@@ -327,7 +327,8 @@
 	// the array's identity changes with each delta while this input never does.
 	const lastUserMessageContent = $derived.by(() => {
 		for (let i = safeRecentMessages.length - 1; i >= 0; i--) {
-			if (safeRecentMessages[i]?.role === 'user') return safeRecentMessages[i].content;
+			const m = safeRecentMessages[i];
+			if (m?.role === 'user') return m.content;
 		}
 		return null;
 	});
@@ -749,6 +750,14 @@
 		return supportsVideo(currentModel);
 	});
 
+	const currentModelSupportsImageGen = $derived.by(() => {
+		if (!settings.modelId) return false;
+		const nanoGPTModels = models.from(Provider.NanoGPT);
+		const currentModel = nanoGPTModels.find((m) => m.id === settings.modelId);
+		if (!currentModel) return false;
+		return isImageOnlyModel(currentModel);
+	});
+
 	const thinkingActive = $derived(
 		settings.reasoningEffort !== 'auto' && settings.reasoningEffort !== 'none'
 	);
@@ -775,14 +784,6 @@
 	// ponytail: one active look for every toggle — the label carries the level, not the colour.
 	const chipActiveClass =
 		'bg-primary/10 hover:bg-primary/15 text-primary ring-primary/30 ring-1 ring-inset';
-
-	const currentModelSupportsImageGen = $derived.by(() => {
-		if (!settings.modelId) return false;
-		const nanoGPTModels = models.from(Provider.NanoGPT);
-		const currentModel = nanoGPTModels.find((m) => m.id === settings.modelId);
-		if (!currentModel) return false;
-		return isImageOnlyModel(currentModel);
-	});
 
 	// Helper to check if file is an image (by MIME type or extension)
 	// Chrome Android often returns empty file.type for images from gallery

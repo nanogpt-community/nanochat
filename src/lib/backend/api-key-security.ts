@@ -1,4 +1,4 @@
-import { assertEncryptionEnabled } from '$lib/encryption';
+import { assertEncryptionEnabled } from '#lib/encryption.js';
 export {
 	apiKeysEqual,
 	CURRENT_DEVELOPER_API_KEY_HASH_PREFIX,
@@ -6,7 +6,7 @@ export {
 	hashDeveloperApiKey,
 	isCurrentDeveloperApiKeyHash,
 	legacyHashDeveloperApiKey,
-} from '$lib/backend/api-key-hash';
+} from '#lib/backend/api-key-hash.js';
 
 // ponytail: api_keys.key_hash is created by the initial migration, so the old
 // PRAGMA table_info() feature-detect is gone. Nothing to probe.

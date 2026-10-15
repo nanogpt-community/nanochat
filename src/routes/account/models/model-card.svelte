@@ -1,26 +1,26 @@
 <script lang="ts">
-	import type { Provider } from '$lib/types';
-	import { Switch } from '$lib/components/ui/switch';
-	import { mutate } from '$lib/client/mutation.svelte';
-	import { api } from '$lib/cache/cached-query.svelte';
-	import { session } from '$lib/state/session.svelte.js';
+	import type { Provider } from '#lib/types.js';
+	import { Switch } from '#lib/components/ui/switch/index.js';
+	import { mutate } from '#lib/client/mutation.svelte.js';
+	import { api } from '#lib/cache/cached-query.svelte.js';
+	import { session } from '#lib/state/session.svelte.js';
 	import { ResultAsync } from 'neverthrow';
-	import { getFirstSentence } from '$lib/utils/strings';
+	import { getFirstSentence } from '#lib/utils/strings.js';
 	import {
 		supportsReasoning,
 		supportsVideo,
 		supportsVision,
 		isImageOnlyModel,
-	} from '$lib/utils/model-capabilities';
-	import type { NanoGPTModel } from '$lib/backend/models/nano-gpt';
-	import Tooltip from '$lib/components/ui/tooltip.svelte';
+	} from '#lib/utils/model-capabilities.js';
+	import type { NanoGPTModel } from '#lib/backend/models/nano-gpt.js';
+	import Tooltip from '#lib/components/ui/tooltip.svelte';
 	import EyeIcon from '~icons/lucide/eye';
 	import BrainIcon from '~icons/lucide/brain';
 	import VideoIcon from '~icons/lucide/video';
 	import TicketIcon from '~icons/lucide/ticket';
 	import ImageIcon from '~icons/lucide/image';
 	import ChevronDownIcon from '~icons/lucide/chevron-down';
-	import { cn } from '$lib/utils/utils';
+	import { cn } from '#lib/utils/utils.js';
 
 	type Props = {
 		enabled?: boolean;
@@ -73,12 +73,7 @@
 	const hasSubscription = $derived(isNanoGPT && Boolean(model.subscription?.included));
 </script>
 
-<div
-	class={cn(
-		'group hover:bg-accent/40 transition-colors',
-		enabled ? 'bg-card' : 'bg-card/40'
-	)}
->
+<div class={cn('group hover:bg-accent/40 transition-colors', enabled ? 'bg-card' : 'bg-card/40')}>
 	<div class="flex items-center gap-3 px-4 py-3">
 		<!-- Capability icons -->
 		<div class="flex shrink-0 items-center gap-1">

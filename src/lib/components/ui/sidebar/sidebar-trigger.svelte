@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { Button, type ButtonElementProps } from '$lib/components/ui/button';
-	import { cn } from '$lib/utils/utils.js';
+	import { Button, type ButtonElementProps } from '#lib/components/ui/button/index.js';
+	import { cn } from '#lib/utils/utils.js';
 	import { useSidebarTrigger } from './sidebar.svelte.js';
 
 	let {

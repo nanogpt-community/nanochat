@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { api, invalidateQueryPattern } from '$lib/cache/cached-query.svelte';
-	import { mutate } from '$lib/client/mutation.svelte';
-	import { Button } from '$lib/components/ui/button';
-	import Tooltip from '$lib/components/ui/tooltip.svelte';
-	import { callModal } from '$lib/components/ui/modal/global-modal.svelte';
+	import { api, invalidateQueryPattern } from '#lib/cache/cached-query.svelte.js';
+	import { mutate } from '#lib/client/mutation.svelte.js';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import Tooltip from '#lib/components/ui/tooltip.svelte';
+	import { callModal } from '#lib/components/ui/modal/global-modal.svelte';
 	import FoldIcon from '~icons/lucide/fold-vertical';
 	import LoaderCircleIcon from '~icons/lucide/loader-circle';
 

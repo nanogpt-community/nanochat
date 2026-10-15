@@ -1,18 +1,18 @@
 <script lang="ts">
-	import { session } from '$lib/state/session.svelte';
+	import { session } from '#lib/state/session.svelte.js';
 	import IconAi from '~icons/lucide/sparkles';
 	import CodeIcon from '~icons/lucide/code';
 	import GraduationCapIcon from '~icons/lucide/graduation-cap';
 	import NewspaperIcon from '~icons/lucide/newspaper';
-	import { Button } from '$lib/components/ui/button';
-	import { usePrompt } from '$lib/state/prompt.svelte';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { usePrompt } from '#lib/state/prompt.svelte.js';
 	import { scale } from 'svelte/transition';
-	import { useCachedQuery, api } from '$lib/cache/cached-query.svelte';
-	import { Provider } from '$lib/types';
-	import type { UserKeyStatus, UserSettings } from '$lib/api';
+	import { useCachedQuery, api } from '#lib/cache/cached-query.svelte.js';
+	import { Provider } from '#lib/types.js';
+	import type { UserKeyStatus, UserSettings } from '#lib/api.js';
 	import { untrack } from 'svelte';
 	import { page } from '$app/state';
-	import { settings } from '$lib/state/settings.svelte.js';
+	import { settings } from '#lib/state/settings.svelte.js';
 
 	const defaultSuggestions = [
 		'How does AI work?',

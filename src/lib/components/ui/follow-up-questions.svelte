@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { usePrompt } from '$lib/state/prompt.svelte';
-	import { cn } from '$lib/utils/utils';
+	import { usePrompt } from '#lib/state/prompt.svelte.js';
+	import { cn } from '#lib/utils/utils.js';
 
 	type Props = {
 		suggestions: unknown;
@@ -11,7 +11,9 @@
 
 	const prompt = usePrompt();
 	const normalizedSuggestions = $derived.by(() =>
-		Array.isArray(suggestions) ? suggestions.filter((suggestion): suggestion is string => typeof suggestion === 'string') : []
+		Array.isArray(suggestions)
+			? suggestions.filter((suggestion): suggestion is string => typeof suggestion === 'string')
+			: []
 	);
 
 	function handleSuggestionClick(question: string) {

@@ -1,8 +1,12 @@
-import { getNanoGPTModels, type NanoGPTModel } from '$lib/backend/models/nano-gpt';
-import { isSubscriptionOnlyMode, isWebDisabledForServerKey, getDailyMessageLimit } from '$lib/backend/message-limits';
-import { getUserKey } from '$lib/db/queries/user-keys';
-import { Provider } from '$lib/types';
-import { toPublicAuthSession } from '$lib/auth-session';
+import { getNanoGPTModels, type NanoGPTModel } from '#lib/backend/models/nano-gpt.js';
+import {
+	isSubscriptionOnlyMode,
+	isWebDisabledForServerKey,
+	getDailyMessageLimit,
+} from '#lib/backend/message-limits.js';
+import { getUserKey } from '#lib/db/queries/user-keys.js';
+import { Provider } from '#lib/types.js';
+import { toPublicAuthSession } from '#lib/auth-session.js';
 import type { LayoutServerLoad } from './$types';
 
 export const load: LayoutServerLoad = async ({ locals }) => {

@@ -1,17 +1,17 @@
 <script lang="ts">
-	import * as Card from '$lib/components/ui/card';
-	import { Label } from '$lib/components/ui/label';
-	import { Textarea } from '$lib/components/ui/textarea';
-	import { Button } from '$lib/components/ui/button';
-	import type { Doc } from '$lib/db/types';
-	import { mutate } from '$lib/client/mutation.svelte';
-	import { api } from '$lib/cache/cached-query.svelte';
-	import { session } from '$lib/state/session.svelte';
-	import { LocalToasts } from '$lib/builders/local-toasts.svelte';
+	import * as Card from '#lib/components/ui/card/index.js';
+	import { Label } from '#lib/components/ui/label/index.js';
+	import { Textarea } from '#lib/components/ui/textarea/index.js';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import type { Doc } from '#lib/db/types.js';
+	import { mutate } from '#lib/client/mutation.svelte.js';
+	import { api } from '#lib/cache/cached-query.svelte.js';
+	import { session } from '#lib/state/session.svelte.js';
+	import { LocalToasts } from '#lib/builders/local-toasts.svelte.js';
 	import { ResultAsync } from 'neverthrow';
 	import TrashIcon from '~icons/lucide/trash';
-	import { callModal } from '$lib/components/ui/modal/global-modal.svelte';
-	import { Input } from '$lib/components/ui/input';
+	import { callModal } from '#lib/components/ui/modal/global-modal.svelte';
+	import { Input } from '#lib/components/ui/input/index.js';
 
 	type Props = {
 		rule: Doc<'user_rules'>;

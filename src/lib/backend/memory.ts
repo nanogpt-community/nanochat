@@ -1,9 +1,9 @@
 import OpenAI from 'openai';
-import { nanoGptUrl } from '$lib/backend/nano-gpt-url.server';
-import { listUserMemories, applyMemoryOps, type MemoryOps } from '$lib/db/queries/user-memories';
-import type { UserMemory } from '$lib/db/schema';
+import { nanoGptUrl } from '#lib/backend/nano-gpt-url.server.js';
+import { listUserMemories, applyMemoryOps, type MemoryOps } from '#lib/db/queries/user-memories.js';
+import type { UserMemory } from '#lib/db/schema.js';
 
-import { DEFAULT_BACKGROUND_MODEL } from '$lib/backend/default-models';
+import { DEFAULT_BACKGROUND_MODEL } from '#lib/backend/default-models.js';
 export const DEFAULT_MEMORY_MODEL = DEFAULT_BACKGROUND_MODEL;
 
 /** System-prompt block injected into every chat when persistent memory is on. */

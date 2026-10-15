@@ -7,13 +7,13 @@ import {
 	getMcpServers,
 	toPublicMcpServer,
 	updateMcpServer,
-} from '$lib/db/queries/mcp-servers';
-import { getAuthenticatedUserId } from '$lib/backend/auth-utils';
-import { assertEncryptionEnabled } from '$lib/encryption';
-import { jsonNoStore } from '$lib/backend/http-security';
-import { invalidateRemoteMcpTools, listServerTools } from '$lib/backend/remote-mcp';
-import { sanitizeHeaders, type HttpHeaders } from '$lib/utils/http-headers';
-import { assertPublicHttpUrl } from '$lib/backend/egress';
+} from '#lib/db/queries/mcp-servers.js';
+import { getAuthenticatedUserId } from '#lib/backend/auth-utils.js';
+import { assertEncryptionEnabled } from '#lib/encryption.js';
+import { jsonNoStore } from '#lib/backend/http-security.js';
+import { invalidateRemoteMcpTools, listServerTools } from '#lib/backend/remote-mcp.js';
+import { sanitizeHeaders, type HttpHeaders } from '#lib/utils/http-headers.js';
+import { assertPublicHttpUrl } from '#lib/backend/egress.js';
 
 /** Vetted destination or a 400 with the reason. */
 async function requireUrl(raw: unknown): Promise<string> {

@@ -3,10 +3,10 @@ import type { RequestHandler } from './$types';
 import {
 	createMessageRating,
 	getMessageRatingsForConversation,
-} from '$lib/db/queries/message-ratings';
-import { getOwnedMessage } from '$lib/db/queries/messages';
-import { getConversationById } from '$lib/db/queries/conversations';
-import { getAuthenticatedUserId } from '$lib/backend/auth-utils';
+} from '#lib/db/queries/message-ratings.js';
+import { getOwnedMessage } from '#lib/db/queries/messages.js';
+import { getConversationById } from '#lib/db/queries/conversations.js';
+import { getAuthenticatedUserId } from '#lib/backend/auth-utils.js';
 
 export const GET: RequestHandler = async ({ request, url }) => {
 	const userId = await getAuthenticatedUserId(request);

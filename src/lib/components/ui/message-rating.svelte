@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { Button } from '$lib/components/ui/button';
-	import Tooltip from '$lib/components/ui/tooltip.svelte';
-	import { cn } from '$lib/utils/utils';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import Tooltip from '#lib/components/ui/tooltip.svelte';
+	import { cn } from '#lib/utils/utils.js';
 	import ThumbsUpIcon from '~icons/lucide/thumbs-up';
 	import ThumbsDownIcon from '~icons/lucide/thumbs-down';
 	import ChevronDownIcon from '~icons/lucide/chevron-down';

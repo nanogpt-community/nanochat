@@ -22,7 +22,7 @@ export type Options = {
 	 *  @default false
 	 */
 	isSearch?: boolean;
-	url: URL;
+	url: typeof page.url;
 };
 
 /** Sets the `data-active` attribute on an `<a/>` tag based on its 'active' state.

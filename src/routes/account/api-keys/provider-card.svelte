@@ -1,21 +1,21 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { useCachedQuery, api } from '$lib/cache/cached-query.svelte';
-	import { LocalToasts } from '$lib/builders/local-toasts.svelte';
-	import { mutate } from '$lib/client/mutation.svelte';
-	import { Button } from '$lib/components/ui/button';
-	import { Input } from '$lib/components/ui/input';
-	import { Link } from '$lib/components/ui/link';
-	import { session } from '$lib/state/session.svelte.js';
-	import { Provider, type ProviderMeta } from '$lib/types';
+	import { useCachedQuery, api } from '#lib/cache/cached-query.svelte.js';
+	import { LocalToasts } from '#lib/builders/local-toasts.svelte.js';
+	import { mutate } from '#lib/client/mutation.svelte.js';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { Input } from '#lib/components/ui/input/index.js';
+	import { Link } from '#lib/components/ui/link/index.js';
+	import { session } from '#lib/state/session.svelte.js';
+	import { Provider, type ProviderMeta } from '#lib/types.js';
 	import KeyIcon from '~icons/lucide/key';
 	import CheckIcon from '~icons/lucide/check';
 	import ServerIcon from '~icons/lucide/server';
 	import ExternalLinkIcon from '~icons/lucide/external-link';
 	import { ResultAsync } from 'neverthrow';
 	import { resource } from 'runed';
-	import * as providers from '$lib/utils/providers';
-	import type { UserKeyStatus, UserSettings } from '$lib/api';
+	import * as providers from '#lib/utils/providers.js';
+	import type { UserKeyStatus, UserSettings } from '#lib/api.js';
 
 	type Props = {
 		provider: Provider;
@@ -156,7 +156,7 @@
 	<!-- Usage stats (only for user-provided NanoGPT key) -->
 	{#if keyQuery.data?.hasKey}
 		{#if apiKeyInfoResource.loading}
-			<div class="border-border grid grid-cols-2 gap-px border-b bg-border sm:grid-cols-4">
+			<div class="border-border bg-border grid grid-cols-2 gap-px border-b sm:grid-cols-4">
 				{#each Array(4) as _}
 					<div class="bg-card h-[68px] animate-pulse p-4">
 						<div class="bg-muted mb-2 h-3 w-16 rounded"></div>

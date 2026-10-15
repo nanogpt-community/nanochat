@@ -37,7 +37,7 @@
 </script>
 
 <script lang="ts">
-	import { cn } from '$lib/utils/utils';
+	import { cn } from '#lib/utils/utils.js';
 	import type { Snippet } from 'svelte';
 
 	let {

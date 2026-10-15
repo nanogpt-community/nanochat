@@ -1,7 +1,7 @@
 import { json, type RequestHandler } from '@sveltejs/kit';
-import { getNanoGPTModels, type NanoGPTModel } from '$lib/backend/models/nano-gpt';
-import type { AALLMModel, AAImageModel, AABenchmarkData } from '$lib/types/artificial-analysis';
-import { getAuthenticatedUserId } from '$lib/backend/auth-utils';
+import { getNanoGPTModels, type NanoGPTModel } from '#lib/backend/models/nano-gpt.js';
+import type { AALLMModel, AAImageModel, AABenchmarkData } from '#lib/types/artificial-analysis.js';
+import { getAuthenticatedUserId } from '#lib/backend/auth-utils.js';
 
 let cachedBenchmarks: AABenchmarkData | null = null;
 let benchmarkCacheTimestamp = 0;
@@ -192,8 +192,10 @@ function findImageBenchmark(model: NanoGPTModel, imageModels: AAImageModel[]): A
 			if (normalizedName === normalizedAaName || normalizedId === normalizedAaSlug) return true;
 			if (modelName.includes(aaName) || aaName.includes(modelName)) return true;
 			if (modelIdShort.includes(aaSlug) || aaSlug.includes(modelIdShort)) return true;
-			if (normalizedName.includes(normalizedAaName) || normalizedAaName.includes(normalizedName)) return true;
-			if (normalizedId.includes(normalizedAaSlug) || normalizedAaSlug.includes(normalizedId)) return true;
+			if (normalizedName.includes(normalizedAaName) || normalizedAaName.includes(normalizedName))
+				return true;
+			if (normalizedId.includes(normalizedAaSlug) || normalizedAaSlug.includes(normalizedId))
+				return true;
 
 			const aaNameTokens = extractKeyTokens(img.name);
 			const aaSlugTokens = extractKeyTokens(img.slug);
@@ -261,21 +263,21 @@ export const GET: RequestHandler = async ({ params, request }) => {
 			source_url: 'https://artificialanalysis.ai',
 			llm: llmBenchmark
 				? {
-					name: llmBenchmark.name,
-					slug: llmBenchmark.slug,
-					intelligence: llmBenchmark.evaluations?.artificial_analysis_intelligence_index,
-					coding: llmBenchmark.evaluations?.artificial_analysis_coding_index,
-					agentic: llmBenchmark.evaluations?.artificial_analysis_agentic_index,
-					speed_tokens_per_second: llmBenchmark.median_output_tokens_per_second,
-				}
+						name: llmBenchmark.name,
+						slug: llmBenchmark.slug,
+						intelligence: llmBenchmark.evaluations?.artificial_analysis_intelligence_index,
+						coding: llmBenchmark.evaluations?.artificial_analysis_coding_index,
+						agentic: llmBenchmark.evaluations?.artificial_analysis_agentic_index,
+						speed_tokens_per_second: llmBenchmark.median_output_tokens_per_second,
+					}
 				: null,
 			image: imageBenchmark
 				? {
-					name: imageBenchmark.name,
-					slug: imageBenchmark.slug,
-					elo: imageBenchmark.elo,
-					rank: imageBenchmark.rank,
-				}
+						name: imageBenchmark.name,
+						slug: imageBenchmark.slug,
+						elo: imageBenchmark.elo,
+						rank: imageBenchmark.rank,
+					}
 				: null,
 		},
 	});

@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { Modal } from '$lib/components/ui/modal';
-	import { Button } from '$lib/components/ui/button';
-	import { toSafeResourceUrl } from '$lib/utils/html-sanitizer';
+	import { Modal } from '#lib/components/ui/modal/index.js';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { toSafeResourceUrl } from '#lib/utils/html-sanitizer.js';
 	import DownloadIcon from '~icons/lucide/download';
 	import ExternalLinkIcon from '~icons/lucide/external-link';
 	import XIcon from '~icons/lucide/x';

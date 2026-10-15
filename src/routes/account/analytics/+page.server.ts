@@ -1,7 +1,7 @@
 import { redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
-import { auth } from '$lib/auth';
-import { getModelAnalytics } from '$lib/analytics/model-analytics';
+import { auth } from '#lib/auth.js';
+import { getModelAnalytics } from '#lib/analytics/model-analytics.js';
 
 export const load: PageServerLoad = async ({ request }) => {
 	const session = await auth.api.getSession({ headers: request.headers });

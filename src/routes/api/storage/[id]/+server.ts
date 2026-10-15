@@ -1,7 +1,7 @@
 import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { existsSync, readFileSync } from 'fs';
-import { getStorageAccess } from '$lib/backend/storage-access';
+import { getStorageAccess } from '#lib/backend/storage-access.js';
 
 const INLINE_SAFE_MIME_TYPES = new Set([
 	'application/pdf',
@@ -32,7 +32,7 @@ function getSafeFilename(filename: string): string {
 
 // GET - Serve file by ID
 export const GET: RequestHandler = async ({ params, request }) => {
-    const { id } = params;
+	const { id } = params;
 
 	const access = await getStorageAccess(id, request);
 	if (!access) {
@@ -41,11 +41,11 @@ export const GET: RequestHandler = async ({ params, request }) => {
 
 	const { storage: file, isPublic } = access;
 
-    if (!existsSync(file.path)) {
-        return error(404, 'File not found on disk');
-    }
+	if (!existsSync(file.path)) {
+		return error(404, 'File not found on disk');
+	}
 
-    const content = readFileSync(file.path);
+	const content = readFileSync(file.path);
 	const isSafeInline = isInlineSafe(file.mimeType);
 	const contentType = isSafeInline ? file.mimeType : 'application/octet-stream';
 	const dispositionType = isSafeInline ? 'inline' : 'attachment';
@@ -54,14 +54,14 @@ export const GET: RequestHandler = async ({ params, request }) => {
 		? 'public, max-age=31536000, immutable'
 		: 'private, max-age=0, must-revalidate';
 
-    return new Response(content, {
-        headers: {
-            'Content-Type': contentType,
-            'Content-Length': file.size.toString(),
-            'Cache-Control': cacheControl,
+	return new Response(content, {
+		headers: {
+			'Content-Type': contentType,
+			'Content-Length': file.size.toString(),
+			'Cache-Control': cacheControl,
 			'Content-Disposition': `${dispositionType}; filename="${safeFilename}"`,
 			'X-Content-Type-Options': 'nosniff',
-			'Vary': 'Cookie, Authorization',
-        },
-    });
+			Vary: 'Cookie, Authorization',
+		},
+	});
 };

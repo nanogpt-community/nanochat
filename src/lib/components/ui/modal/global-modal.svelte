@@ -1,5 +1,5 @@
 <script lang="ts" module>
-	import { iterate } from '$lib/utils/array';
+	import { iterate } from '#lib/utils/array.js';
 	import type { ButtonVariant } from '../button';
 
 	// We can extend the generics to include form fields if needed

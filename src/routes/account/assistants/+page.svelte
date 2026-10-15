@@ -1,15 +1,15 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import { api, useCachedQuery, invalidateQueryPattern } from '$lib/cache/cached-query.svelte.js';
-	import { session } from '$lib/state/session.svelte.js';
-	import { models } from '$lib/state/models.svelte';
-	import { Provider } from '$lib/types';
-	import type { Assistant, UserEnabledModel } from '$lib/api';
-	import Button from '$lib/components/ui/button/button.svelte';
-	import Input from '$lib/components/ui/input/input.svelte';
-	import Textarea from '$lib/components/ui/textarea/textarea.svelte';
-	import Label from '$lib/components/ui/label/label.svelte';
+	import { api, useCachedQuery, invalidateQueryPattern } from '#lib/cache/cached-query.svelte.js';
+	import { session } from '#lib/state/session.svelte.js';
+	import { models } from '#lib/state/models.svelte.js';
+	import { Provider } from '#lib/types.js';
+	import type { Assistant, UserEnabledModel } from '#lib/api.js';
+	import Button from '#lib/components/ui/button/button.svelte';
+	import Input from '#lib/components/ui/input/input.svelte';
+	import Textarea from '#lib/components/ui/textarea/textarea.svelte';
+	import Label from '#lib/components/ui/label/label.svelte';
 	import LoaderCircle from '~icons/lucide/loader-circle';
 	import Trash from '~icons/lucide/trash-2';
 	import Pencil from '~icons/lucide/pencil';
@@ -91,7 +91,7 @@
 		formDefaultWebSearchValyuSearchType = '';
 		// Clear the create query param if present
 		if (page.url.searchParams.has('create')) {
-			goto('/account/assistants', { replaceState: true });
+			goto('/account/assistants', { replace: true });
 		}
 	}
 
@@ -219,11 +219,7 @@
 			<div class="bg-card border-border flex flex-col gap-6 rounded-lg border p-5">
 				<div class="flex flex-col gap-2">
 					<Label for="name" class="text-sm font-medium">Name</Label>
-					<Input
-						id="name"
-						bind:value={formName}
-						placeholder="e.g. Coding Expert"
-					/>
+					<Input id="name" bind:value={formName} placeholder="e.g. Coding Expert" />
 					<p class="text-muted-foreground text-xs">Give your assistant a memorable name.</p>
 				</div>
 				<div class="flex flex-col gap-2">
@@ -248,8 +244,7 @@
 									<code class="text-primary">{'{cur_time}'}</code> - Current time (HH:MM:SS)
 								</div>
 								<div>
-									<code class="text-primary">{'{cur_datetime}'}</code> - Current date and time (ISO
-									format)
+									<code class="text-primary">{'{cur_datetime}'}</code> - Current date and time (ISO format)
 								</div>
 								<div>
 									<code class="text-primary">{'{model_name}'}</code> - Name of the AI model
@@ -395,11 +390,7 @@
 
 				<div class="border-border flex justify-end gap-3 border-t pt-4">
 					<Button variant="ghost" onclick={cancelForm} disabled={isSubmitting}>Cancel</Button>
-					<Button
-						onclick={handleSubmit}
-						disabled={isSubmitting || !formName}
-						class="min-w-[100px]"
-					>
+					<Button onclick={handleSubmit} disabled={isSubmitting || !formName} class="min-w-[100px]">
 						{#if isSubmitting}
 							<LoaderCircle class="mr-2 size-4 animate-spin" />
 							Saving...
@@ -436,11 +427,7 @@
 		{:else}
 			<div class="bg-card border-border divide-border divide-y rounded-lg border">
 				{#each assistants as assistant (assistant.id)}
-					<div
-						class="flex flex-col gap-3 p-5 {editingId === assistant.id
-							? 'bg-primary/5'
-							: ''}"
-					>
+					<div class="flex flex-col gap-3 p-5 {editingId === assistant.id ? 'bg-primary/5' : ''}">
 						<div class="flex items-center justify-between gap-4">
 							<div class="flex min-w-0 items-center gap-2">
 								<span class="truncate text-base font-semibold">{assistant.name}</span>

@@ -1,100 +1,112 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
-import { db, generateId } from '$lib/db';
-import { assistants } from '$lib/db/schema';
+import { db, generateId } from '#lib/db/index.js';
+import { assistants } from '#lib/db/schema.js';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
-import { getAuthenticatedUserId } from '$lib/backend/auth-utils';
+import { getAuthenticatedUserId } from '#lib/backend/auth-utils.js';
 
 export async function GET({ request }: RequestEvent) {
-    const userId = await getAuthenticatedUserId(request);
+	const userId = await getAuthenticatedUserId(request);
 
-    let userAssistants = await db.query.assistants.findMany({
-        where: eq(assistants.userId, userId),
-    });
+	let userAssistants = await db.query.assistants.findMany({
+		where: eq(assistants.userId, userId),
+	});
 
-    if (userAssistants.length === 0) {
-        // Create default assistant
-        const defaultAssistant = {
-            id: generateId(),
-            userId,
-            name: 'Default',
-            description: null,
-            systemPrompt: '',
-            isDefault: true,
-            defaultModelId: null,
-            defaultWebSearchMode: null,
-            defaultWebSearchProvider: null,
-            defaultWebSearchExaDepth: null,
-            defaultWebSearchContextSize: null,
-            defaultWebSearchKagiSource: null,
-            defaultWebSearchValyuSearchType: null,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-        };
+	if (userAssistants.length === 0) {
+		// Create default assistant
+		const defaultAssistant = {
+			id: generateId(),
+			userId,
+			name: 'Default',
+			description: null,
+			systemPrompt: '',
+			isDefault: true,
+			defaultModelId: null,
+			defaultWebSearchMode: null,
+			defaultWebSearchProvider: null,
+			defaultWebSearchExaDepth: null,
+			defaultWebSearchContextSize: null,
+			defaultWebSearchKagiSource: null,
+			defaultWebSearchValyuSearchType: null,
+			createdAt: new Date(),
+			updatedAt: new Date(),
+		};
 
-        await db.insert(assistants).values(defaultAssistant);
-        userAssistants = [defaultAssistant];
-    }
+		await db.insert(assistants).values(defaultAssistant);
+		userAssistants = [defaultAssistant];
+	}
 
-    return json(userAssistants);
+	return json(userAssistants);
 }
 
 const createAssistantSchema = z.object({
-    name: z.string().min(1).max(100),
-    systemPrompt: z.string().max(10000),
-    defaultModelId: z.string().optional(),
-    defaultWebSearchMode: z.enum(['off', 'standard', 'deep']).optional(),
-    defaultWebSearchProvider: z.enum([
-        'linkup',
-        'tavily',
-        'exa',
-        'kagi',
-        'perplexity',
-        'valyu',
-        'brave',
-        'brave-pro',
-        'brave-research',
-    ]).optional(),
-    defaultWebSearchExaDepth: z.enum(['fast', 'auto', 'neural', 'deep']).optional(),
-    defaultWebSearchContextSize: z.enum(['low', 'medium', 'high']).optional(),
-    defaultWebSearchKagiSource: z.enum(['web', 'news', 'search']).optional(),
-    defaultWebSearchValyuSearchType: z.enum(['all', 'web']).optional(),
+	name: z.string().min(1).max(100),
+	systemPrompt: z.string().max(10000),
+	defaultModelId: z.string().optional(),
+	defaultWebSearchMode: z.enum(['off', 'standard', 'deep']).optional(),
+	defaultWebSearchProvider: z
+		.enum([
+			'linkup',
+			'tavily',
+			'exa',
+			'kagi',
+			'perplexity',
+			'valyu',
+			'brave',
+			'brave-pro',
+			'brave-research',
+		])
+		.optional(),
+	defaultWebSearchExaDepth: z.enum(['fast', 'auto', 'neural', 'deep']).optional(),
+	defaultWebSearchContextSize: z.enum(['low', 'medium', 'high']).optional(),
+	defaultWebSearchKagiSource: z.enum(['web', 'news', 'search']).optional(),
+	defaultWebSearchValyuSearchType: z.enum(['all', 'web']).optional(),
 });
 
 export async function POST({ request }: RequestEvent) {
-    const userId = await getAuthenticatedUserId(request);
-    let body;
-    try {
-        body = await request.json();
-    } catch {
-        return json({ error: 'Invalid JSON' }, { status: 400 });
-    }
+	const userId = await getAuthenticatedUserId(request);
+	let body;
+	try {
+		body = await request.json();
+	} catch {
+		return json({ error: 'Invalid JSON' }, { status: 400 });
+	}
 
-    const result = createAssistantSchema.safeParse(body);
-    if (!result.success) {
-        return json({ error: result.error.flatten() }, { status: 400 });
-    }
+	const result = createAssistantSchema.safeParse(body);
+	if (!result.success) {
+		return json({ error: result.error.flatten() }, { status: 400 });
+	}
 
-    const { name, systemPrompt, defaultModelId, defaultWebSearchMode, defaultWebSearchProvider, defaultWebSearchExaDepth, defaultWebSearchContextSize, defaultWebSearchKagiSource, defaultWebSearchValyuSearchType } = result.data;
+	const {
+		name,
+		systemPrompt,
+		defaultModelId,
+		defaultWebSearchMode,
+		defaultWebSearchProvider,
+		defaultWebSearchExaDepth,
+		defaultWebSearchContextSize,
+		defaultWebSearchKagiSource,
+		defaultWebSearchValyuSearchType,
+	} = result.data;
 
-    const newAssistant = {
-        id: generateId(),
-        userId,
-        name,
-        systemPrompt,
-        isDefault: false,
-        defaultModelId: defaultModelId ?? null,
-        defaultWebSearchMode: defaultWebSearchMode ?? null,
-        defaultWebSearchProvider: defaultWebSearchProvider ?? null,
-        defaultWebSearchExaDepth: defaultWebSearchExaDepth ?? null,
-        defaultWebSearchContextSize: defaultWebSearchContextSize ?? null,
-        defaultWebSearchKagiSource: defaultWebSearchKagiSource ?? null,
-        defaultWebSearchValyuSearchType: defaultWebSearchValyuSearchType ?? null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-    };
+	const newAssistant = {
+		id: generateId(),
+		userId,
+		name,
+		systemPrompt,
+		isDefault: false,
+		defaultModelId: defaultModelId ?? null,
+		defaultWebSearchMode: defaultWebSearchMode ?? null,
+		defaultWebSearchProvider: defaultWebSearchProvider ?? null,
+		defaultWebSearchExaDepth: defaultWebSearchExaDepth ?? null,
+		defaultWebSearchContextSize: defaultWebSearchContextSize ?? null,
+		defaultWebSearchKagiSource: defaultWebSearchKagiSource ?? null,
+		defaultWebSearchValyuSearchType: defaultWebSearchValyuSearchType ?? null,
+		createdAt: new Date(),
+		updatedAt: new Date(),
+	};
 
-    await db.insert(assistants).values(newAssistant);
+	await db.insert(assistants).values(newAssistant);
 
-    return json(newAssistant);
+	return json(newAssistant);
 }

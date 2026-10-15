@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { useCachedQuery, api } from '$lib/cache/cached-query.svelte';
-	import type { Prompt } from '$lib/api';
-	import { Button } from '$lib/components/ui/button/index.js';
-	import Input from '$lib/components/ui/input/input.svelte';
-	import Label from '$lib/components/ui/label/label.svelte';
-	import Modal from '$lib/components/ui/modal/modal.svelte';
-	import { substitutePromptVariables } from '$lib/utils/prompt-variables';
-	import { shortcut, getKeybindOptions } from '$lib/actions/shortcut.svelte';
+	import { useCachedQuery, api } from '#lib/cache/cached-query.svelte.js';
+	import type { Prompt } from '#lib/api.js';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import Input from '#lib/components/ui/input/input.svelte';
+	import Label from '#lib/components/ui/label/label.svelte';
+	import Modal from '#lib/components/ui/modal/modal.svelte';
+	import { substitutePromptVariables } from '#lib/utils/prompt-variables.js';
+	import { shortcut, getKeybindOptions } from '#lib/actions/shortcut.svelte.js';
 	import { tick } from 'svelte';
 	import Variable from '~icons/lucide/variable';
 	import ArrowLeft from '~icons/lucide/arrow-left';
@@ -28,7 +28,9 @@
 	const promptsQuery = useCachedQuery<Prompt[]>(api.prompts.list, {});
 	const safePrompts = $derived(
 		Array.isArray(promptsQuery.data)
-			? promptsQuery.data.filter((prompt): prompt is Prompt => !!prompt && typeof prompt.name === 'string')
+			? promptsQuery.data.filter(
+					(prompt): prompt is Prompt => !!prompt && typeof prompt.name === 'string'
+				)
 			: []
 	);
 

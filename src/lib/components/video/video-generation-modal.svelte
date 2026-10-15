@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { Modal } from '$lib/components/ui/modal';
-	import { Button } from '$lib/components/ui/button';
-	import { Input } from '$lib/components/ui/input';
-	import { models } from '$lib/state/models.svelte';
-	import { Provider } from '$lib/types';
-	import { supportsVideo } from '$lib/utils/model-capabilities';
+	import { Modal } from '#lib/components/ui/modal/index.js';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { Input } from '#lib/components/ui/input/index.js';
+	import { models } from '#lib/state/models.svelte.js';
+	import { Provider } from '#lib/types.js';
+	import { supportsVideo } from '#lib/utils/model-capabilities.js';
 	import VideoIcon from '~icons/lucide/video';
 	import { untrack } from 'svelte';
 
@@ -191,35 +191,35 @@
 						{/if}
 					</label>
 
-						{#if param.type === 'select' && param.options}
-							<select
-								class="border-input ring-offset-background placeholder:text-muted-foreground focus:ring-ring flex h-9 w-full rounded-md border bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium focus:ring-1 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-								bind:value={videoParams[param.key]}
-							>
-								{#each param.options as option}
-									<option value={option.value}>{option.label}</option>
-								{/each}
-							</select>
-						{:else if param.type === 'boolean' || param.type === 'switch'}
-							<div class="flex items-center space-x-2">
-								<input
-									type="checkbox"
-									class="text-primary focus:ring-primary h-4 w-4 rounded border-gray-300"
-									bind:checked={videoParams[param.key]}
-								/>
-								<span class="text-muted-foreground text-sm">Enabled</span>
-							</div>
-						{:else if param.type === 'number'}
-							<Input
-								type="number"
-								bind:value={videoParams[param.key]}
-								min={(param as any).min}
-								max={(param as any).max}
-								step={(param as any).step}
+					{#if param.type === 'select' && param.options}
+						<select
+							class="border-input ring-offset-background placeholder:text-muted-foreground focus:ring-ring flex h-9 w-full rounded-md border bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium focus:ring-1 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+							bind:value={videoParams[param.key]}
+						>
+							{#each param.options as option}
+								<option value={option.value}>{option.label}</option>
+							{/each}
+						</select>
+					{:else if param.type === 'boolean' || param.type === 'switch'}
+						<div class="flex items-center space-x-2">
+							<input
+								type="checkbox"
+								class="text-primary focus:ring-primary h-4 w-4 rounded border-gray-300"
+								bind:checked={videoParams[param.key]}
 							/>
-						{:else}
-							<Input type="text" bind:value={videoParams[param.key]} />
-						{/if}
+							<span class="text-muted-foreground text-sm">Enabled</span>
+						</div>
+					{:else if param.type === 'number'}
+						<Input
+							type="number"
+							bind:value={videoParams[param.key]}
+							min={(param as any).min}
+							max={(param as any).max}
+							step={(param as any).step}
+						/>
+					{:else}
+						<Input type="text" bind:value={videoParams[param.key]} />
+					{/if}
 				</div>
 			{/each}
 		{:else}

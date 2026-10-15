@@ -1,4 +1,4 @@
-import { Provider } from '$lib/types';
+import { Provider } from '#lib/types.js';
 import { type NanoGPTModel } from './nano-gpt';
 
 export type ProviderModelMap = {

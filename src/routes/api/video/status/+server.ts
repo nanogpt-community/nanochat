@@ -1,13 +1,13 @@
-import { env } from '$env/dynamic/private';
+import { NANOGPT_API_KEY } from '$app/env/private';
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { db } from '$lib/db';
-import { modelPerformanceStats } from '$lib/db/schema';
+import { db } from '#lib/db/index.js';
+import { modelPerformanceStats } from '#lib/db/schema.js';
 import { eq, and, sql } from 'drizzle-orm';
-import { tryGetAuthenticatedUserId } from '$lib/backend/auth-utils';
-import { getUserKey } from '$lib/db/queries';
-import { nanoGptUrl } from '$lib/backend/nano-gpt-url.server';
-import { saveFile } from '$lib/backend/storage';
+import { tryGetAuthenticatedUserId } from '#lib/backend/auth-utils.js';
+import { getUserKey } from '#lib/db/queries/index.js';
+import { nanoGptUrl } from '#lib/backend/nano-gpt-url.server.js';
+import { saveFile } from '#lib/backend/storage.js';
 
 // ponytail: generous flat cap; bump if long 4K clips start getting skipped
 const MAX_VIDEO_SAVE_BYTES = 300 * 1024 * 1024;
@@ -36,7 +36,7 @@ const resolveNanoGPTKey = async (request: Request, userId?: string): Promise<str
 	if (!userId) return null;
 
 	const userKey = await getUserKey(userId, 'nanogpt');
-	return userKey || env.NANOGPT_API_KEY || null;
+	return userKey || NANOGPT_API_KEY || null;
 };
 
 export const GET: RequestHandler = async ({ request, url, fetch }) => {
@@ -81,8 +81,10 @@ export const GET: RequestHandler = async ({ request, url, fetch }) => {
 		// response, never from the client.
 		if (status === 'COMPLETED' && userId && url.searchParams.get('save') === '1') {
 			const remote = data.data?.output?.video?.url;
+
 			const videoUrl =
 				typeof remote === 'string' ? (remote.startsWith('/') ? nanoGptUrl(remote) : remote) : null;
+
 			if (videoUrl) {
 				try {
 					const fileRes = await fetch(videoUrl);

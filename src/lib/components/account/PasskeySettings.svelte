@@ -1,19 +1,19 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
-	import { authClient } from '$lib/backend/auth/client';
-	import { Button } from '$lib/components/ui/button';
+	import { authClient } from '#lib/backend/auth/client.js';
+	import { Button } from '#lib/components/ui/button/index.js';
 	import {
 		Root as Card,
 		Content as CardContent,
 		Description as CardDescription,
 		Header as CardHeader,
-		Title as CardTitle
-	} from '$lib/components/ui/card';
+		Title as CardTitle,
+	} from '#lib/components/ui/card/index.js';
 	import Loader2 from '~icons/lucide/loader-2';
 	import Plus from '~icons/lucide/plus';
 	import Trash2 from '~icons/lucide/trash-2';
 	import { toast } from 'svelte-sonner';
-	
+
 	interface Props {
 		passkeys: {
 			id: string;
@@ -57,11 +57,11 @@
 		if (!confirm('Are you sure you want to delete this passkey?')) return;
 		isLoading = true;
 		try {
-            // @ts-ignore
+			// @ts-ignore
 			const result = await authClient.passkey.deletePasskey(id);
-             // @ts-ignore
+			// @ts-ignore
 			if (result?.error) {
-                 // @ts-ignore
+				// @ts-ignore
 				toast.error(getErrorMessage(result.error, 'Failed to delete passkey'));
 			} else {
 				toast.success('Passkey deleted successfully');
@@ -78,15 +78,11 @@
 <Card>
 	<CardHeader>
 		<CardTitle>Passkeys</CardTitle>
-		<CardDescription>
-			Manage your passkeys for passwordless login.
-		</CardDescription>
+		<CardDescription>Manage your passkeys for passwordless login.</CardDescription>
 	</CardHeader>
 	<CardContent class="grid gap-4">
 		{#if passkeys.length === 0}
-			<div class="text-muted-foreground text-sm text-center py-4">
-				No passkeys added yet.
-			</div>
+			<div class="text-muted-foreground py-4 text-center text-sm">No passkeys added yet.</div>
 		{:else}
 			<div class="grid gap-2">
 				{#each passkeys as key}
@@ -94,7 +90,9 @@
 						<div class="flex flex-col">
 							<span class="font-medium">{key.name || 'Unnamed Passkey'}</span>
 							<span class="text-muted-foreground text-xs">
-								Added on {key.createdAt ? new Date(key.createdAt).toLocaleDateString() : 'Unknown date'}
+								Added on {key.createdAt
+									? new Date(key.createdAt).toLocaleDateString()
+									: 'Unknown date'}
 							</span>
 						</div>
 						<Button

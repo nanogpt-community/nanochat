@@ -6,15 +6,15 @@ import {
 	updateUserSettings,
 	incrementFreeMessageCount,
 	getOrCreateUserSettings,
-} from '$lib/db/queries';
-import { toPublicUserSettings } from '$lib/db/queries/user-settings';
-import { getAuthenticatedUserId } from '$lib/backend/auth-utils';
-import { db } from '$lib/db';
-import { scheduledTasks } from '$lib/db/schema';
-import { computeNextRunAt } from '$lib/backend/scheduler';
-import { assertEncryptionEnabled } from '$lib/encryption';
-import { jsonNoStore } from '$lib/backend/http-security';
-import { assertPublicHttpUrl } from '$lib/backend/egress';
+} from '#lib/db/queries/index.js';
+import { toPublicUserSettings } from '#lib/db/queries/user-settings.js';
+import { getAuthenticatedUserId } from '#lib/backend/auth-utils.js';
+import { db } from '#lib/db/index.js';
+import { scheduledTasks } from '#lib/db/schema.js';
+import { computeNextRunAt } from '#lib/backend/scheduler.js';
+import { assertEncryptionEnabled } from '#lib/encryption.js';
+import { jsonNoStore } from '#lib/backend/http-security.js';
+import { assertPublicHttpUrl } from '#lib/backend/egress.js';
 
 function normalizeTimezone(value: unknown): string | undefined {
 	if (typeof value !== 'string') return undefined;

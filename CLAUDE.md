@@ -40,22 +40,22 @@ Use one of these authentication labels:
 For new authenticated endpoints, use the shared auth utility:
 
 ```typescript
-import { getAuthenticatedUserId } from '$lib/backend/auth-utils';
+import { getAuthenticatedUserId } from '#lib/backend/auth-utils.js';
 
 export async function GET({ request }: RequestEvent) {
-    const userId = await getAuthenticatedUserId(request);
-    // ... endpoint logic
+	const userId = await getAuthenticatedUserId(request);
+	// ... endpoint logic
 }
 ```
 
 For optional authentication (public with optional user context):
 
 ```typescript
-import { tryGetAuthenticatedUserId } from '$lib/backend/auth-utils';
+import { tryGetAuthenticatedUserId } from '#lib/backend/auth-utils.js';
 
 export async function GET({ request }: RequestEvent) {
-    const userId = await tryGetAuthenticatedUserId(request);
-    // userId may be undefined if not authenticated
+	const userId = await tryGetAuthenticatedUserId(request);
+	// userId may be undefined if not authenticated
 }
 ```
 
@@ -65,6 +65,7 @@ Follow this template when adding a new endpoint:
 
 ```markdown
 #### METHOD `/api/endpoint-path`
+
 Brief description of what the endpoint does.
 
 **Authentication**: Session or API Key
@@ -72,23 +73,23 @@ Brief description of what the endpoint does.
 **Request Body**:
 \`\`\`json
 {
-  "field": "type (description)"
+"field": "type (description)"
 }
 \`\`\`
 
 **Response**:
 \`\`\`json
 {
-  "field": "type"
+"field": "type"
 }
 \`\`\`
 
 **CURL Example**:
 \`\`\`bash
 curl -X METHOD "http://localhost:3432/api/endpoint-path" \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer your_api_key" \
-  -d '{"field": "value"}'
+-H "Content-Type: application/json" \
+-H "Authorization: Bearer your_api_key" \
+-d '{"field": "value"}'
 \`\`\`
 ```
 

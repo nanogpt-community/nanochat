@@ -1,8 +1,8 @@
-import type { ModelPerformanceStats } from '$lib/db/schema';
+import type { ModelPerformanceStats } from '#lib/db/schema.js';
 import {
 	calculateAllModelPerformanceStats,
 	getModelPerformanceStatsByUser,
-} from '$lib/db/queries/model-performance';
+} from '#lib/db/queries/model-performance.js';
 
 export type ModelAnalyticsInsights = {
 	totalMessages: number;

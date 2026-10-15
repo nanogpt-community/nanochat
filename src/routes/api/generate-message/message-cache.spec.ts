@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { applyLimit, upsertMessage } from './call';
-import type { Message } from '$lib/api';
+import type { Message } from '#lib/api.js';
 
 function message(id: string, overrides: Partial<Message> = {}): Message {
 	return {

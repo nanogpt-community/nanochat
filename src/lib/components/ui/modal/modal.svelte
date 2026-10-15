@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { cn } from '$lib/utils/utils';
-	import { clickOutside } from '$lib/attachments/click-outside.svelte.js';
+	import { cn } from '#lib/utils/utils.js';
+	import { clickOutside } from '#lib/attachments/click-outside.svelte.js';
 	import type { Snippet } from 'svelte';
 
 	interface Props {

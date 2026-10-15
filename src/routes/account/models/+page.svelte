@@ -1,22 +1,22 @@
 <script lang="ts">
-	import { useCachedQuery, api } from '$lib/cache/cached-query.svelte';
-	import { Button } from '$lib/components/ui/button';
-	import { Search } from '$lib/components/ui/search';
-	import { mutate } from '$lib/client/mutation.svelte';
-	import { models } from '$lib/state/models.svelte';
-	import { session } from '$lib/state/session.svelte';
-	import { Provider } from '$lib/types.js';
-	import { fuzzysearch } from '$lib/utils/fuzzy-search';
-	import { cn } from '$lib/utils/utils';
+	import { useCachedQuery, api } from '#lib/cache/cached-query.svelte.js';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { Search } from '#lib/components/ui/search/index.js';
+	import { mutate } from '#lib/client/mutation.svelte.js';
+	import { models } from '#lib/state/models.svelte.js';
+	import { session } from '#lib/state/session.svelte.js';
+	import { Provider } from '#lib/types.js';
+	import { fuzzysearch } from '#lib/utils/fuzzy-search.js';
+	import { cn } from '#lib/utils/utils.js';
 	import { Toggle } from 'melt/builders';
 	import { ResultAsync } from 'neverthrow';
 	import CheckIcon from '~icons/lucide/check';
 	import TicketIcon from '~icons/lucide/ticket';
 	import ImageIcon from '~icons/lucide/image';
 	import VideoIcon from '~icons/lucide/video';
-	import type { UserKeyStatus } from '$lib/api';
+	import type { UserKeyStatus } from '#lib/api.js';
 	import ModelCard from './model-card.svelte';
-	import { supportsVideo } from '$lib/utils/model-capabilities';
+	import { supportsVideo } from '#lib/utils/model-capabilities.js';
 
 	const nanoGPTKeyQuery = useCachedQuery<UserKeyStatus>(api.user_keys.get, {
 		provider: Provider.NanoGPT,
@@ -42,9 +42,7 @@
 	let bulkToggleState = $state<'enable' | 'disable' | 'reset' | null>(null);
 
 	const allNanoGPTModelsEnabled = $derived(nanoGPTModelCollection.every((model) => model.enabled));
-	const someNanoGPTModelsEnabled = $derived(
-		nanoGPTModelCollection.some((model) => model.enabled)
-	);
+	const someNanoGPTModelsEnabled = $derived(nanoGPTModelCollection.some((model) => model.enabled));
 	const enabledCount = $derived(nanoGPTModelCollection.filter((m) => m.enabled).length);
 	const totalCount = $derived(nanoGPTModelCollection.length);
 	const activeFilterCount = $derived(
@@ -300,8 +298,8 @@
 						NanoGPT
 					</h3>
 					<p class="text-muted-foreground text-xs">
-						{nanoGPTModels.length} model{nanoGPTModels.length === 1 ? '' : 's'} · Access to premium
-						models via NanoGPT.
+						{nanoGPTModels.length} model{nanoGPTModels.length === 1 ? '' : 's'} · Access to premium models
+						via NanoGPT.
 						{#if !hasNanoGPTKey}
 							<a href="/account/api-keys#nanogpt" class="text-primary ml-1 underline">
 								Add an API key

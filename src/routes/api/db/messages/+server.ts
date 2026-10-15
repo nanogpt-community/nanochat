@@ -10,11 +10,11 @@ import {
 	updateMessageError,
 	deleteMessage,
 	setMessageStarred,
-} from '$lib/db/queries';
-import { db } from '$lib/db';
-import { conversations, messages } from '$lib/db/schema';
-import { getConversationById } from '$lib/db/queries/conversations';
-import { getAuthenticatedUserId } from '$lib/backend/auth-utils';
+} from '#lib/db/queries/index.js';
+import { db } from '#lib/db/index.js';
+import { conversations, messages } from '#lib/db/schema.js';
+import { getConversationById } from '#lib/db/queries/conversations.js';
+import { getAuthenticatedUserId } from '#lib/backend/auth-utils.js';
 
 async function requireOwnedMessage(messageId: string, userId: string) {
 	const message = await db
@@ -99,7 +99,9 @@ export const GET: RequestHandler = async ({ request, url }) => {
 	}
 
 	if (isPublic) {
-		const messages = await getPublicConversationMessages(conversationId, { limit: limit ?? undefined });
+		const messages = await getPublicConversationMessages(conversationId, {
+			limit: limit ?? undefined,
+		});
 		if (!messages) {
 			return error(404, 'Conversation not found or not public');
 		}
@@ -107,7 +109,9 @@ export const GET: RequestHandler = async ({ request, url }) => {
 	}
 
 	const userId = await getAuthenticatedUserId(request);
-	const messages = await getConversationMessages(conversationId, userId, { limit: limit ?? undefined });
+	const messages = await getConversationMessages(conversationId, userId, {
+		limit: limit ?? undefined,
+	});
 	return json(withInlineImages(messages));
 };
 

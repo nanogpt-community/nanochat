@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { api, useCachedQuery } from '$lib/cache/cached-query.svelte.js';
-	import type { UserSettings } from '$lib/api';
-	import { session } from '$lib/state/session.svelte.js';
+	import { api, useCachedQuery } from '#lib/cache/cached-query.svelte.js';
+	import type { UserSettings } from '#lib/api.js';
+	import { session } from '#lib/state/session.svelte.js';
 	import LightSwitch from './light-switch.svelte';
 	import type { LightSwitchProps } from './types';
 

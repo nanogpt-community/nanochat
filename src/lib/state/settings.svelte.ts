@@ -1,5 +1,5 @@
-import { createPersistedObj } from '$lib/spells/persisted-obj.svelte';
-import type { ReasoningEffort } from '$lib/utils/model-capabilities';
+import { createPersistedObj } from '#lib/spells/persisted-obj.svelte.js';
+import type { ReasoningEffort } from '#lib/utils/model-capabilities.js';
 
 export const settings = createPersistedObj('settings', {
 	modelId: undefined as string | undefined,

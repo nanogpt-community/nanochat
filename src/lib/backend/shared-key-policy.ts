@@ -1,6 +1,6 @@
 import { error } from '@sveltejs/kit';
-import { getNanoGPTModels } from '$lib/backend/models/nano-gpt';
-import { checkAndUpdateDailyLimit, isSubscriptionOnlyMode } from '$lib/backend/message-limits';
+import { getNanoGPTModels } from '#lib/backend/models/nano-gpt.js';
+import { checkAndUpdateDailyLimit, isSubscriptionOnlyMode } from '#lib/backend/message-limits.js';
 
 export type SharedKeyDenial = { status: 403 | 429; message: string };
 

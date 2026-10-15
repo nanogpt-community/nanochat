@@ -1,13 +1,13 @@
 import { db, generateId } from '../index';
 import { userKeys, type UserKey } from '../schema';
 import { eq, and } from 'drizzle-orm';
-import type { Provider } from '$lib/types';
+import type { Provider } from '#lib/types.js';
 import {
 	assertEncryptionEnabled,
 	encryptApiKey,
 	decryptApiKey,
 	isEncrypted,
-} from '$lib/encryption';
+} from '#lib/encryption.js';
 
 export type UserKeyStatus = {
 	hasKey: boolean;

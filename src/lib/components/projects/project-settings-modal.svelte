@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { mutate } from '$lib/client/mutation.svelte';
-	import { api, invalidateQueryPattern } from '$lib/cache/cached-query.svelte';
-	import Button from '$lib/components/ui/button/button.svelte';
-	import Modal from '$lib/components/ui/modal/modal.svelte';
-	import { Input } from '$lib/components/ui/input';
-	import { Textarea } from '$lib/components/ui/textarea';
-	import Label from '$lib/components/ui/label/label.svelte';
-	import type { Project, ProjectFile, ProjectMember } from '$lib/api';
+	import { mutate } from '#lib/client/mutation.svelte.js';
+	import { api, invalidateQueryPattern } from '#lib/cache/cached-query.svelte.js';
+	import Button from '#lib/components/ui/button/button.svelte';
+	import Modal from '#lib/components/ui/modal/modal.svelte';
+	import { Input } from '#lib/components/ui/input/index.js';
+	import { Textarea } from '#lib/components/ui/textarea/index.js';
+	import Label from '#lib/components/ui/label/label.svelte';
+	import type { Project, ProjectFile, ProjectMember } from '#lib/api.js';
 	import LoaderCircleIcon from '~icons/lucide/loader-circle';
 	import TrashIcon from '~icons/lucide/trash';
 	import UploadIcon from '~icons/lucide/upload';
@@ -93,7 +93,7 @@
 		loading = true;
 		try {
 			await mutate(`${api.projects.list.url}/${project.id}`, {
-				action: 'update',
+				method: 'PATCH',
 				name,
 				description,
 				systemPrompt,

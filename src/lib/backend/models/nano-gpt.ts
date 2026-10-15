@@ -1,5 +1,5 @@
 import { ResultAsync } from 'neverthrow';
-import { nanoGptUrl } from '$lib/backend/nano-gpt-url.server';
+import { nanoGptUrl } from '#lib/backend/nano-gpt-url.server.js';
 
 const MODEL_CACHE_TTL_MS = 5 * 60 * 1000;
 let cachedModels: NanoGPTModel[] | null = null;

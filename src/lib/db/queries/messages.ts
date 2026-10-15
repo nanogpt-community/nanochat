@@ -1,8 +1,8 @@
-import type { ReasoningEffort } from '$lib/utils/model-capabilities';
+import type { ReasoningEffort } from '#lib/utils/model-capabilities.js';
 import { db, generateId } from '../index';
 import { messages, conversations, type Message } from '../schema';
 import { eq, asc, sql, and } from 'drizzle-orm';
-import { sanitizeHtml } from '$lib/utils/html-sanitizer';
+import { sanitizeHtml } from '#lib/utils/html-sanitizer.js';
 
 const messageRoleOrder = sql<number>`
 	case

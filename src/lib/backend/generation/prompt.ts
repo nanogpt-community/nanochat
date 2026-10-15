@@ -1,5 +1,5 @@
 import type OpenAI from 'openai';
-import { db, generateId } from '$lib/db';
+import { db, generateId } from '#lib/db/index.js';
 import {
 	messages,
 	storage,
@@ -8,23 +8,27 @@ import {
 	projects,
 	type UserRule,
 	type UserSettings,
-} from '$lib/db/schema';
+} from '#lib/db/schema.js';
 import { and, asc, eq } from 'drizzle-orm';
 import { readFile } from 'fs/promises';
-import { Provider } from '$lib/types';
-import * as array from '$lib/utils/array';
-import { parseMessageForRules } from '$lib/utils/rules.js';
-import { extractStoredDocumentText } from '$lib/backend/document-text';
-import { substituteSystemPromptVariables } from '$lib/utils/system-prompt-variables';
-import { listUserMemories } from '$lib/db/queries/user-memories';
-import { formatMemoriesForPrompt } from '$lib/backend/memory';
-import { canAccessProject } from '$lib/backend/conversation-refs';
-import { compactIfNeeded, estimateTokens, formatSummaryForPrompt } from '$lib/backend/compaction';
+import { Provider } from '#lib/types.js';
+import * as array from '#lib/utils/array.js';
+import { parseMessageForRules } from '#lib/utils/rules.js';
+import { extractStoredDocumentText } from '#lib/backend/document-text.js';
+import { substituteSystemPromptVariables } from '#lib/utils/system-prompt-variables.js';
+import { listUserMemories } from '#lib/db/queries/user-memories.js';
+import { formatMemoriesForPrompt } from '#lib/backend/memory.js';
+import { canAccessProject } from '#lib/backend/conversation-refs.js';
+import {
+	compactIfNeeded,
+	estimateTokens,
+	formatSummaryForPrompt,
+} from '#lib/backend/compaction.js';
 import {
 	extractUrlsByType,
 	scrapeUrls,
 	formatScrapedContent,
-} from '$lib/backend/url-scraper.server';
+} from '#lib/backend/url-scraper.server.js';
 import type { Log } from './schema';
 
 const SCRAPE_COST_PER_URL = 0.001;
@@ -298,7 +302,10 @@ export async function buildPrompt(opts: {
 	const [assistant, project] = await Promise.all([
 		conversation?.assistantId
 			? db.query.assistants.findFirst({
-					where: and(eq(assistants.id, conversation.assistantId), eq(assistants.userId, opts.userId)),
+					where: and(
+						eq(assistants.id, conversation.assistantId),
+						eq(assistants.userId, opts.userId)
+					),
 					columns: { systemPrompt: true },
 				})
 			: undefined,

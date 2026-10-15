@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { useCachedQuery, api } from '$lib/cache/cached-query.svelte';
-	import { mutate } from '$lib/client/mutation.svelte';
-	import type { UserSettings } from '$lib/api';
+	import { useCachedQuery, api } from '#lib/cache/cached-query.svelte.js';
+	import { mutate } from '#lib/client/mutation.svelte.js';
+	import type { UserSettings } from '#lib/api.js';
 
 	type ProviderInfo = {
 		provider: string;

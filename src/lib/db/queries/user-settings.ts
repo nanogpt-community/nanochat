@@ -6,7 +6,7 @@ import {
 	decryptApiKey,
 	encryptApiKey,
 	isEncrypted,
-} from '$lib/encryption';
+} from '#lib/encryption.js';
 
 type UserSettingsUpdate = Partial<
 	Omit<NewUserSettings, 'id' | 'userId' | 'createdAt' | 'updatedAt'>

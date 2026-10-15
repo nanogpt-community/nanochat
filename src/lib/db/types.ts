@@ -5,30 +5,30 @@
 
 // Re-export types from database schema with Convex-compatible naming
 export type {
-    UserSettings,
-    UserKey,
-    UserEnabledModel,
-    UserRule,
-    Conversation,
-    Message,
-    Storage,
-    User,
-    Session,
-    ScheduledTask,
-} from '$lib/db/schema';
+	UserSettings,
+	UserKey,
+	UserEnabledModel,
+	UserRule,
+	Conversation,
+	Message,
+	Storage,
+	User,
+	Session,
+	ScheduledTask,
+} from '#lib/db/schema.js';
 
-// Table name to type mapping 
+// Table name to type mapping
 type TableTypes = {
-    user_settings: import('$lib/db/schema').UserSettings;
-    user_keys: import('$lib/db/schema').UserKey;
-    user_enabled_models: import('$lib/db/schema').UserEnabledModel;
-    user_rules: import('$lib/db/schema').UserRule;
-    conversations: import('$lib/db/schema').Conversation;
-    messages: import('$lib/db/schema').Message;
-    storage: import('$lib/db/schema').Storage;
-    scheduled_tasks: import('$lib/db/schema').ScheduledTask;
-    user: import('$lib/db/schema').User;
-    session: import('$lib/db/schema').Session;
+	user_settings: import('#lib/db/schema.js').UserSettings;
+	user_keys: import('#lib/db/schema.js').UserKey;
+	user_enabled_models: import('#lib/db/schema.js').UserEnabledModel;
+	user_rules: import('#lib/db/schema.js').UserRule;
+	conversations: import('#lib/db/schema.js').Conversation;
+	messages: import('#lib/db/schema.js').Message;
+	storage: import('#lib/db/schema.js').Storage;
+	scheduled_tasks: import('#lib/db/schema.js').ScheduledTask;
+	user: import('#lib/db/schema.js').User;
+	session: import('#lib/db/schema.js').Session;
 };
 
 /**

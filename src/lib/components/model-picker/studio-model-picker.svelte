@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { cn } from '$lib/utils/utils';
-	import type { NanoGPTModel } from '$lib/backend/models/nano-gpt';
+	import { cn } from '#lib/utils/utils.js';
+	import type { NanoGPTModel } from '#lib/backend/models/nano-gpt.js';
 	import ChevronDownIcon from '~icons/lucide/chevron-down';
 	import CheckIcon from '~icons/lucide/check';
 	import SearchIcon from '~icons/lucide/search';

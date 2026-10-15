@@ -1,11 +1,11 @@
-import { db } from '$lib/db';
-import { apiKeys } from '$lib/db/schema';
+import { db } from '#lib/db/index.js';
+import { apiKeys } from '#lib/db/schema.js';
 import { eq, sql } from 'drizzle-orm';
 import {
 	CURRENT_DEVELOPER_API_KEY_HASH_PREFIX,
 	hashDeveloperApiKey,
-} from '$lib/backend/api-key-security';
-import { decryptApiKey, isEncrypted } from '$lib/encryption';
+} from '#lib/backend/api-key-security.js';
+import { decryptApiKey, isEncrypted } from '#lib/encryption.js';
 
 /**
  * Rewrites developer key lookup hashes to the current scheme on startup, so the
@@ -32,7 +32,9 @@ export async function migrateApiKeyHashes(): Promise<void> {
 			} catch (e) {
 				// Undecryptable row (encryption key changed): it still works via the
 				// legacy lookup and gets upgraded on its next successful use.
-				console.warn(`[api-key-hashes] Skipped ${record.id}: ${e instanceof Error ? e.message : e}`);
+				console.warn(
+					`[api-key-hashes] Skipped ${record.id}: ${e instanceof Error ? e.message : e}`
+				);
 			}
 		}
 		console.log(`[api-key-hashes] Upgraded ${updated}/${legacy.length} developer key hash(es).`);

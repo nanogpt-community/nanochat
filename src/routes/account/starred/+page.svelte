@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { useCachedQuery, api } from '$lib/cache/cached-query.svelte';
-	import { session } from '$lib/state/session.svelte';
-	import type { Message } from '$lib/api';
-	import { cn } from '$lib/utils/utils';
+	import { useCachedQuery, api } from '#lib/cache/cached-query.svelte.js';
+	import { session } from '#lib/state/session.svelte.js';
+	import type { Message } from '#lib/api.js';
+	import { cn } from '#lib/utils/utils.js';
 	import StarIcon from '~icons/lucide/star';
 	import ExternalLinkIcon from '~icons/lucide/external-link';
 	import Loader2Icon from '~icons/lucide/loader-2';
-	import { invalidateQueryPattern } from '$lib/cache/cached-query.svelte';
+	import { invalidateQueryPattern } from '#lib/cache/cached-query.svelte.js';
 
 	const starredMessages = useCachedQuery<Message[]>(api.starred_messages.get, {
 		cache_scope: session.current?.user.id ?? 'anonymous',
@@ -48,7 +48,6 @@
 </div>
 
 <div class="mt-6 space-y-6">
-
 	{#if starredMessages.isLoading}
 		<div class="flex items-center justify-center py-12">
 			<Loader2Icon class="text-muted-foreground size-6 animate-spin" />

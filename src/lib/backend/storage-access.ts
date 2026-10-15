@@ -1,5 +1,5 @@
-import { tryGetAuthenticatedUserId } from '$lib/backend/auth-utils';
-import { db } from '$lib/db';
+import { tryGetAuthenticatedUserId } from '#lib/backend/auth-utils.js';
+import { db } from '#lib/db/index.js';
 import {
 	conversations,
 	messages,
@@ -8,7 +8,7 @@ import {
 	projects,
 	storage,
 	type Storage,
-} from '$lib/db/schema';
+} from '#lib/db/schema.js';
 import { and, eq, isNotNull, or, sql } from 'drizzle-orm';
 
 type StorageAccessResult = {

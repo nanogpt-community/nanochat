@@ -3,7 +3,7 @@
  * Uses NanoGPT's Web Scraping API (https://nano-gpt.com/api/scrape-urls)
  */
 
-import { nanoGptUrl } from '$lib/backend/nano-gpt-url.server';
+import { nanoGptUrl } from '#lib/backend/nano-gpt-url.server.js';
 import {
 	extractUrls,
 	extractUrlsByType,

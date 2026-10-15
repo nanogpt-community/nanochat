@@ -5,11 +5,11 @@
 
 import { error } from '@sveltejs/kit';
 import { Result, ok, err } from 'neverthrow';
-import { db } from '$lib/db';
-import { apiKeys } from '$lib/db/schema';
+import { db } from '#lib/db/index.js';
+import { apiKeys } from '#lib/db/schema.js';
 import { eq, sql } from 'drizzle-orm';
-import { auth } from '$lib/auth';
-import { decryptApiKey, isEncrypted } from '$lib/encryption';
+import { auth } from '#lib/auth.js';
+import { decryptApiKey, isEncrypted } from '#lib/encryption.js';
 import {
 	apiKeysEqual,
 	CURRENT_DEVELOPER_API_KEY_HASH_PREFIX,
@@ -17,7 +17,7 @@ import {
 	hashDeveloperApiKey,
 	isCurrentDeveloperApiKeyHash,
 	legacyHashDeveloperApiKey,
-} from '$lib/backend/api-key-security';
+} from '#lib/backend/api-key-security.js';
 
 function getStoredApiKeyValue(storedKey: string): string {
 	return isEncrypted(storedKey) ? decryptApiKey(storedKey) : storedKey;

@@ -1,15 +1,14 @@
-import { resolveNanoGptApiKey } from '$lib/backend/nanogpt-key.server';
-import { checkSharedKeyUse } from '$lib/backend/shared-key-policy';
-import { env } from '$env/dynamic/private';
+import { resolveNanoGptApiKey } from '#lib/backend/nanogpt-key.server.js';
+import { checkSharedKeyUse } from '#lib/backend/shared-key-policy.js';
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { db } from '$lib/db';
-import { modelPerformanceStats } from '$lib/db/schema';
+import { db } from '#lib/db/index.js';
+import { modelPerformanceStats } from '#lib/db/schema.js';
 import { eq, and, sql } from 'drizzle-orm';
-import { tryGetAuthenticatedUserId } from '$lib/backend/auth-utils';
-import { getUserKey } from '$lib/db/queries';
-import { nanoGptUrl } from '$lib/backend/nano-gpt-url.server';
-import { readRedactedResponseText, redactSecrets } from '$lib/backend/secret-redaction';
+import { tryGetAuthenticatedUserId } from '#lib/backend/auth-utils.js';
+import { getUserKey } from '#lib/db/queries/index.js';
+import { nanoGptUrl } from '#lib/backend/nano-gpt-url.server.js';
+import { readRedactedResponseText, redactSecrets } from '#lib/backend/secret-redaction.js';
 
 const COST_PER_1K_CHARS: Record<string, number> = {
 	'gpt-4o-mini-tts': 0.0125,

@@ -1,15 +1,15 @@
-import { db, generateId } from '$lib/db';
+import { db, generateId } from '#lib/db/index.js';
 import {
 	conversations,
 	messages,
 	storage,
 	type UserEnabledModel,
 	type UserSettings,
-} from '$lib/db/schema';
+} from '#lib/db/schema.js';
 import { and, asc, eq, sql } from 'drizzle-orm';
 import { readFile } from 'fs/promises';
-import { Provider } from '$lib/types';
-import { nanoGptUrl } from '$lib/backend/nano-gpt-url.server';
+import { Provider } from '#lib/types.js';
+import { nanoGptUrl } from '#lib/backend/nano-gpt-url.server.js';
 import { generateConversationTitle, handleGenerationError } from './finalize';
 import type { Log } from './schema';
 

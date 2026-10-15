@@ -1,5 +1,5 @@
-import { extractTextFromPDF } from '$lib/utils/pdf-extraction';
-import { extractTextFromEPUB } from '$lib/utils/epub-extraction';
+import { extractTextFromPDF } from '#lib/utils/pdf-extraction.js';
+import { extractTextFromEPUB } from '#lib/utils/epub-extraction.js';
 
 /**
  * Parsers are the most expensive thing a request can trigger (a child process or

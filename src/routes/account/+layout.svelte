@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { goto, invalidateAll } from '$app/navigation';
 	import { page } from '$app/state';
-	import { active } from '$lib/actions/active.svelte';
-	import { authClient } from '$lib/backend/auth/client.js';
-	import Button from '$lib/components/ui/button/button.svelte';
-	import { ThemeToggle } from '$lib/components/ui/light-switch';
+	import { active } from '#lib/actions/active.svelte.js';
+	import { authClient } from '#lib/backend/auth/client.js';
+	import Button from '#lib/components/ui/button/button.svelte';
+	import { ThemeToggle } from '#lib/components/ui/light-switch/index.js';
 	import ArrowLeftIcon from '~icons/lucide/arrow-left';
 	import GithubIcon from '~icons/lucide/github';
 	import CameraIcon from '~icons/lucide/camera';
@@ -27,11 +27,11 @@
 	import StarIcon from '~icons/lucide/star';
 	import CodeIcon from '~icons/lucide/code';
 	import { Avatar } from 'melt/components';
-	import { useCachedQuery, api } from '$lib/cache/cached-query.svelte.js';
-	import { session } from '$lib/state/session.svelte.js';
-	import { cn } from '$lib/utils/utils.js';
+	import { useCachedQuery, api } from '#lib/cache/cached-query.svelte.js';
+	import { session } from '#lib/state/session.svelte.js';
+	import { cn } from '#lib/utils/utils.js';
 
-	import type { UserSettings } from '$lib/api';
+	import type { UserSettings } from '#lib/api.js';
 
 	let { data, children } = $props();
 	const currentSession = $derived(data.session!);

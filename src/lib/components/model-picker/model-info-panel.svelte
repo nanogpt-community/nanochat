@@ -1,15 +1,19 @@
 <script lang="ts">
-	import type { NanoGPTModel } from '$lib/backend/models/nano-gpt';
-	import type { AALLMModel, AAImageModel, AABenchmarkData } from '$lib/types/artificial-analysis';
+	import type { NanoGPTModel } from '#lib/backend/models/nano-gpt.js';
+	import type {
+		AALLMModel,
+		AAImageModel,
+		AABenchmarkData,
+	} from '#lib/types/artificial-analysis.js';
 	import {
 		supportsVision,
 		supportsReasoning,
 		isImageOnlyModel,
 		supportsVideo,
-	} from '$lib/utils/model-capabilities';
-	import { toSafeResourceUrl } from '$lib/utils/html-sanitizer';
-	import { cn } from '$lib/utils/utils';
-	import { useCachedQuery, api } from '$lib/cache/cached-query.svelte';
+	} from '#lib/utils/model-capabilities.js';
+	import { toSafeResourceUrl } from '#lib/utils/html-sanitizer.js';
+	import { cn } from '#lib/utils/utils.js';
+	import { useCachedQuery, api } from '#lib/cache/cached-query.svelte.js';
 	import EyeIcon from '~icons/lucide/eye';
 	import BrainIcon from '~icons/lucide/brain';
 	import ImageIcon from '~icons/lucide/image';
@@ -190,7 +194,9 @@
 
 	// Find matching image model benchmark
 	const imageBenchmark = $derived.by(() => {
-		const imageModels = Array.isArray(benchmarks.data?.imageModels) ? benchmarks.data.imageModels : [];
+		const imageModels = Array.isArray(benchmarks.data?.imageModels)
+			? benchmarks.data.imageModels
+			: [];
 		if (!benchmarks.data?.available || imageModels.length === 0 || !isImageOnlyModel(model))
 			return null;
 

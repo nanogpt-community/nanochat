@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { useCachedQuery, api } from '$lib/cache/cached-query.svelte';
-	import type { Doc } from '$lib/db/types';
-	import type { Message, Conversation } from '$lib/api';
-	import { Button } from '$lib/components/ui/button';
-	import Tooltip from '$lib/components/ui/tooltip.svelte';
+	import { useCachedQuery, api } from '#lib/cache/cached-query.svelte.js';
+	import type { Doc } from '#lib/db/types.js';
+	import type { Message, Conversation } from '#lib/api.js';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import Tooltip from '#lib/components/ui/tooltip.svelte';
 	import DownloadIcon from '~icons/lucide/download';
 
 	let {

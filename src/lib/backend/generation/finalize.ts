@@ -1,12 +1,17 @@
 import OpenAI from 'openai';
-import { db, generateId } from '$lib/db';
-import { conversations, messages, modelPerformanceStats, type UserSettings } from '$lib/db/schema';
+import { db, generateId } from '#lib/db/index.js';
+import {
+	conversations,
+	messages,
+	modelPerformanceStats,
+	type UserSettings,
+} from '#lib/db/schema.js';
 import { and, eq } from 'drizzle-orm';
 import { ResultAsync } from 'neverthrow';
-import { Provider } from '$lib/types';
-import { nanoGptUrl } from '$lib/backend/nano-gpt-url.server';
-import { DEFAULT_BACKGROUND_MODEL } from '$lib/backend/default-models';
-import { FOLLOW_UP_QUESTIONS_PROMPT } from '$lib/prompts/follow-up-questions';
+import { Provider } from '#lib/types.js';
+import { nanoGptUrl } from '#lib/backend/nano-gpt-url.server.js';
+import { DEFAULT_BACKGROUND_MODEL } from '#lib/backend/default-models.js';
+import { FOLLOW_UP_QUESTIONS_PROMPT } from '#lib/prompts/follow-up-questions.js';
 import type { Log } from './schema';
 
 export function isAbortError(error: unknown): boolean {

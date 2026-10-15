@@ -1,15 +1,15 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import { api, useCachedQuery, invalidateQueryPattern } from '$lib/cache/cached-query.svelte.js';
-	import { session } from '$lib/state/session.svelte.js';
-	import { models } from '$lib/state/models.svelte';
-	import type { Prompt, UserEnabledModel } from '$lib/api';
-	import { extractVariables, highlightVariables } from '$lib/utils/prompt-variables';
-	import Button from '$lib/components/ui/button/button.svelte';
-	import Input from '$lib/components/ui/input/input.svelte';
-	import Textarea from '$lib/components/ui/textarea/textarea.svelte';
-	import Label from '$lib/components/ui/label/label.svelte';
+	import { api, useCachedQuery, invalidateQueryPattern } from '#lib/cache/cached-query.svelte.js';
+	import { session } from '#lib/state/session.svelte.js';
+	import { models } from '#lib/state/models.svelte.js';
+	import type { Prompt, UserEnabledModel } from '#lib/api.js';
+	import { extractVariables, highlightVariables } from '#lib/utils/prompt-variables.js';
+	import Button from '#lib/components/ui/button/button.svelte';
+	import Input from '#lib/components/ui/input/input.svelte';
+	import Textarea from '#lib/components/ui/textarea/textarea.svelte';
+	import Label from '#lib/components/ui/label/label.svelte';
 	import LoaderCircle from '~icons/lucide/loader-circle';
 	import Trash from '~icons/lucide/trash-2';
 	import Pencil from '~icons/lucide/pencil';
@@ -118,7 +118,7 @@
 		formAppendMode = 'replace';
 		formVariables = [];
 		if (page.url.searchParams.has('create')) {
-			goto('/account/prompts', { replaceState: true });
+			goto('/account/prompts', { replace: true });
 		}
 	}
 
@@ -192,11 +192,7 @@
 		}
 	}
 
-	function updateVariable(
-		index: number,
-		field: 'defaultValue' | 'description',
-		value: string
-	) {
+	function updateVariable(index: number, field: 'defaultValue' | 'description', value: string) {
 		formVariables = formVariables.map((v, i) =>
 			i === index ? { ...v, [field]: value || undefined } : v
 		);
@@ -232,20 +228,14 @@
 					{isCreating ? 'Create Prompt' : 'Edit Prompt'}
 				</h2>
 				<p class="text-muted-foreground text-xs">
-					{isCreating
-						? 'Create a new reusable prompt template.'
-						: 'Update your prompt template.'}
+					{isCreating ? 'Create a new reusable prompt template.' : 'Update your prompt template.'}
 				</p>
 			</div>
 			<div class="bg-card border-border flex flex-col gap-6 rounded-lg border p-5">
 				<div class="grid gap-4 sm:grid-cols-2">
 					<div class="flex flex-col gap-2">
 						<Label for="name" class="text-sm font-medium">Name</Label>
-						<Input
-							id="name"
-							bind:value={formName}
-							placeholder="e.g. Summarize Article"
-						/>
+						<Input id="name" bind:value={formName} placeholder="e.g. Summarize Article" />
 					</div>
 					<div class="flex flex-col gap-2">
 						<Label for="description" class="text-sm font-medium">Description (optional)</Label>
@@ -279,9 +269,15 @@
 								System variables (auto-substituted)
 							</summary>
 							<div class="bg-muted/40 mt-2 space-y-1 rounded-md p-3 font-mono text-xs">
-								<div><code class="text-primary">{'{cur_date}'}</code> - Current date (YYYY-MM-DD)</div>
-								<div><code class="text-primary">{'{cur_time}'}</code> - Current time (HH:MM:SS)</div>
-								<div><code class="text-primary">{'{cur_datetime}'}</code> - Current date and time</div>
+								<div>
+									<code class="text-primary">{'{cur_date}'}</code> - Current date (YYYY-MM-DD)
+								</div>
+								<div>
+									<code class="text-primary">{'{cur_time}'}</code> - Current time (HH:MM:SS)
+								</div>
+								<div>
+									<code class="text-primary">{'{cur_datetime}'}</code> - Current date and time
+								</div>
 								<div><code class="text-primary">{'{user_name}'}</code> - Your name</div>
 							</div>
 						</details>
@@ -309,8 +305,7 @@
 										<Label class="text-muted-foreground text-xs">Default Value</Label>
 										<Input
 											value={variable.defaultValue ?? ''}
-											oninput={(e) =>
-												updateVariable(index, 'defaultValue', e.currentTarget.value)}
+											oninput={(e) => updateVariable(index, 'defaultValue', e.currentTarget.value)}
 											placeholder="Optional default"
 											class="h-9 text-sm"
 										/>
@@ -319,8 +314,7 @@
 										<Label class="text-muted-foreground text-xs">Description</Label>
 										<Input
 											value={variable.description ?? ''}
-											oninput={(e) =>
-												updateVariable(index, 'description', e.currentTarget.value)}
+											oninput={(e) => updateVariable(index, 'description', e.currentTarget.value)}
 											placeholder="Optional description"
 											class="h-9 text-sm"
 										/>
@@ -446,11 +440,7 @@
 		{:else}
 			<div class="bg-card border-border divide-border divide-y rounded-lg border">
 				{#each promptsList as prompt (prompt.id)}
-					<div
-						class="flex flex-col gap-3 p-5 {editingId === prompt.id
-							? 'bg-primary/5'
-							: ''}"
-					>
+					<div class="flex flex-col gap-3 p-5 {editingId === prompt.id ? 'bg-primary/5' : ''}">
 						<div class="flex items-start justify-between gap-4">
 							<div class="flex min-w-0 flex-1 flex-col gap-1">
 								<div class="flex flex-wrap items-center gap-2">

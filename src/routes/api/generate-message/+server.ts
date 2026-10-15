@@ -1,21 +1,24 @@
-import { db, generateId } from '$lib/db';
-import { conversations, messages } from '$lib/db/schema';
+import { db, generateId } from '#lib/db/index.js';
+import { conversations, messages } from '#lib/db/schema.js';
 import { eq } from 'drizzle-orm';
 import { error, json, type RequestHandler } from '@sveltejs/kit';
 import { ResultAsync } from 'neverthrow';
-import { Provider } from '$lib/types';
-import { supportsVideo } from '$lib/utils/model-capabilities';
+import { Provider } from '#lib/types.js';
+import { supportsVideo } from '#lib/utils/model-capabilities.js';
 import { generationAbortControllers } from './cache.js';
 import {
 	generateMessageRequestSchema,
 	type GenerateMessageRequestBody,
 	type GenerateMessageResponse,
-} from '$lib/backend/generation/schema';
-import { authenticateGenerationRequest, prepareGeneration } from '$lib/backend/generation/request';
-import { runChatGeneration } from '$lib/backend/generation/run';
-import { handleGenerationError } from '$lib/backend/generation/finalize';
-import { generateImageResponse } from '$lib/backend/generation/image';
-import { generateVideoResponse } from '$lib/backend/generation/video';
+} from '#lib/backend/generation/schema.js';
+import {
+	authenticateGenerationRequest,
+	prepareGeneration,
+} from '#lib/backend/generation/request.js';
+import { runChatGeneration } from '#lib/backend/generation/run.js';
+import { handleGenerationError } from '#lib/backend/generation/finalize.js';
+import { generateImageResponse } from '#lib/backend/generation/image.js';
+import { generateVideoResponse } from '#lib/backend/generation/video.js';
 
 export type { GenerateMessageRequestBody, GenerateMessageResponse };
 

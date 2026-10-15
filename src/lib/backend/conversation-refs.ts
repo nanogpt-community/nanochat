@@ -1,5 +1,5 @@
-import { db } from '$lib/db';
-import { assistants, projectMembers, projects } from '$lib/db/schema';
+import { db } from '#lib/db/index.js';
+import { assistants, projectMembers, projects } from '#lib/db/schema.js';
 import { and, eq } from 'drizzle-orm';
 
 /**

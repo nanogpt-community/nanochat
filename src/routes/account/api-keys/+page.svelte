@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Provider, type ProviderMeta } from '$lib/types';
+	import { Provider, type ProviderMeta } from '#lib/types.js';
 	import ProviderCard from './provider-card.svelte';
 
 	const allProviders = Object.values(Provider);

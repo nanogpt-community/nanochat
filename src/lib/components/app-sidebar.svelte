@@ -1,16 +1,16 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import { useCachedQuery, api, invalidateQueryPattern } from '$lib/cache/cached-query.svelte';
-	import type { Doc, Id } from '$lib/db/types';
-	import type { Conversation, UserSettings, Project } from '$lib/api';
-	import * as Sidebar from '$lib/components/ui/sidebar';
-	import { useSidebarControls } from '$lib/components/ui/sidebar';
-	import Tooltip from '$lib/components/ui/tooltip.svelte';
-	import { cmdOrCtrl } from '$lib/hooks/is-mac.svelte';
-	import { session } from '$lib/state/session.svelte';
-	import { cn } from '$lib/utils/utils.js';
-	import { mutate } from '$lib/client/mutation.svelte';
+	import { useCachedQuery, api, invalidateQueryPattern } from '#lib/cache/cached-query.svelte.js';
+	import type { Doc, Id } from '#lib/db/types.js';
+	import type { Conversation, UserSettings, Project } from '#lib/api.js';
+	import * as Sidebar from '#lib/components/ui/sidebar/index.js';
+	import { useSidebarControls } from '#lib/components/ui/sidebar/index.js';
+	import Tooltip from '#lib/components/ui/tooltip.svelte';
+	import { cmdOrCtrl } from '#lib/hooks/is-mac.svelte.js';
+	import { session } from '#lib/state/session.svelte.js';
+	import { cn } from '#lib/utils/utils.js';
+	import { mutate } from '#lib/client/mutation.svelte.js';
 	import { Avatar } from 'melt/components';
 	import LoaderCircleIcon from '~icons/lucide/loader-circle';
 	import PanelLeftIcon from '~icons/lucide/panel-left';
@@ -31,11 +31,11 @@
 	import ImageIcon from '~icons/lucide/image';
 	import LibraryIcon from '~icons/lucide/library';
 	import ChevronRightIcon from '~icons/lucide/chevron-right';
-	import { Input } from '$lib/components/ui/input';
-	import CreateProjectModal from '$lib/components/projects/create-project-modal.svelte';
-	import ProjectSettingsModal from '$lib/components/projects/project-settings-modal.svelte';
+	import { Input } from '#lib/components/ui/input/index.js';
+	import CreateProjectModal from '#lib/components/projects/create-project-modal.svelte';
+	import ProjectSettingsModal from '#lib/components/projects/project-settings-modal.svelte';
 	import SettingsIcon from '~icons/lucide/settings';
-	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
+	import * as DropdownMenu from '#lib/components/ui/dropdown-menu/index.js';
 
 	let { searchModalOpen = $bindable(false) }: { searchModalOpen: boolean } = $props();
 

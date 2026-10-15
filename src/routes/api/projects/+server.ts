@@ -1,9 +1,9 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
-import { db, generateId } from '$lib/db';
-import { projects, projectMembers } from '$lib/db/schema';
+import { db, generateId } from '#lib/db/index.js';
+import { projects, projectMembers } from '#lib/db/schema.js';
 import { eq, or, and } from 'drizzle-orm';
 import { z } from 'zod';
-import { getAuthenticatedUserId } from '$lib/backend/auth-utils';
+import { getAuthenticatedUserId } from '#lib/backend/auth-utils.js';
 
 // GET /api/projects - List user's projects (owned + shared)
 export async function GET({ request }: RequestEvent) {

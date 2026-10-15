@@ -1,10 +1,10 @@
-import { building } from '$app/environment';
-import { auth } from '$lib/auth';
-import { migrateEmailDomains } from '$lib/migrations/email-domain';
-import { migrateApiKeyHashes } from '$lib/migrations/api-key-hashes';
-import { startScheduler } from '$lib/backend/scheduler';
-import { appendSensitiveVary, applyNoStoreHeaders } from '$lib/backend/http-security';
-import type { Handle } from '@sveltejs/kit';
+import type { Handle } from '@sveltejs/kit/hooks';
+import { building } from '$app/env';
+import { auth } from '#lib/auth.js';
+import { migrateEmailDomains } from '#lib/migrations/email-domain.js';
+import { migrateApiKeyHashes } from '#lib/migrations/api-key-hashes.js';
+import { startScheduler } from '#lib/backend/scheduler.js';
+import { appendSensitiveVary, applyNoStoreHeaders } from '#lib/backend/http-security.js';
 import { svelteKitHandler } from 'better-auth/svelte-kit';
 
 function requestCarriesSensitiveAuth(event: Parameters<Handle>[0]['event']): boolean {

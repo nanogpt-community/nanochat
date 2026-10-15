@@ -1,4 +1,4 @@
-import { db, generateId } from '$lib/db';
+import { db, generateId } from '#lib/db/index.js';
 import {
 	userEnabledModels,
 	userKeys,
@@ -10,17 +10,17 @@ import {
 	type UserEnabledModel,
 	type UserRule,
 	type UserSettings,
-} from '$lib/db/schema';
+} from '#lib/db/schema.js';
 import { and, eq } from 'drizzle-orm';
 import { error } from '@sveltejs/kit';
-import { auth } from '$lib/auth';
-import { Provider } from '$lib/types';
-import { getNanoGPTModels, type NanoGPTModel } from '$lib/backend/models/nano-gpt';
-import { getUserIdFromApiKey } from '$lib/backend/auth-utils';
-import { nanoGptKeyFromRecord } from '$lib/backend/nanogpt-key.server';
-import { isWebDisabledForServerKey } from '$lib/backend/message-limits';
-import { assertSharedKeyUse } from '$lib/backend/shared-key-policy';
-import { resolveConversationRefs } from '$lib/backend/conversation-refs';
+import { auth } from '#lib/auth.js';
+import { Provider } from '#lib/types.js';
+import { getNanoGPTModels, type NanoGPTModel } from '#lib/backend/models/nano-gpt.js';
+import { getUserIdFromApiKey } from '#lib/backend/auth-utils.js';
+import { nanoGptKeyFromRecord } from '#lib/backend/nanogpt-key.server.js';
+import { isWebDisabledForServerKey } from '#lib/backend/message-limits.js';
+import { assertSharedKeyUse } from '#lib/backend/shared-key-policy.js';
+import { resolveConversationRefs } from '#lib/backend/conversation-refs.js';
 import type { GenerateMessageRequestBody, Log } from './schema';
 
 /** Bearer `nc_` API key first, then the session cookie. Throws a 401 otherwise. */

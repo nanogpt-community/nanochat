@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { cn } from '$lib/utils/utils';
-	import { TextareaAutosize } from '$lib/spells/textarea-autosize.svelte.js';
+	import { cn } from '#lib/utils/utils.js';
+	import { TextareaAutosize } from '#lib/spells/textarea-autosize.svelte.js';
 	import type { HTMLTextareaAttributes } from 'svelte/elements';
 
 	type Props = HTMLTextareaAttributes & {
@@ -21,5 +21,4 @@
 	{@attach (node) => {
 		if (!autosize) return;
 		autosizeTextarea.attachment(node);
-	}}
-></textarea>
+	}}></textarea>

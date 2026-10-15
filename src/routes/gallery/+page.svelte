@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { useCachedQuery, api, invalidateQueryPattern } from '$lib/cache/cached-query.svelte';
-	import { session } from '$lib/state/session.svelte';
+	import { useCachedQuery, api, invalidateQueryPattern } from '#lib/cache/cached-query.svelte.js';
+	import { session } from '#lib/state/session.svelte.js';
 	import { goto } from '$app/navigation';
-	import { Button } from '$lib/components/ui/button';
+	import { Button } from '#lib/components/ui/button/index.js';
 	import ImageIcon from '~icons/lucide/image';
 	import VideoIcon from '~icons/lucide/video';
 	import FileTextIcon from '~icons/lucide/file-text';
@@ -281,7 +281,7 @@
 							href={file.url}
 							target="_blank"
 							rel="noreferrer"
-							class="bg-secondary/50 hover:bg-secondary text-foreground inline-flex flex-1 min-w-24 items-center justify-center gap-2 rounded-md px-3 py-2 text-xs font-semibold transition-colors"
+							class="bg-secondary/50 hover:bg-secondary text-foreground inline-flex min-w-24 flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-xs font-semibold transition-colors"
 						>
 							<ExternalLinkIcon class="size-3.5" />
 							Open
@@ -289,7 +289,7 @@
 						{#if file.conversationId}
 							<button
 								type="button"
-								class="hover:bg-accent bg-secondary/50 inline-flex flex-1 min-w-24 items-center justify-center gap-2 rounded-md px-3 py-2 text-xs font-semibold transition-colors"
+								class="hover:bg-accent bg-secondary/50 inline-flex min-w-24 flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-xs font-semibold transition-colors"
 								onclick={() => openChat(file.conversationId)}
 							>
 								<ChatBubbleIcon class="size-3.5" />
@@ -298,7 +298,7 @@
 						{/if}
 						<button
 							type="button"
-							class="bg-destructive/90 hover:bg-destructive inline-flex flex-1 min-w-24 items-center justify-center gap-2 rounded-md px-3 py-2 text-xs font-semibold text-white transition-colors disabled:opacity-60"
+							class="bg-destructive/90 hover:bg-destructive inline-flex min-w-24 flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-xs font-semibold text-white transition-colors disabled:opacity-60"
 							onclick={() => deleteFile(file)}
 							disabled={isDeleting(file.id)}
 						>
